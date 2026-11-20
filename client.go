@@ -6,6 +6,7 @@ import (
 
 	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/csrf"
+	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
 )
 
@@ -18,6 +19,7 @@ type Client struct {
 	csrf          *csrf.Guard
 	tokens        *token.Service
 	auth          *auth.Service
+	sessions      *session.Service
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -86,7 +88,8 @@ func New(cfg Config) (*Client, error) {
 		csrf: csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
 			cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 			strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger),
-		tokens: token.New(cfg.Store, cfg.Clock),
+		tokens:   token.New(cfg.Store, cfg.Clock),
+		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session),
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
