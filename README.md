@@ -129,11 +129,37 @@ cfg.JWT = &signet.JWTConfig{
 }
 ```
 
+## Email verification and password reset
+
+By default, sign-up sends a verification email and sign-in requires a verified
+email. Configure the application origin used in links and choose a mailer:
+
+```go
+cfg := signet.DefaultConfig()
+cfg.AppURL = "https://app.example.com"
+cfg.Mailer = smtpMailer // from mailer/smtp, or console.New(os.Stdout) for development
+```
+
+`SendVerification` / `VerifyEmail` and `SendPasswordReset` / `ResetPassword`
+are available as Go methods and as JSON endpoints at `/send-verification`,
+`/verify-email`, `/send-password-reset` and `/reset-password`. Tokens are
+short-lived, single-use and stored only as digests; reset requests never reveal
+whether an email is registered, and a successful reset revokes every Session.
+Both flags default to true; point `SendVerificationOnSignUp` or
+`RequireVerifiedEmail` at `false` if your product does not use email
+verification.
+
+Email content is rendered through the `EmailTemplates` interface. The default
+implementation ships HTML and plain-text templates; set `Config.Templates` to
+replace them. The `mailer/console` adapter writes messages to an `io.Writer`
+and is for development only because it prints links. The `mailer/smtp` adapter
+uses STARTTLS by default, supports implicit TLS and requires an explicit switch
+for plaintext transport.
+
 ## Current state
 
-Phase 2 is in place: cookie sessions, auth middleware with timeout enforcement,
-CSRF protection, session management and optional JWT mode. Email verification,
-password reset, OAuth and database adapters arrive in later phases.
+Phase 3 is in place: email verification, password reset, email templates and
+mailer adapters. OAuth and database adapters arrive in later phases.
 
 ### Limitations
 

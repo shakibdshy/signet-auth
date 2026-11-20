@@ -9,24 +9,15 @@ import (
 	"github.com/shakibdshy/signet"
 )
 
-func TestHandlerEndpointsAreWired(t *testing.T) {
+func TestHandlerRejectsUnknownPaths(t *testing.T) {
 	client, err := signet.New(completeConfig())
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	handler := client.Handler()
-	paths := []string{
-		"/verify-email",
-		"/reset-password",
-	}
-	for _, path := range paths {
-		t.Run(path, func(t *testing.T) {
-			rec := httptest.NewRecorder()
-			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, path, nil))
-			if rec.Code != http.StatusNotImplemented {
-				t.Errorf("status = %d, want %d", rec.Code, http.StatusNotImplemented)
-			}
-		})
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/not-a-signet-route", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }
 

@@ -48,7 +48,7 @@ func TestSignInCreatesSessionWithHashedToken(t *testing.T) {
 
 func TestSignInFailuresAreGenericAndUseDummyVerifier(t *testing.T) {
 	hasher := &versionedHasher{version: 1}
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -69,7 +69,7 @@ func TestSignInFailuresAreGenericAndUseDummyVerifier(t *testing.T) {
 func TestSignInRehashesStaleVerifier(t *testing.T) {
 	hasher := &versionedHasher{version: 1}
 	store := newMemoryStore()
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -103,7 +103,7 @@ func TestSignInRejectsDisabledUser(t *testing.T) {
 
 func TestRehashFailureDoesNotAbortSignIn(t *testing.T) {
 	hasher := &rehashFailureHasher{}
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -121,7 +121,7 @@ func TestRehashFailureDoesNotAbortSignIn(t *testing.T) {
 }
 
 func TestSignInEnforcesMinimumPasswordLength(t *testing.T) {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}

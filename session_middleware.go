@@ -38,7 +38,7 @@ func (c *Client) currentSession(r *http.Request) (*Session, error) {
 	if err != nil || cookie.Value == "" {
 		return nil, ErrNotFound
 	}
-	return c.cfg.Store.SessionByHash(r.Context(), digestSessionToken(cookie.Value))
+	return c.cfg.Store.SessionByHash(r.Context(), digestSecret(cookie.Value))
 }
 
 func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required bool) (*User, bool) {
@@ -55,7 +55,7 @@ func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required b
 	if err != nil || cookie.Value == "" {
 		return deny()
 	}
-	session, err := c.cfg.Store.SessionByHash(r.Context(), digestSessionToken(cookie.Value))
+	session, err := c.cfg.Store.SessionByHash(r.Context(), digestSecret(cookie.Value))
 	if err != nil || session.RevokedAt != nil {
 		return deny()
 	}

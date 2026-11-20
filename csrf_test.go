@@ -106,7 +106,7 @@ func TestCSRFDoesNotAffectAnonymousRequests(t *testing.T) {
 
 func TestCSRFCanBeDisabledExplicitly(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}

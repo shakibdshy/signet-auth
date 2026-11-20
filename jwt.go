@@ -125,7 +125,7 @@ func (c *Client) issueTokens(ctx context.Context, userID string) (*TokenPair, er
 	if err != nil {
 		return nil, err
 	}
-	raw, digest := newSessionToken()
+	raw, digest := newRawSecret()
 	token := &Token{
 		ID:        newID(),
 		UserID:    userID,
@@ -145,7 +145,7 @@ func (c *Client) issueTokens(ctx context.Context, userID string) (*TokenPair, er
 }
 
 func (c *Client) refreshTokens(ctx context.Context, presented string) (*TokenPair, error) {
-	digest := digestSessionToken(presented)
+	digest := digestSecret(presented)
 	token, err := c.cfg.Store.TokenByHash(ctx, TokenRefresh, digest)
 	if errors.Is(err, ErrNotFound) {
 		return nil, ErrTokenInvalid

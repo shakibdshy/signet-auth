@@ -22,7 +22,7 @@ type Session struct {
 	RevokedAt         *time.Time
 }
 
-func newSessionToken() (string, string) {
+func newRawSecret() (string, string) {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
 		panic("signet: crypto/rand unavailable: " + err.Error())
@@ -32,7 +32,7 @@ func newSessionToken() (string, string) {
 	return token, hex.EncodeToString(digest[:])
 }
 
-func digestSessionToken(token string) string {
+func digestSecret(token string) string {
 	digest := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(digest[:])
 }

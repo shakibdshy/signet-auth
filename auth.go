@@ -101,6 +101,13 @@ func (c *Client) SignUp(ctx context.Context, in SignUpInput) (*SignUpResult, err
 
 	c.logInfo("sign_up", "user_id", user.ID)
 	c.cfg.OnSignUp(ctx, redactedUser(user))
+	if c.sendVerificationOnSignUp() {
+		// A mail outage must not destroy a successfully created User; the
+		// caller receives the error and can retry with SendVerification.
+		if err := c.sendVerification(ctx, user); err != nil {
+			return nil, err
+		}
+	}
 	return &SignUpResult{User: user}, nil
 }
 
@@ -143,10 +150,14 @@ func (c *Client) SignIn(ctx context.Context, in SignInInput) (*SignInResult, err
 		c.logInfo("sign_in_failure", "reason", "mismatch")
 		return nil, ErrInvalidCredentials
 	}
+	if c.requireVerifiedEmail() && !user.EmailVerified {
+		c.logInfo("sign_in_failure", "reason", "unverified")
+		return nil, ErrEmailNotVerified
+	}
 
 	c.rehashIfNeeded(ctx, account, in.Password, user.ID)
 
-	token, digest := newSessionToken()
+	token, digest := newRawSecret()
 	now := c.cfg.Clock.Now()
 	session := &Session{
 		ID:                newID(),
@@ -190,7 +201,7 @@ func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	if in.SessionToken == "" {
 		return nil
 	}
-	session, err := c.cfg.Store.SessionByHash(ctx, digestSessionToken(in.SessionToken))
+	session, err := c.cfg.Store.SessionByHash(ctx, digestSecret(in.SessionToken))
 	if errors.Is(err, ErrNotFound) {
 		return nil
 	}

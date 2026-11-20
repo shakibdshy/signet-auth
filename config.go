@@ -34,6 +34,16 @@ type Config struct {
 	// JWT enables optional bearer-token mode. When nil, only cookie sessions
 	// are available.
 	JWT *JWTConfig
+	// RequireVerifiedEmail blocks sign-in until the User's email is verified.
+	// Nil means true; set a pointer to false to opt out.
+	RequireVerifiedEmail *bool
+	// SendVerificationOnSignUp sends a verification email when a User is created.
+	// Nil means true; set a pointer to false to opt out.
+	SendVerificationOnSignUp *bool
+	// AppURL is the application origin used to build absolute email links.
+	AppURL string
+	// Templates renders Signet's transactional email. Defaults to DefaultTemplates.
+	Templates EmailTemplates
 }
 
 // CookieConfig controls the session cookie. Secure behaviour is the default.
@@ -84,5 +94,6 @@ func DefaultConfig() Config {
 			MaxLength: 128,
 		},
 		PathPrefix: "/",
+		Templates:  DefaultTemplates,
 	}
 }

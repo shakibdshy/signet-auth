@@ -239,6 +239,28 @@ type adjustableClock struct{ at time.Time }
 
 func (c *adjustableClock) Now() time.Time { return c.at }
 
+type capturingMailer struct {
+	messages []signet.Message
+	fail     bool
+}
+
+func (m *capturingMailer) Send(_ context.Context, msg signet.Message) error {
+	if m.fail {
+		return errTestStore
+	}
+	m.messages = append(m.messages, msg)
+	return nil
+}
+
+func testConfig() signet.Config {
+	cfg := signet.DefaultConfig()
+	cfg.RequireVerifiedEmail = boolPtr(false)
+	cfg.SendVerificationOnSignUp = boolPtr(false)
+	return cfg
+}
+
+func boolPtr(value bool) *bool { return &value }
+
 var errTestStore = &testStoreError{}
 
 type testStoreError struct{}

@@ -27,3 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   enforcement, a same-origin CSRF guard, session listing and revocation,
   optional JWT mode with rotating hashed Refresh tokens and replay containment,
   and the /token endpoint.
+- Phase 3 verification and reset: email templates with HTML and plain-text
+  defaults, console and SMTP mailer adapters, single-use hashed verification
+  and reset Tokens, anti-enumeration, the verified-email sign-in gate, session
+  revocation and password-changed notifications.

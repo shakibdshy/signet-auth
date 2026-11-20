@@ -21,7 +21,7 @@ func newAuthClient() (*signet.Client, *memoryStore, *recordingLimiter) {
 	store := newMemoryStore()
 	limiter := &recordingLimiter{allow: true}
 	var logs bytes.Buffer
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = limiter
@@ -117,7 +117,7 @@ func TestSignUpRollsBackUserWhenAccountFails(t *testing.T) {
 }
 
 func TestSignUpEventsAndRedactedHook(t *testing.T) {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}

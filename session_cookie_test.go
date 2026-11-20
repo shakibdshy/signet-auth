@@ -49,7 +49,7 @@ func TestSignInSetsSecureHostCookie(t *testing.T) {
 }
 
 func TestSignInUsesPlainNameWithDomain(t *testing.T) {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -129,7 +129,7 @@ func TestRequireAuthRejectsAnonymousAndOptionalAuthPasses(t *testing.T) {
 func TestExpiredSessionIsRejectedAndRevoked(t *testing.T) {
 	clock := &adjustableClock{at: testTime}
 	store := newMemoryStore()
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -159,7 +159,7 @@ func TestExpiredSessionIsRejectedAndRevoked(t *testing.T) {
 func TestAcceptedRequestExtendsIdleExpiry(t *testing.T) {
 	clock := &adjustableClock{at: testTime}
 	store := newMemoryStore()
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}

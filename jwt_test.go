@@ -17,7 +17,7 @@ var testJWTKey = []byte("a-long-test-signing-key-for-hs256-only")
 func jwtClient(t *testing.T) (*signet.Client, *memoryStore) {
 	t.Helper()
 	store := newMemoryStore()
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -49,7 +49,7 @@ func TestJWTConfigValidation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := signet.DefaultConfig()
+			cfg := testConfig()
 			cfg.Store = newMemoryStore()
 			cfg.Mailer = fakeMailer{}
 			cfg.RateLimiter = &recordingLimiter{allow: true}

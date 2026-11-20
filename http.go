@@ -18,7 +18,9 @@ var authEndpoints = []string{
 	"sessions",
 	"session",
 	"token",
+	"send-verification",
 	"verify-email",
+	"send-password-reset",
 	"reset-password",
 }
 
@@ -52,6 +54,14 @@ func (c *Client) Handler() http.Handler {
 			c.handleCurrentSession(w, r)
 		case "token":
 			c.handleToken(w, r)
+		case "send-verification":
+			c.handleSendVerification(w, r)
+		case "verify-email":
+			c.handleVerifyEmail(w, r)
+		case "send-password-reset":
+			c.handleSendPasswordReset(w, r)
+		case "reset-password":
+			c.handleResetPassword(w, r)
 		default:
 			http.Error(w, "signet: endpoint not implemented", http.StatusNotImplemented)
 		}
@@ -253,13 +263,71 @@ func (c *Client) handleToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, pair)
 }
 
+func (c *Client) handleSendVerification(w http.ResponseWriter, r *http.Request) {
+	var in SendVerificationInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	if err := c.SendVerification(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (c *Client) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var in VerifyEmailInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	if err := c.VerifyEmail(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (c *Client) handleSendPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var in SendPasswordResetInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	if err := c.SendPasswordReset(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (c *Client) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	var in ResetPasswordInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	if err := c.ResetPassword(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func writeAuthError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrRateLimited):
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
 	case errors.Is(err, ErrTokenInvalid), errors.Is(err, ErrTokenExpired), errors.Is(err, ErrRefreshReuse):
 		writeError(w, http.StatusUnauthorized, "invalid_token", "invalid token")
-	case errors.Is(err, ErrInvalidCredentials), errors.Is(err, ErrEmailNotVerified):
+	case errors.Is(err, ErrEmailNotVerified):
+		writeError(w, http.StatusForbidden, "email_not_verified", "email not verified")
+	case errors.Is(err, ErrInvalidCredentials):
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
 	case errors.Is(err, ErrJWTDisabled):
 		writeError(w, http.StatusNotFound, "not_found", "not found")

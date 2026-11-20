@@ -3,12 +3,14 @@ package signet_test
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/shakibdshy/signet"
 )
 
 func ExampleClient_SignUp() {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -29,7 +31,7 @@ func ExampleClient_SignUp() {
 }
 
 func ExampleClient_SignIn() {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -56,7 +58,7 @@ func ExampleClient_SignIn() {
 }
 
 func ExampleClient_ListSessions() {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -86,7 +88,7 @@ func ExampleClient_ListSessions() {
 }
 
 func ExampleClient_ExchangeToken() {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -110,4 +112,78 @@ func ExampleClient_ExchangeToken() {
 	}
 	fmt.Println(pair.AccessToken != "", pair.RefreshToken != "")
 	// Output: true true
+}
+
+func exampleToken(msg signet.Message) string {
+	for _, line := range strings.Split(msg.TextBody, "\n") {
+		if strings.HasPrefix(line, "https://") {
+			parsed, err := url.Parse(line)
+			if err == nil {
+				return parsed.Query().Get("token")
+			}
+		}
+	}
+	return ""
+}
+
+func ExampleClient_VerifyEmail() {
+	cfg := signet.DefaultConfig()
+	cfg.Store = newMemoryStore()
+	cfg.Mailer = &capturingMailer{}
+	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.AppURL = "https://app.example.com"
+	client, err := signet.New(cfg)
+	if err != nil {
+		panic(err)
+	}
+	_, err = client.SignUp(context.Background(), signet.SignUpInput{
+		Email: "user@example.com", Password: "correct horse battery staple",
+	})
+	if err != nil {
+		panic(err)
+	}
+	mailer := cfg.Mailer.(*capturingMailer)
+	token := exampleToken(mailer.messages[0])
+	if err := client.VerifyEmail(context.Background(), signet.VerifyEmailInput{Token: token}); err != nil {
+		panic(err)
+	}
+	_, err = client.SignIn(context.Background(), signet.SignInInput{
+		Email: "user@example.com", Password: "correct horse battery staple",
+	})
+	fmt.Println(err == nil)
+	// Output: true
+}
+
+func ExampleClient_ResetPassword() {
+	cfg := testConfig()
+	cfg.Store = newMemoryStore()
+	cfg.Mailer = &capturingMailer{}
+	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.AppURL = "https://app.example.com"
+	client, err := signet.New(cfg)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := client.SignUp(context.Background(), signet.SignUpInput{
+		Email: "user@example.com", Password: "old-password",
+	}); err != nil {
+		panic(err)
+	}
+	if err := client.SendPasswordReset(context.Background(), signet.SendPasswordResetInput{
+		Email: "user@example.com",
+	}); err != nil {
+		panic(err)
+	}
+	mailer := cfg.Mailer.(*capturingMailer)
+	token := exampleToken(mailer.messages[len(mailer.messages)-1])
+	if err := client.ResetPassword(context.Background(), signet.ResetPasswordInput{
+		Token: token, NewPassword: "new-password",
+	}); err != nil {
+		panic(err)
+	}
+	_, err = client.SignIn(context.Background(), signet.SignInInput{
+		Email: "user@example.com", Password: "new-password",
+	})
+	fmt.Println(err == nil)
+	// Output: true
 }

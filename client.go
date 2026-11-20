@@ -52,6 +52,14 @@ func New(cfg Config) (*Client, error) {
 	return &Client{cfg: cfg, dummyVerifier: dummy, jwt: jwtCfg}, nil
 }
 
+func (c *Client) requireVerifiedEmail() bool {
+	return c.cfg.RequireVerifiedEmail == nil || *c.cfg.RequireVerifiedEmail
+}
+
+func (c *Client) sendVerificationOnSignUp() bool {
+	return c.cfg.SendVerificationOnSignUp == nil || *c.cfg.SendVerificationOnSignUp
+}
+
 func (c *Client) logInfo(msg string, attrs ...any) {
 	c.cfg.Logger.Info(msg, append([]any{"at", c.cfg.Clock.Now()}, attrs...)...)
 }
@@ -102,6 +110,9 @@ func withDefaults(cfg Config) Config {
 	}
 	if cfg.OnSignIn == nil {
 		cfg.OnSignIn = noopHook
+	}
+	if cfg.Templates == nil {
+		cfg.Templates = DefaultTemplates
 	}
 	return cfg
 }

@@ -15,7 +15,7 @@ import (
 func TestAbsoluteExpiryRejectsAndRevokes(t *testing.T) {
 	clock := &adjustableClock{at: testTime}
 	store := newMemoryStore()
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -71,7 +71,7 @@ func TestTamperedSessionCookieIsRejected(t *testing.T) {
 
 func TestMiddlewareDoesNotLogSessionToken(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -95,7 +95,7 @@ func TestMiddlewareDoesNotLogSessionToken(t *testing.T) {
 }
 
 func TestTokenEndpointIsRateLimited(t *testing.T) {
-	cfg := signet.DefaultConfig()
+	cfg := testConfig()
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: false}
