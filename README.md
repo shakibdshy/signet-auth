@@ -182,11 +182,29 @@ link token that an authenticated User can pass to `LinkOAuthAccount`.
 `oauth/google` and `oauth/github` are the built-in adapters; implement the root
 `OAuthProvider` interface to add more providers without changing the core.
 
+## Storage
+
+PostgreSQL and SQLite adapters ship in `store/postgres` and `store/sqlite`.
+They accept a pool or database you own and implement the full `signet.Store`
+contract against an embedded default schema:
+
+```go
+store := postgres.New(pool)
+if err := store.Migrate(ctx); err != nil { /* handle */ }
+cfg.Store = store
+```
+
+Migrations are explicit and idempotent; Signet never migrates automatically.
+For an existing users table, implement the four narrow Store contracts
+yourself — see [`docs/custom-schema.md`](docs/custom-schema.md). Any Store can
+be validated with the shared suite in `store/conformance`.
+
 ## Current state
 
-Phase 4 is in place: OAuth sign-in with Google and GitHub, PKCE, encrypted
-state, verified-only auto-linking and explicit linking. Database adapters
-arrive in later phases.
+Phase 5 is in place: PostgreSQL and SQLite adapters, embedded migrations and
+the shared Store conformance suite. Remaining roadmap items are example apps,
+comparison docs and the v0.1.0 tag.
+
 
 ### Limitations
 

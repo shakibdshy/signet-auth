@@ -35,3 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adapters, PKCE with encrypted expiring state, redirect allowlist,
   verified-only auto-linking, one-time explicit link tokens and session
   creation on callback.
+- Phase 5 storage: PostgreSQL and SQLite Store adapters with embedded explicit
+  migrations, a public shared Store conformance suite, a custom-schema guide,
+  and ADR 0003.
