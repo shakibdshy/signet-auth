@@ -172,18 +172,26 @@ func TestAcceptedRequestExtendsIdleExpiry(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	cookie := signInCookie(t, client)
+	var absoluteBefore time.Time
+	for _, session := range store.sessions {
+		absoluteBefore = session.AbsoluteExpiresAt
+	}
 	clock.at = testTime.Add(5 * time.Minute)
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	req := httptest.NewRequest(http.MethodGet, "/private", nil)
 	req.AddCookie(cookie)
 	client.RequireAuth(next).ServeHTTP(httptest.NewRecorder(), req)
-	var expires time.Time
+	var expires, absoluteAfter time.Time
 	for _, session := range store.sessions {
 		expires = session.IdleExpiresAt
+		absoluteAfter = session.AbsoluteExpiresAt
 	}
 	want := clock.at.Add(30 * time.Minute)
 	if !expires.Equal(want) {
 		t.Errorf("idle expiry = %v, want %v", expires, want)
+	}
+	if !absoluteAfter.Equal(absoluteBefore) {
+		t.Errorf("absolute expiry changed from %v to %v", absoluteBefore, absoluteAfter)
 	}
 }
 
