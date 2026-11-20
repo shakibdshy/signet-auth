@@ -2,7 +2,6 @@ package signet
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"strings"
 	"time"
@@ -89,20 +88,7 @@ func (c *Client) sendVerification(ctx context.Context, user *User) error {
 }
 
 func (c *Client) issueOneTimeToken(ctx context.Context, userID string, kind TokenKind, ttl time.Duration) (string, *Token, error) {
-	raw, digest := newRawSecret()
-	now := c.cfg.Clock.Now()
-	token := &Token{
-		ID:        newID(),
-		UserID:    userID,
-		Kind:      kind,
-		Hash:      digest,
-		ExpiresAt: now.Add(ttl),
-		CreatedAt: now,
-	}
-	if err := c.cfg.Store.CreateToken(ctx, token); err != nil {
-		return "", nil, err
-	}
-	return raw, token, nil
+	return c.tokens.Issue(ctx, userID, kind, ttl)
 }
 
 func (c *Client) emailLink(path, raw string) string {
@@ -110,30 +96,5 @@ func (c *Client) emailLink(path, raw string) string {
 }
 
 func (c *Client) consumeToken(ctx context.Context, kind TokenKind, raw string) (*Token, error) {
-	digest := digestSecret(raw)
-	token, err := c.cfg.Store.TokenByHash(ctx, kind, digest)
-	if errors.Is(err, ErrNotFound) {
-		return nil, ErrTokenInvalid
-	}
-	if err != nil {
-		return nil, err
-	}
-	if token.UsedAt != nil {
-		return nil, ErrTokenInvalid
-	}
-	if !c.cfg.Clock.Now().Before(token.ExpiresAt) {
-		return nil, ErrTokenExpired
-	}
-	consumed, err := c.cfg.Store.ConsumeToken(ctx, kind, digest)
-	if errors.Is(err, ErrNotFound) {
-		return nil, ErrTokenInvalid
-	}
-	if err != nil {
-		return nil, err
-	}
-	// Compare in constant time even though the store already matched the digest.
-	if subtle.ConstantTimeCompare([]byte(consumed.Hash), []byte(digest)) != 1 {
-		return nil, ErrTokenInvalid
-	}
-	return consumed, nil
+	return c.tokens.Consume(ctx, kind, raw)
 }

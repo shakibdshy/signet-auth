@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/shakibdshy/signet/internal/csrf"
+	"github.com/shakibdshy/signet/internal/token"
 )
 
 // Client is a configured Signet instance. It is safe for concurrent use and
@@ -14,6 +15,7 @@ type Client struct {
 	dummyVerifier string
 	jwt           *JWTConfig
 	csrf          *csrf.Guard
+	tokens        *token.Service
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -82,6 +84,7 @@ func New(cfg Config) (*Client, error) {
 		csrf: csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
 			cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 			strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger),
+		tokens: token.New(cfg.Store, cfg.Clock),
 	}, nil
 }
 
