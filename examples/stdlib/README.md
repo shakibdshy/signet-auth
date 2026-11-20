@@ -1,7 +1,13 @@
-# net/http example
+# Standard library example
 
-Placeholder for a runnable example using only the Go standard library.
+A runnable Signet app using only `net/http`. It migrates a SQLite database,
+exposes Signet's endpoints under `/auth/`, and protects `/private` with
+`RequireAuth`.
 
-This example will become its own Go module so that its dependencies do not leak
-into the main Signet module. Nothing is implemented yet — authentication code
-arrives in a later phase.
+```sh
+go run .
+```
+
+This is its own Go module with a `replace` to the repository root so framework
+dependencies stay out of the main module. The console mailer is for development
+only — it prints verification and reset links to stdout.

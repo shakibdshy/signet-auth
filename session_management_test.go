@@ -64,8 +64,11 @@ func TestRevokeAllSessionsHTTP(t *testing.T) {
 	if len(store.sessions) != 2 {
 		t.Fatalf("sessions = %d, want 2", len(store.sessions))
 	}
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
 	req := httptest.NewRequest(http.MethodDelete, "/sessions", nil)
+	req.Header.Set("X-CSRF-Token", csrfToken)
 	req.AddCookie(cookie1)
+	req.AddCookie(csrfCookie)
 	rec := httptest.NewRecorder()
 	client.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
@@ -92,8 +95,11 @@ func TestRevokeCurrentSessionHTTP(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	cookie := signInCookie(t, client)
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
 	req := httptest.NewRequest(http.MethodDelete, "/session", nil)
+	req.Header.Set("X-CSRF-Token", csrfToken)
 	req.AddCookie(cookie)
+	req.AddCookie(csrfCookie)
 	rec := httptest.NewRecorder()
 	client.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {

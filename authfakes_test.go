@@ -256,6 +256,7 @@ func testConfig() signet.Config {
 	cfg := signet.DefaultConfig()
 	cfg.RequireVerifiedEmail = boolPtr(false)
 	cfg.SendVerificationOnSignUp = boolPtr(false)
+	cfg.CSRFKey = make([]byte, 32)
 	return cfg
 }
 

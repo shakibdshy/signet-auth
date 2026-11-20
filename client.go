@@ -46,6 +46,9 @@ func New(cfg Config) (*Client, error) {
 			return nil, ErrInvalidOAuthConfig
 		}
 	}
+	if len(cfg.CSRFKey) != 32 && !cfg.JWTOnly {
+		return nil, ErrInvalidCSRFConfig
+	}
 	var jwtCfg *JWTConfig
 	if cfg.JWT != nil {
 		jwtCopy := *cfg.JWT

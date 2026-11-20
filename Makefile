@@ -3,13 +3,19 @@ GO ?= go
 # Developer tools installed with `go install` land in GOPATH/bin.
 export PATH := $(shell $(GO) env GOPATH)/bin:$(PATH)
 
-.PHONY: test integration cover lint vet vuln fmt fmt-check tidy check
+.PHONY: test integration examples cover lint vet vuln fmt fmt-check tidy check
 
 test:
 	$(GO) test -race ./...
 
 integration:
 	$(GO) test -race -count=1 ./store/postgres/... ./store/sqlite/...
+
+examples:
+	@for dir in examples/stdlib examples/chi examples/echo examples/gin; do \
+		echo "building $$dir"; \
+		(cd $$dir && $(GO) build ./...) || exit 1; \
+	done
 
 cover:
 	$(GO) test -race -coverprofile=coverage.out ./...

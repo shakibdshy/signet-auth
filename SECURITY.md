@@ -2,9 +2,16 @@
 
 ## Supported versions
 
-Signet is pre-1.0. Only the latest development state receives fixes; there are
-no supported stable releases yet. This policy will be updated to list supported
-versions once 1.0 is released.
+| Version | Supported |
+| --- | --- |
+| 0.1.x | Yes |
+| < 0.1 | No |
+
+Signet is pre-1.0. Security fixes target the latest 0.1.x patch release. This
+policy will be updated when 1.0 is released.
+
+The contact address below is still a placeholder. Replace it with a monitored
+security mailbox before treating this release as publicly supported.
 
 ## Reporting a vulnerability
 

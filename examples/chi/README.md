@@ -1,7 +1,11 @@
-# chi example
+# Chi example
 
-Placeholder for a runnable example using [chi](https://github.com/go-chi/chi).
+A runnable Signet app using [Chi](https://github.com/go-chi/chi/v5). Signet's
+handler is mounted with `Mount`, and `RequireAuth` is applied with `With`.
 
-This example will become its own Go module so that its framework dependencies do
-not leak into the main Signet module. Nothing is implemented yet — authentication
-code arrives in a later phase.
+```sh
+go run .
+```
+
+This is its own Go module with a `replace` to the repository root so Chi stays
+out of the main module. The console mailer is for development only.

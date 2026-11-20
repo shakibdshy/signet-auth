@@ -137,7 +137,7 @@ func TestOAuthCallbackHTTPRedirectsWithSession(t *testing.T) {
 	if rec.Header().Get("Location") != "https://app.example.com/dashboard" {
 		t.Errorf("Location = %q", rec.Header().Get("Location"))
 	}
-	if len(rec.Result().Cookies()) != 1 {
+	if findCookie(rec.Result().Cookies(), "__Host-signet_session") == nil {
 		t.Error("expected a session cookie")
 	}
 }

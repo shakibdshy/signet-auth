@@ -128,6 +128,7 @@ func exampleToken(msg signet.Message) string {
 
 func ExampleClient_VerifyEmail() {
 	cfg := signet.DefaultConfig()
+	cfg.CSRFKey = make([]byte, 32)
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = &capturingMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -198,6 +199,7 @@ func exampleState(raw string) string {
 
 func ExampleClient_OAuthStart() {
 	cfg := signet.DefaultConfig()
+	cfg.CSRFKey = make([]byte, 32)
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}
@@ -223,6 +225,7 @@ func ExampleClient_OAuthStart() {
 
 func ExampleClient_OAuthCallback() {
 	cfg := signet.DefaultConfig()
+	cfg.CSRFKey = make([]byte, 32)
 	cfg.Store = newMemoryStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = &recordingLimiter{allow: true}

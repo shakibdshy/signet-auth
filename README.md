@@ -2,223 +2,165 @@
 
 A modern, secure-by-default, embeddable authentication library for Go.
 
-> **Status:** early development, not production-ready. The API is unstable and
-> may change without notice. Do not use Signet in production yet.
+> **Status:** v0.1.0 — the Version 1 feature set is complete. The API may still
+> change before 1.0. Evaluate carefully before production use.
 
-Signet aims to make authentication in Go applications straightforward without
-taking control away from the application. It is built on `net/http` primitives,
-so it works with the standard library or any router, and it never owns your
-database schema.
+Signet is a library imported into your application, not a separate auth server.
+It is built on `net/http` primitives, so it works with the standard library or
+any router, and it never owns your database schema.
 
-## Planned features
+## Features
 
-- Email/password authentication
-- Sessions
-- OAuth sign-in with Google and GitHub
-- Email verification
-- Password reset
-- PostgreSQL and SQLite storage adapters
+- Email/password authentication with Argon2id, transparent rehash and a bcrypt option
+- Cookie sessions with idle and absolute timeouts, plus optional JWT access and refresh tokens
+- OAuth sign-in with Google and GitHub, PKCE and verified-only account linking
+- Email verification and password reset with single-use, hashed tokens
+- Same-origin checks and signed double-submit CSRF protection
+- PostgreSQL and SQLite adapters with explicit, embedded migrations
+- Pluggable storage, mail, password hashing, rate limiting and logging
+- Structured events with `slog` and redacted application hooks
 
 ## Design principles
 
-- **Secure by default.** Safe choices are the default; insecure behaviour must
-  be opted into explicitly.
-- **Router-agnostic (`net/http`).** Signet speaks standard `http.Handler` and
-  `http.Request`, not a particular framework's API.
-- **Bring your own schema.** You own and migrate your database tables. Signet
-  adapts to them rather than taking over your data model.
-- **Pluggable everything.** Storage, mail delivery, and OAuth providers are
-  interfaces with swappable implementations.
-- **Small API.** A focused surface that is easy to learn, review, and audit.
+- **Secure by default.** Safe choices are the default; insecure behaviour must be opted into explicitly.
+- **Router-agnostic (`net/http`).** Signet speaks standard `http.Handler` and `http.Request`, not a framework API.
+- **Bring your own schema.** You own and migrate your database tables. Signet adapts to them rather than taking over your data model.
+- **Pluggable everything.** Storage, mail delivery, password hashing, rate limiting and OAuth providers are interfaces with swappable implementations.
+- **Small API.** A focused surface that is easy to learn, review and audit.
 - **Great docs.** Clear, example-driven documentation is part of the product.
 
-## Quickstart
+## Five-minute quickstart
 
-Email and password authentication is available from Go and as plain `net/http`
-endpoints. Supply implementations of the `Store`, `Mailer` and `RateLimiter`
-interfaces; `DefaultConfig()` provides secure defaults for everything else,
-including the password hasher.
+Install the module and create a client with a store, mailer, rate limiter and CSRF key:
 
 ```go
 package main
 
 import (
 	"context"
+	"crypto/rand"
 	"log"
+	"os"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/mailer/console"
 )
 
 func main() {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		log.Fatal(err)
+	}
 	cfg := signet.DefaultConfig()
-	cfg.Store = myStore        // implements signet.Store
-	cfg.Mailer = myMailer      // implements signet.Mailer
-	cfg.RateLimiter = myLimiter // implements signet.RateLimiter
-
+	cfg.Store = myStore            // implements signet.Store
+	cfg.Mailer = console.New(os.Stdout) // development only
+	cfg.RateLimiter = myLimiter    // implements signet.RateLimiter
+	cfg.CSRFKey = key
+	cfg.AppURL = "https://app.example.com"
 	auth, err := signet.New(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	_, err = auth.SignUp(context.Background(), signet.SignUpInput{
-		Email:    "user@example.com",
-		Password: "correct horse battery staple",
+		Email: "user@example.com", Password: "correct horse battery staple",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	result, err := auth.SignIn(context.Background(), signet.SignInInput{
-		Email:    "user@example.com",
-		Password: "correct horse battery staple",
+		Email: "user@example.com", Password: "correct horse battery staple",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = result.SessionToken // raw Session token; store only its digest yourself
+	_ = result.SessionToken
 }
 ```
 
 Mount `auth.Handler()` on any router to expose `/signup`, `/signin`, `/signout`,
-`/sessions`, `/session` and `/token` as JSON endpoints. Storage adapters ship in
-a later phase; until then, bring your own `Store` implementation.
+`/sessions`, `/session`, `/token`, `/csrf-token` and the verification, reset and
+OAuth endpoints. Runnable apps for four routers live in [`examples/`](examples/).
+
+## Security
+
+- Passwords use Argon2id with OWASP-recommended parameters; verifiers carry their algorithm and parameters and are rehashed transparently on sign-in.
+- Sessions use 32-byte opaque tokens; only their SHA-256 digest is stored. Cookies are `HttpOnly`, `Secure` and `SameSite=Lax`, with a `__Host-` prefix where valid.
+- State-changing requests carrying a session cookie are checked against `Origin` and `Sec-Fetch-Site` and require a signed double-submit CSRF token in `X-CSRF-Token`. This applies to headerless clients too when they use cookies; use JWT mode for non-browser clients. Obtain the token from `GET /csrf-token` or the sign-in response.
+- Verification, reset and refresh tokens are random, single-use, short-lived and stored only as digests; unknown-email responses do not disclose account existence.
+- OAuth uses PKCE with an encrypted, expiring state and an allowlisted redirect target. Only verified emails are auto-linked.
+- Rate limiting applies to sign-up, sign-in, reset and verification endpoints. Nothing logs passwords, tokens or secrets.
+
+Only disable protections with the explicitly named `Insecure*` options, which emit warnings. See [`SECURITY.md`](SECURITY.md) for reporting vulnerabilities.
 
 ## Sessions and cookies
 
-The HTTP sign-in endpoint sets a `HttpOnly`, `Secure`, `SameSite=Lax` cookie
-containing the raw Session token; the store keeps only its digest. The cookie
-uses a `__Host-` prefix when Secure, scoped to `/`, with no Domain. Wrap your
-handlers with `auth.RequireAuth` (or `auth.OptionalAuth` for public pages) and
-read the User with `signet.UserFromContext(r.Context())`. Idle and absolute
-timeouts are enforced on every request; expired Sessions are revoked.
-
-State-changing requests carrying the session cookie are same-origin checked via
-`Origin` and `Sec-Fetch-Site`; a failed check returns `403`. Browser clients
-that send neither header are allowed so non-browser clients keep working. Only
-disable this with `InsecureDisableCSRF` when another layer provides equivalent
-protection.
-
-List and revoke Sessions with `ListSessions`, `RevokeSession` and
-`RevokeAllSessions`, or the matching HTTP endpoints. Listing never returns a
-token digest.
-
-```go
-mux := http.NewServeMux()
-mux.Handle("/auth/", auth.Handler())
-mux.Handle("/private", auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	user, ok := signet.UserFromContext(r.Context())
-	if !ok {
-		return
-	}
-	fmt.Fprintln(w, user.Email)
-})))
-```
+Wrap handlers with `auth.RequireAuth` (or `auth.OptionalAuth` for public pages)
+and read the User with `signet.UserFromContext(r.Context())`. Idle and absolute
+timeouts are enforced on every request; expired Sessions are revoked. List and
+revoke Sessions with `ListSessions`, `RevokeSession` and `RevokeAllSessions`, or
+the matching HTTP endpoints. Listing never returns a token digest.
 
 ## Optional JWT mode
 
-Set `Config.JWT` to issue short-lived Access tokens and rotating Refresh
-tokens for API clients. An explicit signing key and algorithm are required;
-only `HS256`, `RS256` and `EdDSA` are accepted. `POST /token` exchanges
-credentials or a Refresh token. A replayed Refresh token revokes all Sessions
-and Refresh tokens for that User.
-
-```go
-cfg.JWT = &signet.JWTConfig{
-	Algorithm: "HS256",
-	Key:       signingKey, // []byte for HS256, *rsa.PrivateKey for RS256, ed25519.PrivateKey for EdDSA
-}
-```
+Set `Config.JWT` to issue short-lived Access tokens and rotating Refresh tokens
+for API clients. An explicit key and algorithm are required; only `HS256`,
+`RS256` and `EdDSA` are accepted. `POST /token` exchanges credentials or a
+Refresh token, and replay of a consumed Refresh token revokes all Sessions and
+Refresh tokens for that User. Set `Config.JWTOnly` for API-only applications: no
+session cookies are issued and no CSRF key is required.
 
 ## Email verification and password reset
 
 By default, sign-up sends a verification email and sign-in requires a verified
-email. Configure the application origin used in links and choose a mailer:
-
-```go
-cfg := signet.DefaultConfig()
-cfg.AppURL = "https://app.example.com"
-cfg.Mailer = smtpMailer // from mailer/smtp, or console.New(os.Stdout) for development
-```
-
-`SendVerification` / `VerifyEmail` and `SendPasswordReset` / `ResetPassword`
-are available as Go methods and as JSON endpoints at `/send-verification`,
-`/verify-email`, `/send-password-reset` and `/reset-password`. Tokens are
-short-lived, single-use and stored only as digests; reset requests never reveal
-whether an email is registered, and a successful reset revokes every Session.
-Both flags default to true; point `SendVerificationOnSignUp` or
-`RequireVerifiedEmail` at `false` if your product does not use email
-verification.
-
-Email content is rendered through the `EmailTemplates` interface. The default
-implementation ships HTML and plain-text templates; set `Config.Templates` to
-replace them. The `mailer/console` adapter writes messages to an `io.Writer`
-and is for development only because it prints links. The `mailer/smtp` adapter
-uses STARTTLS by default, supports implicit TLS and requires an explicit switch
-for plaintext transport.
+email. Tokens are short-lived, single-use and stored only as digests; a reset
+revokes every Session. Templates are rendered by the `EmailTemplates` interface,
+with HTML and plain-text defaults. `mailer/smtp` uses STARTTLS by default;
+`mailer/console` is for development only. Point `SendVerificationOnSignUp` or
+`RequireVerifiedEmail` at `false` if your product does not use email verification.
 
 ## OAuth sign-in
 
-OAuth is opt-in. Register providers, supply their client credentials, set the
-application origin and allowlist the redirect targets:
-
-```go
-cfg.OAuth = &signet.OAuthConfig{
-	Providers:        []signet.OAuthProvider{google.Provider{ClientID: "...", ClientSecret: "..."}},
-	Credentials:      map[string]signet.OAuthCredentials{"google": {ClientID: "..."}},
-	RedirectBaseURL:  "https://app.example.com",
-	AllowedRedirects: []string{"https://app.example.com/dashboard"},
-	StateKey:         signingKey, // 32 bytes
-}
-```
-
-`POST /oauth/start` with `{provider, redirect}` returns the provider
-authorization URL. The flow uses PKCE with an encrypted, expiring state value.
-`GET /oauth/callback` redeems the code, sets the session cookie and redirects to
-the allowlisted target. A verified email matching an existing User auto-links a
-provider Account; a verified email with no match creates a new verified User.
-An unverified email never auto-links — the callback redirects with a one-time
-link token that an authenticated User can pass to `LinkOAuthAccount`.
-
-`oauth/google` and `oauth/github` are the built-in adapters; implement the root
-`OAuthProvider` interface to add more providers without changing the core.
+Register providers through `Config.OAuth` with a 32-byte `StateKey`, an
+application origin and an exact redirect allowlist. `POST /oauth/start` returns
+the authorization URL; `GET /oauth/callback` redeems the code and redirects.
+`oauth/google` and `oauth/github` are built in, and the root `OAuthProvider`
+interface lets you add more without changing the core.
 
 ## Storage
 
-PostgreSQL and SQLite adapters ship in `store/postgres` and `store/sqlite`.
-They accept a pool or database you own and implement the full `signet.Store`
-contract against an embedded default schema:
-
-```go
-store := postgres.New(pool)
-if err := store.Migrate(ctx); err != nil { /* handle */ }
-cfg.Store = store
-```
-
+`store/postgres` and `store/sqlite` accept a pool or database you own.
 Migrations are explicit and idempotent; Signet never migrates automatically.
 For an existing users table, implement the four narrow Store contracts
 yourself — see [`docs/custom-schema.md`](docs/custom-schema.md). Any Store can
 be validated with the shared suite in `store/conformance`.
 
-## Current state
+## Comparison
 
-Phase 5 is in place: PostgreSQL and SQLite adapters, embedded migrations and
-the shared Store conformance suite. Remaining roadmap items are example apps,
-comparison docs and the v0.1.0 tag.
+| | Signet | Goth | Authboss | Ory Kratos |
+| --- | --- | --- | --- | --- |
+| Form | Embedded Go library | Embedded Go library | Embedded Go library | Standalone identity service |
+| Password auth | Yes | No | Yes | Yes |
+| Sessions / JWT | Both | Neither | Server-side sessions | Sessions + tokens |
+| OAuth | Google, GitHub | Many providers | Limited | Configurable |
+| Schema ownership | Yours or bundled SQL | N/A | More opinionated | Service-owned |
+| Router coupling | `net/http` only | `net/http` | Framework-friendly | HTTP API |
 
+Goth focuses on social OAuth only. Authboss is more opinionated about storage
+and application structure. Kratos is a separate server you run and call over an
+API. Signet aims to sit in between: an embeddable library with a small API and
+no schema ownership.
 
-### Limitations
+## Limitations
 
-Sign-up writes the User and its credential Account in two store calls. If the second fails, Signet deletes the new User on a best-effort basis; true cross-database atomicity arrives with the storage adapters.
-
-### Dependencies
-
-The only third-party dependency is `golang.org/x/crypto`, used for Argon2id and bcrypt. Everything else is the standard library.
+Sign-up writes the User and its credential Account in two store calls; if the
+second fails, Signet deletes the new User on a best-effort basis. There is no
+transaction across Store calls. Passkeys, TOTP, magic links and organizations
+are planned for later versions.
 
 ## Documentation
 
 The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) and architectural
-decisions in [`docs/adr/`](docs/adr/). Runnable examples for several routers are
-planned under [`examples/`](examples/).
+decisions in [`docs/adr/`](docs/adr/). Runnable examples are in [`examples/`](examples/).
 
 ## License
 

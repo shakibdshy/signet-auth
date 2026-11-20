@@ -46,6 +46,12 @@ type Config struct {
 	Templates EmailTemplates
 	// OAuth enables external sign-in providers. When nil, OAuth is disabled.
 	OAuth *OAuthConfig
+	// CSRFKey signs double-submit CSRF tokens. Applications that issue session
+	// cookies must supply 32 bytes.
+	CSRFKey []byte
+	// JWTOnly marks an API-only application: no session cookies are issued and
+	// no CSRF key is required.
+	JWTOnly bool
 }
 
 // CookieConfig controls the session cookie. Secure behaviour is the default.

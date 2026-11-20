@@ -1,7 +1,11 @@
 # Gin example
 
-Placeholder for a runnable example using [Gin](https://github.com/gin-gonic/gin).
+A runnable Signet app using [Gin](https://github.com/gin-gonic/gin). Signet's
+handler and protected handler are wrapped with `gin.WrapH`.
 
-This example will become its own Go module so that its framework dependencies do
-not leak into the main Signet module. Nothing is implemented yet — authentication
-code arrives in a later phase.
+```sh
+go run .
+```
+
+This is its own Go module with a `replace` to the repository root so Gin stays
+out of the main module. The console mailer is for development only.

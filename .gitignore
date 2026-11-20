@@ -6,6 +6,10 @@
 *.dylib
 /bin/
 /dist/
+/examples/stdlib/stdlib
+/examples/chi/chi
+/examples/echo/echo
+/examples/gin/gin
 
 # Test binaries and coverage output
 *.test

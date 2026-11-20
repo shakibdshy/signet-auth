@@ -39,3 +39,7 @@ _Avoid_: session token
 **OAuth identity**:
 A provider's assertion about a User's external identity: a provider user ID, an email and whether that email is verified.
 _Avoid_: profile, user info
+
+**CSRF token**:
+A signed value that proves a browser request is same-origin. It is not single-use and is distinct from a Token.
+_Avoid_: anti-CSRF value

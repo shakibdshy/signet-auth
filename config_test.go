@@ -15,6 +15,7 @@ import (
 
 func completeConfig() signet.Config {
 	cfg := signet.DefaultConfig()
+	cfg.CSRFKey = make([]byte, 32)
 	cfg.Store = &fakeStore{}
 	cfg.Mailer = fakeMailer{}
 	cfg.PasswordHasher = fakePasswordHasher{}
@@ -103,6 +104,24 @@ func TestNewSuppliesDefaultHasher(t *testing.T) {
 	cfg.PasswordHasher = nil
 	if _, err := signet.New(cfg); err != nil {
 		t.Fatalf("New() error = %v, want nil with the default hasher", err)
+	}
+}
+
+func TestNewRequiresCSRFKeyForCookieSessions(t *testing.T) {
+	cfg := completeConfig()
+	cfg.CSRFKey = nil
+	if _, err := signet.New(cfg); !errors.Is(err, signet.ErrInvalidCSRFConfig) {
+		t.Fatalf("New error = %v, want ErrInvalidCSRFConfig", err)
+	}
+}
+
+func TestJWTOnlyDoesNotRequireCSRFKey(t *testing.T) {
+	cfg := completeConfig()
+	cfg.CSRFKey = nil
+	cfg.JWTOnly = true
+	cfg.JWT = &signet.JWTConfig{Algorithm: "HS256", Key: make([]byte, 32)}
+	if _, err := signet.New(cfg); err != nil {
+		t.Fatalf("New error = %v, want nil for a JWT-only setup", err)
 	}
 }
 

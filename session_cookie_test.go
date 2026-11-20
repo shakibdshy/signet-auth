@@ -36,10 +36,10 @@ func TestSignInSetsSecureHostCookie(t *testing.T) {
 	}
 	rec, token := signInOverHTTP(t, client)
 	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 {
-		t.Fatalf("cookies = %d, want 1", len(cookies))
+	cookie := findCookie(cookies, "__Host-signet_session")
+	if cookie == nil {
+		t.Fatalf("no host session cookie in %+v", cookies)
 	}
-	cookie := cookies[0]
 	if cookie.Name != "__Host-signet_session" || cookie.Value != token {
 		t.Errorf("cookie = %s=%s, want the derived host name and the Session token", cookie.Name, cookie.Value)
 	}
@@ -63,7 +63,7 @@ func TestSignInUsesPlainNameWithDomain(t *testing.T) {
 	}
 	rec, _ := signInOverHTTP(t, client)
 	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 || cookies[0].Name != "signet_session" {
+	if findCookie(cookies, "signet_session") == nil {
 		t.Fatalf("cookies = %+v, want plain name when a Domain is set", cookies)
 	}
 }
@@ -74,10 +74,13 @@ func TestSignOutClearsCookie(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	rec, token := signInOverHTTP(t, client)
-	cookie := rec.Result().Cookies()[0]
+	cookie := findCookie(rec.Result().Cookies(), "__Host-signet_session")
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
 	req := httptest.NewRequest(http.MethodPost, "/signout", strings.NewReader(`{"session_token":"`+token+`"}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-CSRF-Token", csrfToken)
 	req.AddCookie(cookie)
+	req.AddCookie(csrfCookie)
 	out := httptest.NewRecorder()
 	client.Handler().ServeHTTP(out, req)
 	if out.Code != http.StatusNoContent {
@@ -195,12 +198,24 @@ func TestAcceptedRequestExtendsIdleExpiry(t *testing.T) {
 	}
 }
 
+func findCookie(cookies []*http.Cookie, name string) *http.Cookie {
+	for _, cookie := range cookies {
+		if cookie.Name == name {
+			return cookie
+		}
+	}
+	return nil
+}
+
 func signInCookie(t *testing.T, client *signet.Client) *http.Cookie {
 	t.Helper()
 	rec, _ := signInOverHTTP(t, client)
 	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 {
-		t.Fatalf("cookies = %d, want 1", len(cookies))
+	for _, name := range []string{"__Host-signet_session", "signet_session"} {
+		if cookie := findCookie(cookies, name); cookie != nil {
+			return cookie
+		}
 	}
-	return cookies[0]
+	t.Fatalf("no session cookie in %+v", cookies)
+	return nil
 }

@@ -99,6 +99,7 @@ func TestPasswordResetConsumeRateLimited(t *testing.T) {
 
 func TestConfigDefaultsApplyWithoutDefaultConfig(t *testing.T) {
 	cfg := signet.Config{
+		CSRFKey:     make([]byte, 32),
 		Store:       newMemoryStore(),
 		Mailer:      &capturingMailer{},
 		RateLimiter: &recordingLimiter{allow: true},

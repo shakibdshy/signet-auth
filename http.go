@@ -11,31 +11,36 @@ import (
 	"time"
 )
 
-var authEndpoints = []string{
-	"signup",
-	"signin",
-	"signout",
-	"sessions",
-	"session",
-	"token",
-	"send-verification",
-	"verify-email",
-	"send-password-reset",
-	"reset-password",
-	"oauth/start",
-	"oauth/callback",
+type authEndpoint struct {
+	name      string
+	anonymous bool
+}
+
+var authEndpoints = []authEndpoint{
+	{name: "signup", anonymous: true},
+	{name: "signin", anonymous: true},
+	{name: "signout"},
+	{name: "sessions"},
+	{name: "session"},
+	{name: "token", anonymous: true},
+	{name: "send-verification"},
+	{name: "verify-email"},
+	{name: "send-password-reset"},
+	{name: "reset-password"},
+	{name: "oauth/start", anonymous: true},
+	{name: "oauth/callback", anonymous: true},
+	{name: "csrf-token", anonymous: true},
 }
 
 type userContextKey struct{}
 
 // Handler returns a plain http.Handler serving Signet's authentication
-// endpoints under Config.PathPrefix. Only implemented endpoints do work; the
-// remaining ones still return 501 until their phases arrive.
+// endpoints under Config.PathPrefix.
 func (c *Client) Handler() http.Handler {
 	prefix := strings.TrimRight(c.cfg.PathPrefix, "/")
 	routes := make(map[string]string, len(authEndpoints))
 	for _, endpoint := range authEndpoints {
-		routes[prefix+"/"+endpoint] = endpoint
+		routes[prefix+"/"+endpoint.name] = endpoint.name
 	}
 	base := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpoint, ok := routes[r.URL.Path]
@@ -68,6 +73,8 @@ func (c *Client) Handler() http.Handler {
 			c.handleOAuthStart(w, r)
 		case "oauth/callback":
 			c.handleOAuthCallback(w, r)
+		case "csrf-token":
+			c.handleCSRFToken(w, r)
 		default:
 			http.Error(w, "signet: endpoint not implemented", http.StatusNotImplemented)
 		}
@@ -95,12 +102,31 @@ func (c *Client) hasSessionCookie(r *http.Request) bool {
 }
 
 func (c *Client) csrfRejected(w http.ResponseWriter, r *http.Request) bool {
-	if c.cfg.InsecureDisableCSRF || !isStateChanging(r.Method) || !c.hasSessionCookie(r) || c.isSameOrigin(r) {
+	if c.cfg.InsecureDisableCSRF || !isStateChanging(r.Method) || !c.hasSessionCookie(r) || c.csrfExempt(r.URL.Path) {
+		return false
+	}
+	token := r.Header.Get(csrfHeader)
+	cookie, err := r.Cookie(c.csrfCookieName())
+	if c.isSameOrigin(r) && err == nil && token != "" && token == cookie.Value && c.validCSRFToken(token) {
 		return false
 	}
 	c.logInfo("csrf_rejected", "path", r.URL.Path)
 	writeError(w, http.StatusForbidden, "csrf", "cross-origin request rejected")
 	return true
+}
+
+func (c *Client) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	token, err := c.issueCSRFToken()
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	c.setCSRFCookie(w, token)
+	writeJSON(w, http.StatusOK, map[string]string{"token": token})
 }
 
 func (c *Client) isSameOrigin(r *http.Request) bool {
@@ -154,15 +180,24 @@ func (c *Client) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	http.SetCookie(w, c.sessionCookie(result.SessionToken, false))
+	csrfToken, err := c.setSessionAndCSRFCookies(w, result.SessionToken)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":          result.User,
 		"session_token": result.SessionToken,
+		"csrf_token":    csrfToken,
 	})
 }
 
+func (c *Client) useHostPrefix() bool {
+	return c.cfg.Cookie.Secure && c.cfg.Cookie.Path == "/" && c.cfg.Cookie.Domain == ""
+}
+
 func (c *Client) cookieName() string {
-	if c.cfg.Cookie.Secure && c.cfg.Cookie.Path == "/" && c.cfg.Cookie.Domain == "" {
+	if c.useHostPrefix() {
 		return "__Host-" + c.cfg.Cookie.Name
 	}
 	return c.cfg.Cookie.Name
@@ -187,6 +222,9 @@ func (c *Client) sessionCookie(value string, expiring bool) *http.Cookie {
 }
 
 func (c *Client) clearSessionCookie(w http.ResponseWriter) {
+	if c.cfg.JWTOnly {
+		return
+	}
 	http.SetCookie(w, c.sessionCookie("", true))
 }
 
@@ -367,8 +405,9 @@ func (c *Client) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		query := target.Query()
 		query.Set("link_token", result.LinkToken)
 		target.RawQuery = query.Encode()
-	} else {
-		http.SetCookie(w, c.sessionCookie(result.SessionToken, false))
+	} else if _, err := c.setSessionAndCSRFCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
 	}
 	http.Redirect(w, r, target.String(), http.StatusFound)
 }

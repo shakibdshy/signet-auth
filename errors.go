@@ -56,4 +56,6 @@ var (
 	ErrOAuthEmailNotVerified = errors.New("signet: oauth email not verified")
 	// ErrOAuthAccountConflict reports a provider Account owned by another User.
 	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
+	// ErrInvalidCSRFConfig reports a missing or short CSRF signing key.
+	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
 )

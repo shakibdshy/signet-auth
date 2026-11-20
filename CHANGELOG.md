@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] - 2026-11-20
+
 ### Added
 
 - Initial project structure, documentation, tooling, and CI configuration.
@@ -38,3 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 5 storage: PostgreSQL and SQLite Store adapters with embedded explicit
   migrations, a public shared Store conformance suite, a custom-schema guide,
   and ADR 0003.
+- Phase 6 release hardening: signed double-submit CSRF tokens, four runnable
+  router examples in separate modules, a rewritten README with a five-minute
+  quickstart and comparison, ADR 0004, and the v0.1.0 tag.
