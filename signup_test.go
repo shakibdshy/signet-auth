@@ -13,20 +13,21 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 var testTime = time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 
-func newAuthClient() (*signet.Client, *memoryStore, *recordingLimiter) {
-	store := newMemoryStore()
-	limiter := &recordingLimiter{allow: true}
+func newAuthClient() (*signet.Client, *testutil.Store, *testutil.Limiter) {
+	store := testutil.NewStore()
+	limiter := &testutil.Limiter{Allowed: true}
 	var logs bytes.Buffer
-	cfg := testConfig()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = limiter
-	cfg.PasswordHasher = fastHasher{}
-	cfg.Clock = fixedClock{at: testTime}
+	cfg.PasswordHasher = testutil.FastHasher{}
+	cfg.Clock = testutil.FixedClock{At: testTime}
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -95,34 +96,34 @@ func TestSignUpRejectsDuplicateEmail(t *testing.T) {
 
 func TestSignUpRateLimited(t *testing.T) {
 	client, _, limiter := newAuthClient()
-	limiter.allow = false
+	limiter.Allowed = false
 	if _, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "user@example.com", Password: "password123"}); !errors.Is(err, signet.ErrRateLimited) {
 		t.Fatalf("SignUp error = %v, want ErrRateLimited", err)
 	}
-	if len(limiter.keys) != 1 || !strings.HasPrefix(limiter.keys[0], "signup|") {
-		t.Errorf("limiter keys = %v, want one signup key", limiter.keys)
+	if len(limiter.Keys) != 1 || !strings.HasPrefix(limiter.Keys[0], "signup|") {
+		t.Errorf("limiter keys = %v, want one signup key", limiter.Keys)
 	}
 }
 
 func TestSignUpRollsBackUserWhenAccountFails(t *testing.T) {
 	client, store, _ := newAuthClient()
-	store.failAccountCreate = true
+	store.FailAccountCreate = true
 	_, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "user@example.com", Password: "password123"})
 	if err == nil {
 		t.Fatal("SignUp error = nil, want store failure")
 	}
-	if len(store.users) != 0 || len(store.usersByEmail) != 0 {
-		t.Errorf("rollback left %d Users behind", len(store.users))
+	if len(store.Users) != 0 || len(store.UsersByEmail) != 0 {
+		t.Errorf("rollback left %d Users behind", len(store.Users))
 	}
 }
 
 func TestSignUpEventsAndRedactedHook(t *testing.T) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
-	cfg.PasswordHasher = fastHasher{}
-	cfg.Clock = fixedClock{at: testTime}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.PasswordHasher = testutil.FastHasher{}
+	cfg.Clock = testutil.FixedClock{At: testTime}
 	var logs bytes.Buffer
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	var hooked *signet.User
@@ -179,7 +180,7 @@ func TestSignUpHTTPEndpoint(t *testing.T) {
 
 func TestSignUpHTTPRateLimited(t *testing.T) {
 	client, _, limiter := newAuthClient()
-	limiter.allow = false
+	limiter.Allowed = false
 	req := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader(`{"email":"user@example.com","password":"password123"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

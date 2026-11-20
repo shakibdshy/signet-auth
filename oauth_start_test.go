@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
-func oauthStartClient(t *testing.T, limiter *recordingLimiter) *signet.Client {
+func oauthStartClient(t *testing.T, limiter *testutil.Limiter) *signet.Client {
 	t.Helper()
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
 	cfg.RateLimiter = limiter
 	cfg.OAuth = &signet.OAuthConfig{
@@ -39,7 +40,7 @@ func TestOAuthDisabledByDefault(t *testing.T) {
 }
 
 func TestOAuthStartValidatesRequest(t *testing.T) {
-	client := oauthStartClient(t, &recordingLimiter{allow: true})
+	client := oauthStartClient(t, &testutil.Limiter{Allowed: true})
 	tests := []struct {
 		name string
 		in   signet.OAuthStartInput
@@ -58,7 +59,7 @@ func TestOAuthStartValidatesRequest(t *testing.T) {
 }
 
 func TestOAuthStartReturnsPKCEAndState(t *testing.T) {
-	client := oauthStartClient(t, &recordingLimiter{allow: true})
+	client := oauthStartClient(t, &testutil.Limiter{Allowed: true})
 	result, err := client.OAuthStart(context.Background(), signet.OAuthStartInput{Provider: "google", Redirect: "https://app.example.com/dashboard"})
 	if err != nil {
 		t.Fatalf("OAuthStart: %v", err)
@@ -74,7 +75,7 @@ func TestOAuthStartReturnsPKCEAndState(t *testing.T) {
 }
 
 func TestOAuthStartHTTP(t *testing.T) {
-	client := oauthStartClient(t, &recordingLimiter{allow: true})
+	client := oauthStartClient(t, &testutil.Limiter{Allowed: true})
 	req := httptest.NewRequest(http.MethodPost, "/oauth/start", strings.NewReader(`{"provider":"google","redirect":"https://app.example.com/dashboard"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -85,7 +86,7 @@ func TestOAuthStartHTTP(t *testing.T) {
 }
 
 func TestOAuthStartRateLimited(t *testing.T) {
-	client := oauthStartClient(t, &recordingLimiter{allow: false})
+	client := oauthStartClient(t, &testutil.Limiter{Allowed: false})
 	req := httptest.NewRequest(http.MethodPost, "/oauth/start", strings.NewReader(`{"provider":"google","redirect":"https://app.example.com/dashboard"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

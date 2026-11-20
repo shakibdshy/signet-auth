@@ -10,15 +10,16 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func TestAbsoluteExpiryRejectsAndRevokes(t *testing.T) {
-	clock := &adjustableClock{at: testTime}
-	store := newMemoryStore()
-	cfg := testConfig()
+	clock := &testutil.Clock{At: testTime}
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Clock = clock
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -28,10 +29,10 @@ func TestAbsoluteExpiryRejectsAndRevokes(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	cookie := signInCookie(t, client)
-	for _, session := range store.sessions {
+	for _, session := range store.Sessions {
 		session.AbsoluteExpiresAt = testTime.Add(time.Minute)
 	}
-	clock.at = testTime.Add(2 * time.Minute)
+	clock.At = testTime.Add(2 * time.Minute)
 	called := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
@@ -44,8 +45,8 @@ func TestAbsoluteExpiryRejectsAndRevokes(t *testing.T) {
 	if called || rec.Code != http.StatusUnauthorized {
 		t.Errorf("called = %v, status = %d; want false and 401", called, rec.Code)
 	}
-	if len(store.sessions) != 0 {
-		t.Errorf("sessions = %d, want the expired Session revoked", len(store.sessions))
+	if len(store.Sessions) != 0 {
+		t.Errorf("sessions = %d, want the expired Session revoked", len(store.Sessions))
 	}
 }
 
@@ -71,10 +72,10 @@ func TestTamperedSessionCookieIsRejected(t *testing.T) {
 
 func TestMiddlewareDoesNotLogSessionToken(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -95,10 +96,10 @@ func TestMiddlewareDoesNotLogSessionToken(t *testing.T) {
 }
 
 func TestTokenEndpointIsRateLimited(t *testing.T) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: false}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: false}
 	cfg.JWT = &signet.JWTConfig{Algorithm: "HS256", Key: testJWTKey}
 	client, err := signet.New(cfg)
 	if err != nil {

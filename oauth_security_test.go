@@ -10,14 +10,15 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func TestOAuthStateExpires(t *testing.T) {
-	clock := &adjustableClock{at: testTime}
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	clock := &testutil.Clock{At: testTime}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Clock = clock
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
@@ -34,14 +35,14 @@ func TestOAuthStateExpires(t *testing.T) {
 		t.Fatalf("OAuthStart: %v", err)
 	}
 	state := stateFromURL(t, result.URL)
-	clock.at = testTime.Add(11 * time.Minute)
+	clock.At = testTime.Add(11 * time.Minute)
 	if _, err := client.OAuthCallback(context.Background(), signet.OAuthCallbackInput{Code: "code", State: state}); !errors.Is(err, signet.ErrOAuthInvalidState) {
 		t.Fatalf("expired state error = %v, want ErrOAuthInvalidState", err)
 	}
 }
 
 func TestPKCEVerifierIsNotExposedInURL(t *testing.T) {
-	client := oauthStartClient(t, &recordingLimiter{allow: true})
+	client := oauthStartClient(t, &testutil.Limiter{Allowed: true})
 	result, err := client.OAuthStart(context.Background(), signet.OAuthStartInput{Provider: "google", Redirect: "https://app.example.com/dashboard"})
 	if err != nil {
 		t.Fatalf("OAuthStart: %v", err)
@@ -119,15 +120,15 @@ func TestOAuthAccountConflictSentinel(t *testing.T) {
 }
 
 func TestLinkTokenExpires(t *testing.T) {
-	clock := &adjustableClock{at: testTime}
+	clock := &testutil.Clock{At: testTime}
 	provider := fakeOAuthProvider{name: "google", identity: &signet.OAuthIdentity{
 		Provider: "google", ProviderUserID: "provider-user",
 		Email: "unverified@example.com", EmailVerified: false,
 	}}
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Clock = clock
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{provider},
@@ -152,7 +153,7 @@ func TestLinkTokenExpires(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SignUp: %v", err)
 	}
-	clock.at = testTime.Add(11 * time.Minute)
+	clock.At = testTime.Add(11 * time.Minute)
 	err = client.LinkOAuthAccount(context.Background(), signet.LinkOAuthAccountInput{
 		UserID: user.User.ID, LinkToken: callback.LinkToken,
 	})
@@ -163,10 +164,10 @@ func TestLinkTokenExpires(t *testing.T) {
 
 func TestOAuthDoesNotLogSecrets(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},

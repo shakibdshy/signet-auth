@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func issueCSRFToken(t *testing.T, client *signet.Client) (string, *http.Cookie) {
@@ -116,11 +117,11 @@ func TestCSRFRejectsMissingAndTamperedTokens(t *testing.T) {
 }
 
 func TestCSRFTokenExpires(t *testing.T) {
-	clock := &adjustableClock{at: testTime}
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	clock := &testutil.Clock{At: testTime}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Clock = clock
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -131,7 +132,7 @@ func TestCSRFTokenExpires(t *testing.T) {
 	}
 	cookie := signInCookie(t, client)
 	token, csrfCookie := issueCSRFToken(t, client)
-	clock.at = testTime.Add(13 * time.Hour)
+	clock.At = testTime.Add(13 * time.Hour)
 	if rec := csrfRequest(client, cookie, csrfCookie, "", "", token); rec.Code != http.StatusForbidden {
 		t.Fatalf("expired token status = %d, want 403", rec.Code)
 	}
@@ -139,10 +140,10 @@ func TestCSRFTokenExpires(t *testing.T) {
 
 func TestCSRFDoesNotLogTokens(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -161,10 +162,10 @@ func TestCSRFDoesNotLogTokens(t *testing.T) {
 
 func TestCSRFRejectionEventHasNoToken(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -255,10 +256,10 @@ func TestCSRFDoesNotAffectAnonymousRequests(t *testing.T) {
 
 func TestCSRFCanBeDisabledExplicitly(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.InsecureDisableCSRF = true
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	client, err := signet.New(cfg)

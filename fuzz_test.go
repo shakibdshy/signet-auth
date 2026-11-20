@@ -12,13 +12,14 @@ import (
 	"testing"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func fuzzServiceClient() *signet.Client {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	client, err := signet.New(cfg)
 	if err != nil {
 		panic(err)
@@ -90,10 +91,10 @@ func oauthState(client *signet.Client) string {
 }
 
 func FuzzOAuthState(f *testing.F) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
 		RedirectBaseURL:  "https://app.example.com",

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func stateFromURL(t *testing.T, raw string) string {
@@ -20,13 +21,13 @@ func stateFromURL(t *testing.T, raw string) string {
 	return parsed.Query().Get("state")
 }
 
-func oauthCallbackClient(t *testing.T, provider signet.OAuthProvider) (*signet.Client, *memoryStore) {
+func oauthCallbackClient(t *testing.T, provider signet.OAuthProvider) (*signet.Client, *testutil.Store) {
 	t.Helper()
-	store := newMemoryStore()
-	cfg := testConfig()
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{provider},
 		RedirectBaseURL:  "https://app.example.com",
@@ -65,8 +66,8 @@ func TestOAuthCallbackCreatesUserWithVerifiedEmail(t *testing.T) {
 	if err != nil || len(accounts) != 1 || accounts[0].Provider != "google" || accounts[0].PasswordHash != "" {
 		t.Fatalf("Accounts = (%v, %v), want one provider Account", accounts, err)
 	}
-	if len(store.sessions) != 1 {
-		t.Errorf("sessions = %d, want 1", len(store.sessions))
+	if len(store.Sessions) != 1 {
+		t.Errorf("sessions = %d, want 1", len(store.Sessions))
 	}
 }
 
@@ -98,8 +99,8 @@ func TestOAuthCallbackRequiresExplicitLinkForUnverifiedEmail(t *testing.T) {
 	if err != nil || result.User != nil || result.LinkToken == "" {
 		t.Fatalf("OAuthCallback = (%v, %v), want a link token and no User", result, err)
 	}
-	if len(store.users) != 0 {
-		t.Errorf("users = %d, want none for an unverified email", len(store.users))
+	if len(store.Users) != 0 {
+		t.Errorf("users = %d, want none for an unverified email", len(store.Users))
 	}
 	user, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "owner@example.com", Password: "password123"})
 	if err != nil {
@@ -143,10 +144,10 @@ func TestOAuthCallbackHTTPRedirectsWithSession(t *testing.T) {
 }
 
 func TestOAuthCallbackRateLimited(t *testing.T) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: false}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: false}
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
 		RedirectBaseURL:  "https://app.example.com",

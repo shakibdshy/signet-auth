@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 type fakeOAuthProvider struct {
@@ -54,10 +55,10 @@ func TestNewValidatesOAuthConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := testConfig()
-			cfg.Store = newMemoryStore()
+			cfg := testutil.NewConfig()
+			cfg.Store = testutil.NewStore()
 			cfg.Mailer = fakeMailer{}
-			cfg.RateLimiter = &recordingLimiter{allow: true}
+			cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 			cfg.OAuth = tt.oauth
 			if _, err := signet.New(cfg); !errors.Is(err, tt.want) {
 				t.Fatalf("New error = %v, want %v", err, tt.want)
@@ -67,10 +68,10 @@ func TestNewValidatesOAuthConfig(t *testing.T) {
 }
 
 func TestOAuthConfigAcceptsValidSetup(t *testing.T) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
 		RedirectBaseURL:  "https://app.example.com",

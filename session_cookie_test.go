@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func signInOverHTTP(t *testing.T, client *signet.Client) (*httptest.ResponseRecorder, string) {
@@ -49,10 +50,10 @@ func TestSignInSetsSecureHostCookie(t *testing.T) {
 }
 
 func TestSignInUsesPlainNameWithDomain(t *testing.T) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Cookie.Domain = "example.com"
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -130,12 +131,12 @@ func TestRequireAuthRejectsAnonymousAndOptionalAuthPasses(t *testing.T) {
 }
 
 func TestExpiredSessionIsRejectedAndRevoked(t *testing.T) {
-	clock := &adjustableClock{at: testTime}
-	store := newMemoryStore()
-	cfg := testConfig()
+	clock := &testutil.Clock{At: testTime}
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Clock = clock
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -145,7 +146,7 @@ func TestExpiredSessionIsRejectedAndRevoked(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	cookie := signInCookie(t, client)
-	clock.at = testTime.Add(31 * time.Minute)
+	clock.At = testTime.Add(31 * time.Minute)
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/private", nil)
@@ -154,18 +155,18 @@ func TestExpiredSessionIsRejectedAndRevoked(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401 for an idle-expired Session", rec.Code)
 	}
-	if len(store.sessions) != 0 {
-		t.Errorf("sessions = %d, want the expired Session revoked", len(store.sessions))
+	if len(store.Sessions) != 0 {
+		t.Errorf("sessions = %d, want the expired Session revoked", len(store.Sessions))
 	}
 }
 
 func TestAcceptedRequestExtendsIdleExpiry(t *testing.T) {
-	clock := &adjustableClock{at: testTime}
-	store := newMemoryStore()
-	cfg := testConfig()
+	clock := &testutil.Clock{At: testTime}
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Clock = clock
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -176,20 +177,20 @@ func TestAcceptedRequestExtendsIdleExpiry(t *testing.T) {
 	}
 	cookie := signInCookie(t, client)
 	var absoluteBefore time.Time
-	for _, session := range store.sessions {
+	for _, session := range store.Sessions {
 		absoluteBefore = session.AbsoluteExpiresAt
 	}
-	clock.at = testTime.Add(5 * time.Minute)
+	clock.At = testTime.Add(5 * time.Minute)
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	req := httptest.NewRequest(http.MethodGet, "/private", nil)
 	req.AddCookie(cookie)
 	client.RequireAuth(next).ServeHTTP(httptest.NewRecorder(), req)
 	var expires, absoluteAfter time.Time
-	for _, session := range store.sessions {
+	for _, session := range store.Sessions {
 		expires = session.IdleExpiresAt
 		absoluteAfter = session.AbsoluteExpiresAt
 	}
-	want := clock.at.Add(30 * time.Minute)
+	want := clock.At.Add(30 * time.Minute)
 	if !expires.Equal(want) {
 		t.Errorf("idle expiry = %v, want %v", expires, want)
 	}

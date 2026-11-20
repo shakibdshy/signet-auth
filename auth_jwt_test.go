@@ -10,17 +10,18 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 var testJWTKey = []byte("a-long-test-signing-key-for-hs256-only")
 
-func jwtClient(t *testing.T) (*signet.Client, *memoryStore) {
+func jwtClient(t *testing.T) (*signet.Client, *testutil.Store) {
 	t.Helper()
-	store := newMemoryStore()
-	cfg := testConfig()
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.JWT = &signet.JWTConfig{Algorithm: "HS256", Key: testJWTKey}
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -49,10 +50,10 @@ func TestJWTConfigValidation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := testConfig()
-			cfg.Store = newMemoryStore()
+			cfg := testutil.NewConfig()
+			cfg.Store = testutil.NewStore()
 			cfg.Mailer = fakeMailer{}
-			cfg.RateLimiter = &recordingLimiter{allow: true}
+			cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 			cfg.JWT = tt.jwt
 			if _, err := signet.New(cfg); !errors.Is(err, tt.want) {
 				t.Fatalf("New error = %v, want %v", err, tt.want)
@@ -98,8 +99,8 @@ func TestRefreshRotatesAndDetectsReuse(t *testing.T) {
 	if _, err := client.ExchangeToken(context.Background(), signet.TokenInput{RefreshToken: first.RefreshToken}); !errors.Is(err, signet.ErrRefreshReuse) {
 		t.Fatalf("replayed refresh error = %v, want ErrRefreshReuse", err)
 	}
-	if len(store.sessions) != 0 || len(store.tokens) != 0 {
-		t.Errorf("reuse should revoke Sessions and Tokens; got %d sessions, %d tokens", len(store.sessions), len(store.tokens))
+	if len(store.Sessions) != 0 || len(store.Tokens) != 0 {
+		t.Errorf("reuse should revoke Sessions and Tokens; got %d sessions, %d tokens", len(store.Sessions), len(store.Tokens))
 	}
 }
 
@@ -155,8 +156,8 @@ func TestRefreshReuseRevokesAllTokenKinds(t *testing.T) {
 	if _, err := client.ExchangeToken(context.Background(), signet.TokenInput{RefreshToken: first.RefreshToken}); !errors.Is(err, signet.ErrRefreshReuse) {
 		t.Fatalf("replay error = %v, want ErrRefreshReuse", err)
 	}
-	if len(store.tokens) != 0 {
-		t.Errorf("tokens = %d, want all kinds revoked", len(store.tokens))
+	if len(store.Tokens) != 0 {
+		t.Errorf("tokens = %d, want all kinds revoked", len(store.Tokens))
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func TestSignOutRevokesSession(t *testing.T) {
@@ -25,8 +26,8 @@ func TestSignOutRevokesSession(t *testing.T) {
 	if err := client.SignOut(context.Background(), signet.SignOutInput{SessionToken: result.SessionToken}); err != nil {
 		t.Fatalf("SignOut: %v", err)
 	}
-	if len(store.sessions) != 0 {
-		t.Errorf("sessions = %d, want 0 after sign-out", len(store.sessions))
+	if len(store.Sessions) != 0 {
+		t.Errorf("sessions = %d, want 0 after sign-out", len(store.Sessions))
 	}
 }
 
@@ -57,18 +58,18 @@ func TestSignOutHTTPEndpoint(t *testing.T) {
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204; body = %s", rec.Code, rec.Body.String())
 	}
-	if len(store.sessions) != 0 {
-		t.Errorf("sessions = %d, want 0 after sign-out", len(store.sessions))
+	if len(store.Sessions) != 0 {
+		t.Errorf("sessions = %d, want 0 after sign-out", len(store.Sessions))
 	}
 }
 
 func TestSignOutDoesNotLogToken(t *testing.T) {
 	var logs bytes.Buffer
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
-	cfg.PasswordHasher = fastHasher{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.PasswordHasher = testutil.FastHasher{}
 	cfg.Logger = slog.New(slog.NewTextHandler(&logs, nil))
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -109,7 +110,7 @@ func TestFullHTTPAuthFlow(t *testing.T) {
 	if rec := post("/signout", string(body)); rec.Code != http.StatusNoContent {
 		t.Fatalf("sign-out status = %d, body = %s", rec.Code, rec.Body.String())
 	}
-	if len(store.sessions) != 0 {
-		t.Errorf("sessions = %d, want 0", len(store.sessions))
+	if len(store.Sessions) != 0 {
+		t.Errorf("sessions = %d, want 0", len(store.Sessions))
 	}
 }

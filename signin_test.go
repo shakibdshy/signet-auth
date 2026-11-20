@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func signUp(client *signet.Client) error {
@@ -31,11 +32,11 @@ func TestSignInCreatesSessionWithHashedToken(t *testing.T) {
 	if result.User == nil || result.SessionToken == "" {
 		t.Fatalf("SignIn result = %+v, want a User and a Session token", result)
 	}
-	if len(store.sessions) != 1 {
-		t.Fatalf("sessions = %d, want 1", len(store.sessions))
+	if len(store.Sessions) != 1 {
+		t.Fatalf("sessions = %d, want 1", len(store.Sessions))
 	}
 	var stored *signet.Session
-	for _, session := range store.sessions {
+	for _, session := range store.Sessions {
 		stored = session
 	}
 	if stored.TokenHash == "" || stored.TokenHash == result.SessionToken {
@@ -47,11 +48,11 @@ func TestSignInCreatesSessionWithHashedToken(t *testing.T) {
 }
 
 func TestSignInFailuresAreGenericAndUseDummyVerifier(t *testing.T) {
-	hasher := &versionedHasher{version: 1}
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	hasher := &testutil.VersionedHasher{Version: 1}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.PasswordHasher = hasher
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -61,18 +62,18 @@ func TestSignInFailuresAreGenericAndUseDummyVerifier(t *testing.T) {
 	if !errors.Is(err, signet.ErrInvalidCredentials) {
 		t.Fatalf("SignIn(unknown) error = %v, want ErrInvalidCredentials", err)
 	}
-	if hasher.verifyCalls != 1 {
-		t.Errorf("Verify calls = %d, want 1 dummy verification", hasher.verifyCalls)
+	if hasher.VerifyCalls != 1 {
+		t.Errorf("Verify calls = %d, want 1 dummy verification", hasher.VerifyCalls)
 	}
 }
 
 func TestSignInRehashesStaleVerifier(t *testing.T) {
-	hasher := &versionedHasher{version: 1}
-	store := newMemoryStore()
-	cfg := testConfig()
+	hasher := &testutil.VersionedHasher{Version: 1}
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.PasswordHasher = hasher
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -81,12 +82,12 @@ func TestSignInRehashesStaleVerifier(t *testing.T) {
 	if err := signUp(client); err != nil {
 		t.Fatalf("SignUp: %v", err)
 	}
-	hasher.version = 2
+	hasher.Version = 2
 	if _, err := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "password123"}); err != nil {
 		t.Fatalf("SignIn after parameter change: %v", err)
 	}
-	if len(store.accounts) != 1 || !strings.HasPrefix(store.accounts[0].PasswordHash, "v2:") {
-		t.Errorf("credential Account verifier = %+v, want upgraded version", store.accounts)
+	if len(store.Accounts) != 1 || !strings.HasPrefix(store.Accounts[0].PasswordHash, "v2:") {
+		t.Errorf("credential Account verifier = %+v, want upgraded version", store.Accounts)
 	}
 }
 
@@ -95,18 +96,18 @@ func TestSignInRejectsDisabledUser(t *testing.T) {
 	if err := signUp(client); err != nil {
 		t.Fatalf("SignUp: %v", err)
 	}
-	store.usersByEmail["user@example.com"].Disabled = true
+	store.UsersByEmail["user@example.com"].Disabled = true
 	if _, err := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "password123"}); !errors.Is(err, signet.ErrInvalidCredentials) {
 		t.Fatalf("SignIn(disabled) error = %v, want ErrInvalidCredentials", err)
 	}
 }
 
 func TestRehashFailureDoesNotAbortSignIn(t *testing.T) {
-	hasher := &rehashFailureHasher{}
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	hasher := &testutil.RehashFailureHasher{}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.PasswordHasher = hasher
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -121,11 +122,11 @@ func TestRehashFailureDoesNotAbortSignIn(t *testing.T) {
 }
 
 func TestSignInEnforcesMinimumPasswordLength(t *testing.T) {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
-	cfg.PasswordHasher = fastHasher{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.PasswordHasher = testutil.FastHasher{}
 	cfg.Password.MinLength = 12
 	client, err := signet.New(cfg)
 	if err != nil {

@@ -61,8 +61,8 @@ func TestRevokeAllSessionsHTTP(t *testing.T) {
 	}
 	cookie1 := signInCookie(t, client)
 	cookie2 := signInCookie(t, client)
-	if len(store.sessions) != 2 {
-		t.Fatalf("sessions = %d, want 2", len(store.sessions))
+	if len(store.Sessions) != 2 {
+		t.Fatalf("sessions = %d, want 2", len(store.Sessions))
 	}
 	csrfToken, csrfCookie := issueCSRFToken(t, client)
 	req := httptest.NewRequest(http.MethodDelete, "/sessions", nil)
@@ -74,8 +74,8 @@ func TestRevokeAllSessionsHTTP(t *testing.T) {
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204; body = %s", rec.Code, rec.Body.String())
 	}
-	if len(store.sessions) != 0 {
-		t.Errorf("sessions = %d, want 0", len(store.sessions))
+	if len(store.Sessions) != 0 {
+		t.Errorf("sessions = %d, want 0", len(store.Sessions))
 	}
 	protected := client.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 	for _, cookie := range []*http.Cookie{cookie1, cookie2} {

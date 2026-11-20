@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func ExampleClient_SignUp() {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	client, err := signet.New(cfg)
 	if err != nil {
 		panic(err)
@@ -31,10 +32,10 @@ func ExampleClient_SignUp() {
 }
 
 func ExampleClient_SignIn() {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	client, err := signet.New(cfg)
 	if err != nil {
 		panic(err)
@@ -58,10 +59,10 @@ func ExampleClient_SignIn() {
 }
 
 func ExampleClient_ListSessions() {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	client, err := signet.New(cfg)
 	if err != nil {
 		panic(err)
@@ -88,10 +89,10 @@ func ExampleClient_ListSessions() {
 }
 
 func ExampleClient_ExchangeToken() {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.JWT = &signet.JWTConfig{Algorithm: "HS256", Key: []byte("an-example-key-at-least-32-bytes-long")}
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -129,9 +130,9 @@ func exampleToken(msg signet.Message) string {
 func ExampleClient_VerifyEmail() {
 	cfg := signet.DefaultConfig()
 	cfg.CSRFKey = make([]byte, 32)
-	cfg.Store = newMemoryStore()
-	cfg.Mailer = &capturingMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = &testutil.Mailer{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.AppURL = "https://app.example.com"
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -143,8 +144,8 @@ func ExampleClient_VerifyEmail() {
 	if err != nil {
 		panic(err)
 	}
-	mailer := cfg.Mailer.(*capturingMailer)
-	token := exampleToken(mailer.messages[0])
+	mailer := cfg.Mailer.(*testutil.Mailer)
+	token := exampleToken(mailer.Messages[0])
 	if err := client.VerifyEmail(context.Background(), signet.VerifyEmailInput{Token: token}); err != nil {
 		panic(err)
 	}
@@ -156,10 +157,10 @@ func ExampleClient_VerifyEmail() {
 }
 
 func ExampleClient_ResetPassword() {
-	cfg := testConfig()
-	cfg.Store = newMemoryStore()
-	cfg.Mailer = &capturingMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = &testutil.Mailer{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.AppURL = "https://app.example.com"
 	client, err := signet.New(cfg)
 	if err != nil {
@@ -175,8 +176,8 @@ func ExampleClient_ResetPassword() {
 	}); err != nil {
 		panic(err)
 	}
-	mailer := cfg.Mailer.(*capturingMailer)
-	token := exampleToken(mailer.messages[len(mailer.messages)-1])
+	mailer := cfg.Mailer.(*testutil.Mailer)
+	token := exampleToken(mailer.Messages[len(mailer.Messages)-1])
 	if err := client.ResetPassword(context.Background(), signet.ResetPasswordInput{
 		Token: token, NewPassword: "new-password",
 	}); err != nil {
@@ -200,9 +201,9 @@ func exampleState(raw string) string {
 func ExampleClient_OAuthStart() {
 	cfg := signet.DefaultConfig()
 	cfg.CSRFKey = make([]byte, 32)
-	cfg.Store = newMemoryStore()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
 		RedirectBaseURL:  "https://app.example.com",
@@ -226,9 +227,9 @@ func ExampleClient_OAuthStart() {
 func ExampleClient_OAuthCallback() {
 	cfg := signet.DefaultConfig()
 	cfg.CSRFKey = make([]byte, 32)
-	cfg.Store = newMemoryStore()
+	cfg.Store = testutil.NewStore()
 	cfg.Mailer = fakeMailer{}
-	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OAuth = &signet.OAuthConfig{
 		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
 		RedirectBaseURL:  "https://app.example.com",
