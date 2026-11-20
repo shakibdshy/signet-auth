@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/secret"
 )
 
 const resetTokenTTL = time.Hour
@@ -31,8 +32,8 @@ func (c *Client) SendPasswordReset(ctx context.Context, in SendPasswordResetInpu
 		// Equalize work with the registered-email path without sending mail.
 		// Mail transport time itself remains a signal; eliminating that needs
 		// queued delivery, which is outside this phase.
-		raw, _ := newRawSecret()
-		_ = digestSecret(raw)
+		raw := secret.NewToken()
+		_ = secret.Digest(raw)
 		_ = c.cfg.Templates.ResetPassword(TemplateData{Email: email, ExpiresAt: c.cfg.Clock.Now().Add(resetTokenTTL)})
 		return nil
 	}

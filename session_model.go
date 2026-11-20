@@ -10,11 +10,6 @@ import (
 // Session is one authenticated visit by a User.
 type Session = core.Session
 
-func newRawSecret() (string, string) {
-	token := secret.NewToken()
-	return token, secret.Digest(token)
-}
-
 func (c *Client) createSession(ctx context.Context, userID string) (string, error) {
 	return c.sessions.Create(ctx, userID)
 }

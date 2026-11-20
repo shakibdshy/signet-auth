@@ -1,0 +1,203 @@
+package token
+
+import (
+	"context"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"errors"
+	"log/slog"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/secret"
+)
+
+const (
+	defaultAccessTTL  = 15 * time.Minute
+	defaultRefreshTTL = 30 * 24 * time.Hour
+)
+
+type jwtAlgorithm struct {
+	method   jwt.SigningMethod
+	validKey func(any) bool
+}
+
+var jwtAlgorithms = map[string]jwtAlgorithm{
+	"HS256": {jwt.SigningMethodHS256, func(key any) bool { _, ok := key.([]byte); return ok }},
+	"RS256": {jwt.SigningMethodRS256, func(key any) bool { _, ok := key.(*rsa.PrivateKey); return ok }},
+	"EdDSA": {jwt.SigningMethodEdDSA, func(key any) bool { _, ok := key.(ed25519.PrivateKey); return ok }},
+}
+
+// ValidateJWTConfig checks the algorithm and key and fills default TTLs.
+func ValidateJWTConfig(cfg *core.JWTConfig) error {
+	algorithm, ok := jwtAlgorithms[cfg.Algorithm]
+	if !ok {
+		return core.ErrInvalidJWTAlgorithm
+	}
+	if !algorithm.validKey(cfg.Key) {
+		return core.ErrInvalidJWTKey
+	}
+	if cfg.AccessTTL == 0 {
+		cfg.AccessTTL = defaultAccessTTL
+	}
+	if cfg.RefreshTTL == 0 {
+		cfg.RefreshTTL = defaultRefreshTTL
+	}
+	return nil
+}
+
+// JWTDependencies holds the resolved configuration and collaborators the JWT
+// service needs.
+type JWTDependencies struct {
+	Config  *core.JWTConfig
+	Store   core.Store
+	Clock   core.Clock
+	Limiter core.RateLimiter
+	Logger  *slog.Logger
+	SignIn  func(context.Context, core.SignInInput) (*core.SignInResult, error)
+}
+
+// JWTService implements Signet's optional bearer-token mode.
+type JWTService struct{ deps JWTDependencies }
+
+// NewJWT returns a JWTService.
+func NewJWT(deps JWTDependencies) *JWTService { return &JWTService{deps: deps} }
+
+func (s *JWTService) allow(ctx context.Context, endpoint, key string) error {
+	if key == "" {
+		key = "local"
+	}
+	allowed, err := s.deps.Limiter.Allow(ctx, endpoint+"|"+key)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return core.ErrRateLimited
+	}
+	return nil
+}
+
+func (s *JWTService) logWarn(msg string, attrs ...any) {
+	s.deps.Logger.Warn(msg, append([]any{"at", s.deps.Clock.Now()}, attrs...)...)
+}
+
+// Exchange issues a TokenPair for credentials, or rotates a Refresh token.
+func (s *JWTService) Exchange(ctx context.Context, in core.TokenInput) (*core.TokenPair, error) {
+	if s.deps.Config == nil {
+		return nil, core.ErrJWTDisabled
+	}
+	if in.RefreshToken != "" {
+		if err := s.allow(ctx, "token", in.RateLimitKey); err != nil {
+			return nil, err
+		}
+		return s.refreshTokens(ctx, in.RefreshToken)
+	}
+	result, err := s.deps.SignIn(ctx, core.SignInInput{
+		Email: in.Email, Password: in.Password, RateLimitKey: in.RateLimitKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.Issue(ctx, result.User.ID)
+}
+
+// VerifyAccessToken validates a bearer token and returns its User.
+func (s *JWTService) VerifyAccessToken(ctx context.Context, raw string) (*core.User, error) {
+	if s.deps.Config == nil {
+		return nil, core.ErrJWTDisabled
+	}
+	claims := &jwt.RegisteredClaims{}
+	parsed, err := jwt.ParseWithClaims(raw, claims, func(token *jwt.Token) (any, error) {
+		if token.Method.Alg() != s.deps.Config.Algorithm {
+			return nil, core.ErrInvalidJWTAlgorithm
+		}
+		return s.deps.Config.Key, nil
+	}, jwt.WithValidMethods([]string{s.deps.Config.Algorithm}))
+	if err != nil || !parsed.Valid {
+		return nil, core.ErrTokenInvalid
+	}
+	if s.deps.Config.Issuer != "" && claims.Issuer != s.deps.Config.Issuer {
+		return nil, core.ErrTokenInvalid
+	}
+	return s.deps.Store.UserByID(ctx, claims.Subject)
+}
+
+// Issue signs a fresh Access token and stores a rotating Refresh proof.
+func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair, error) {
+	now := s.deps.Clock.Now()
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		Issuer:    s.deps.Config.Issuer,
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(s.deps.Config.AccessTTL)),
+	}
+	algorithm, ok := jwtAlgorithms[s.deps.Config.Algorithm]
+	if !ok {
+		return nil, core.ErrInvalidJWTAlgorithm
+	}
+	access, err := jwt.NewWithClaims(algorithm.method, claims).SignedString(s.deps.Config.Key)
+	if err != nil {
+		return nil, err
+	}
+	raw := secret.NewToken()
+	token := &core.Token{
+		ID:        secret.NewID(),
+		UserID:    userID,
+		Kind:      core.TokenRefresh,
+		Hash:      secret.Digest(raw),
+		ExpiresAt: now.Add(s.deps.Config.RefreshTTL),
+		CreatedAt: now,
+	}
+	if err := s.deps.Store.CreateToken(ctx, token); err != nil {
+		return nil, err
+	}
+	return &core.TokenPair{
+		AccessToken:  access,
+		RefreshToken: raw,
+		ExpiresIn:    int64(s.deps.Config.AccessTTL / time.Second),
+	}, nil
+}
+
+func (s *JWTService) refreshTokens(ctx context.Context, presented string) (*core.TokenPair, error) {
+	digest := secret.Digest(presented)
+	token, err := s.deps.Store.TokenByHash(ctx, core.TokenRefresh, digest)
+	if errors.Is(err, core.ErrNotFound) {
+		return nil, core.ErrTokenInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	if token.UsedAt != nil {
+		return s.handleRefreshReuse(ctx, token.UserID)
+	}
+	if !s.deps.Clock.Now().Before(token.ExpiresAt) {
+		return nil, core.ErrTokenExpired
+	}
+	consumed, err := s.deps.Store.ConsumeToken(ctx, core.TokenRefresh, digest)
+	if errors.Is(err, core.ErrNotFound) {
+		return s.handleRefreshReuse(ctx, token.UserID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.deps.Store.UserByID(ctx, consumed.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user.Disabled {
+		return nil, core.ErrInvalidCredentials
+	}
+	return s.Issue(ctx, user.ID)
+}
+
+func (s *JWTService) handleRefreshReuse(ctx context.Context, userID string) (*core.TokenPair, error) {
+	// Security: a replayed Refresh token is treated as theft. Contain it by
+	// revoking every Session and Refresh token of that User.
+	_ = s.deps.Store.DeleteSessionsForUser(ctx, userID)
+	for _, kind := range []core.TokenKind{core.TokenRefresh, core.TokenVerifyEmail, core.TokenResetPassword, core.TokenOAuthLink} {
+		_ = s.deps.Store.DeleteTokensForUser(ctx, userID, kind)
+	}
+	s.logWarn("refresh_token_reuse", "user_id", userID)
+	return nil, core.ErrRefreshReuse
+}

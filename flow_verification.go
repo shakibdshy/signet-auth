@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/secret"
 )
 
 const verificationTokenTTL = 24 * time.Hour
@@ -32,8 +33,8 @@ func (c *Client) SendVerification(ctx context.Context, in SendVerificationInput)
 		// Equalize work with the registered-email path without sending mail.
 		// Mail transport time itself remains a signal; eliminating that needs
 		// queued delivery, which is outside this phase.
-		raw, _ := newRawSecret()
-		_ = digestSecret(raw)
+		raw := secret.NewToken()
+		_ = secret.Digest(raw)
 		_ = c.cfg.Templates.VerifyEmail(TemplateData{Email: email, ExpiresAt: c.cfg.Clock.Now().Add(verificationTokenTTL)})
 		return nil
 	}

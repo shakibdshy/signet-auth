@@ -9,11 +9,15 @@ import (
 	"github.com/shakibdshy/signet"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet/internal/token"
 )
 
 var (
-	_ signet.Store = (*testutil.Store)(nil)
-	_              = errors.Is(signet.ErrNotFound, core.ErrNotFound)
+	_ signet.Store                                  = (*testutil.Store)(nil)
+	_                                               = errors.Is(signet.ErrNotFound, core.ErrNotFound)
+	_                                               = errors.Is(signet.ErrMissingHasher, core.ErrMissingHasher)
+	_ func(*core.JWTConfig) error                   = token.ValidateJWTConfig
+	_ func(token.JWTDependencies) *token.JWTService = token.NewJWT
 )
 
 type fakeUserStore struct{}

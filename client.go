@@ -17,7 +17,7 @@ import (
 type Client struct {
 	cfg           Config
 	dummyVerifier string
-	jwt           *JWTConfig
+	jwtService    *token.JWTService
 	csrf          *csrf.Guard
 	tokens        *token.Service
 	auth          *auth.Service
@@ -67,7 +67,7 @@ func New(cfg Config) (*Client, error) {
 	var jwtCfg *JWTConfig
 	if cfg.JWT != nil {
 		jwtCopy := *cfg.JWT
-		if err := validateJWTConfig(&jwtCopy); err != nil {
+		if err := token.ValidateJWTConfig(&jwtCopy); err != nil {
 			return nil, err
 		}
 		jwtCfg = &jwtCopy
@@ -87,12 +87,17 @@ func New(cfg Config) (*Client, error) {
 	c := &Client{
 		cfg:           cfg,
 		dummyVerifier: dummy,
-		jwt:           jwtCfg,
 		csrf: csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
 			cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 			strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger),
 		tokens:   token.New(cfg.Store, cfg.Clock),
 		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session),
+	}
+	if jwtCfg != nil {
+		c.jwtService = token.NewJWT(token.JWTDependencies{
+			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
+			Limiter: cfg.RateLimiter, Logger: cfg.Logger, SignIn: c.SignIn,
+		})
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
