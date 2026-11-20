@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/testutil"
 	"github.com/shakibdshy/signet/internal/token"
@@ -18,6 +19,7 @@ var (
 	_                                               = errors.Is(signet.ErrMissingHasher, core.ErrMissingHasher)
 	_ func(*core.JWTConfig) error                   = token.ValidateJWTConfig
 	_ func(token.JWTDependencies) *token.JWTService = token.NewJWT
+	_ auth.Argon2idHasher                           = signet.Argon2idHasher{}
 )
 
 type fakeUserStore struct{}
