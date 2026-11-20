@@ -11,3 +11,7 @@ Triage uses the five canonical role labels (`needs-triage`, `needs-info`, `ready
 ### Domain docs
 
 Single-context layout: one `GLOSSARY.md` at the repo root and ADRs in `docs/adr/`. See `docs/agents/domain.md`.
+
+## Requirements coverage
+
+Before calling code-review, fill in `docs/checklists/phase-N.md` using the template at `docs/checklists/requirements-coverage.md`: every Testing Decisions line and security requirement must name a test or an explained limitation.

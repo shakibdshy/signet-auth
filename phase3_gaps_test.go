@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +36,84 @@ func TestVerificationTokenExpiryUsesClock(t *testing.T) {
 	clock.at = testTime.Add(25 * time.Hour)
 	if err := client.VerifyEmail(context.Background(), signet.VerifyEmailInput{Token: token}); !errors.Is(err, signet.ErrTokenExpired) {
 		t.Fatalf("expired verification error = %v, want ErrTokenExpired", err)
+	}
+}
+
+func rateLimitedPhase3Client(t *testing.T) *signet.Client {
+	t.Helper()
+	cfg := testConfig()
+	cfg.Store = newMemoryStore()
+	cfg.Mailer = &capturingMailer{}
+	cfg.RateLimiter = &recordingLimiter{allow: false}
+	cfg.AppURL = "https://app.example.com"
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return client
+}
+
+func TestVerificationSendRateLimited(t *testing.T) {
+	client := rateLimitedPhase3Client(t)
+	req := httptest.NewRequest(http.MethodPost, "/send-verification", strings.NewReader(`{"email":"user@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestVerificationConsumeRateLimited(t *testing.T) {
+	client := rateLimitedPhase3Client(t)
+	req := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"token":"x"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPasswordResetSendRateLimited(t *testing.T) {
+	client := rateLimitedPhase3Client(t)
+	req := httptest.NewRequest(http.MethodPost, "/send-password-reset", strings.NewReader(`{"email":"user@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPasswordResetConsumeRateLimited(t *testing.T) {
+	client := rateLimitedPhase3Client(t)
+	req := httptest.NewRequest(http.MethodPost, "/reset-password", strings.NewReader(`{"token":"x","new_password":"password123"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestConfigDefaultsApplyWithoutDefaultConfig(t *testing.T) {
+	cfg := signet.Config{
+		Store:       newMemoryStore(),
+		Mailer:      &capturingMailer{},
+		RateLimiter: &recordingLimiter{allow: true},
+	}
+	cfg.Cookie.Secure = true
+	cfg.Cookie.HttpOnly = true
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "user@example.com", Password: "password123"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	if _, err := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "password123"}); !errors.Is(err, signet.ErrEmailNotVerified) {
+		t.Fatalf("hand-built Config sign-in error = %v, want ErrEmailNotVerified", err)
 	}
 }
 
