@@ -347,30 +347,18 @@ func (h *Handler) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeAuthError(w http.ResponseWriter, err error) {
-	switch {
-	case errors.Is(err, core.ErrRateLimited):
-		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
-	case errors.Is(err, core.ErrTokenInvalid), errors.Is(err, core.ErrTokenExpired), errors.Is(err, core.ErrRefreshReuse):
-		writeError(w, http.StatusUnauthorized, "invalid_token", "invalid token")
-	case errors.Is(err, core.ErrEmailNotVerified):
-		writeError(w, http.StatusForbidden, "email_not_verified", "email not verified")
-	case errors.Is(err, core.ErrInvalidCredentials):
-		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
-	case errors.Is(err, core.ErrJWTDisabled), errors.Is(err, core.ErrOAuthDisabled), errors.Is(err, core.ErrOAuthProviderNotFound):
-		writeError(w, http.StatusNotFound, "not_found", "not found")
-	case errors.Is(err, core.ErrOAuthRedirectNotAllowed), errors.Is(err, core.ErrOAuthInvalidState):
-		writeError(w, http.StatusBadRequest, "invalid_request", "invalid request")
-	case errors.Is(err, core.ErrOAuthEmailNotVerified):
-		writeError(w, http.StatusForbidden, "oauth_email_not_verified", "email not verified by provider")
-	case errors.Is(err, core.ErrOAuthAccountConflict):
-		writeError(w, http.StatusConflict, "oauth_account_conflict", "provider account belongs to another user")
-	case errors.Is(err, core.ErrEmailAlreadyExists):
-		writeError(w, http.StatusBadRequest, "email_exists", "email already registered")
-	case errors.Is(err, core.ErrInvalidEmail), errors.Is(err, core.ErrPasswordTooShort),
-		errors.Is(err, core.ErrPasswordTooLong):
-		writeError(w, http.StatusBadRequest, "invalid_input", "invalid input")
-	default:
-		writeError(w, http.StatusInternalServerError, "internal_error", "internal error")
+	for _, spec := range ContractFor().Errors {
+		if spec.Sentinel == nil {
+			if spec.Code == "internal_error" {
+				writeError(w, spec.Status, spec.Code, spec.Message)
+				return
+			}
+			continue
+		}
+		if errors.Is(err, spec.Sentinel) {
+			writeError(w, spec.Status, spec.Code, spec.Message)
+			return
+		}
 	}
 }
 
