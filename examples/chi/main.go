@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,11 +12,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	_ "modernc.org/sqlite"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shakibdshy/signet"
 	"github.com/shakibdshy/signet/mailer/console"
-	"github.com/shakibdshy/signet/store/sqlite"
+	"github.com/shakibdshy/signet/store/postgres"
 )
 
 type memoryLimiter struct {
@@ -32,13 +31,25 @@ func (l *memoryLimiter) Allow(_ context.Context, key string) (bool, error) {
 	return l.hits[key] <= 10, nil
 }
 
+const defaultDSN = "postgres://signet:signet@localhost:5432/signet?sslmode=disable"
+
+func databaseURL() string {
+	if value := os.Getenv("SIGNET_DATABASE_URL"); value != "" {
+		return value
+	}
+	return defaultDSN
+}
+
 func newAuth() (*signet.Client, error) {
 	ctx := context.Background()
-	db, err := sql.Open("sqlite", "signet.db")
+	pool, err := pgxpool.New(ctx, databaseURL())
 	if err != nil {
 		return nil, err
 	}
-	store := sqlite.New(db)
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("connect to PostgreSQL: %w", err)
+	}
+	store := postgres.New(pool)
 	if err := store.Migrate(ctx); err != nil {
 		return nil, err
 	}
@@ -52,6 +63,7 @@ func newAuth() (*signet.Client, error) {
 	cfg.RateLimiter = &memoryLimiter{hits: make(map[string]int)}
 	cfg.CSRFKey = key
 	cfg.AppURL = "http://localhost:8080"
+	cfg.PathPrefix = "/auth"
 	return signet.New(cfg)
 }
 

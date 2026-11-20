@@ -1,10 +1,10 @@
-// Command stdlib demonstrates Signet with the standard library router.
+// Command stdlib demonstrates Signet with the standard library router and a
+// local PostgreSQL database.
 package main
 
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,12 +12,14 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shakibdshy/signet"
 	"github.com/shakibdshy/signet/mailer/console"
-	"github.com/shakibdshy/signet/store/sqlite"
+	"github.com/shakibdshy/signet/store/postgres"
 )
+
+const defaultDSN = "postgres://signet:signet@localhost:5432/signet?sslmode=disable"
 
 type memoryLimiter struct {
 	mu   sync.Mutex
@@ -31,14 +33,24 @@ func (l *memoryLimiter) Allow(_ context.Context, key string) (bool, error) {
 	return l.hits[key] <= 10, nil
 }
 
+func databaseURL() string {
+	if value := os.Getenv("SIGNET_DATABASE_URL"); value != "" {
+		return value
+	}
+	return defaultDSN
+}
+
 func main() {
 	ctx := context.Background()
-	db, err := sql.Open("sqlite", "signet.db")
+	pool, err := pgxpool.New(ctx, databaseURL())
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() { _ = db.Close() }()
-	store := sqlite.New(db)
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatalf("connect to PostgreSQL: %v", err)
+	}
+	store := postgres.New(pool)
 	if err := store.Migrate(ctx); err != nil {
 		log.Fatal(err)
 	}
@@ -53,6 +65,7 @@ func main() {
 	cfg.RateLimiter = &memoryLimiter{hits: make(map[string]int)}
 	cfg.CSRFKey = key
 	cfg.AppURL = "http://localhost:8080"
+	cfg.PathPrefix = "/auth"
 	auth, err := signet.New(cfg)
 	if err != nil {
 		log.Fatal(err)
