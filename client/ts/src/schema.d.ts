@@ -232,7 +232,7 @@ export interface components {
     schemas: {
         ApiError: {
             /** @enum {string} */
-            error: "email_exists" | "email_not_verified" | "internal_error" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited";
+            error: "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited";
             message: string;
         };
         OAuthStartInput: {

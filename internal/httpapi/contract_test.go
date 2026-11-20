@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -104,4 +105,16 @@ func TestContractRequestAndResponseShapes(t *testing.T) {
 	if len(token.Methods) != 1 || token.Methods[0].Verb != "POST" {
 		t.Errorf("token verb = %v, want POST", token.Methods)
 	}
+}
+
+func TestContractDescribesCSRFRejection(t *testing.T) {
+	for _, spec := range ContractFor().Errors {
+		if spec.Code == "csrf" {
+			if spec.Status != http.StatusForbidden {
+				t.Errorf("csrf status = %d, want 403", spec.Status)
+			}
+			return
+		}
+	}
+	t.Fatal("contract omits the csrf error code returned by the CSRF guard")
 }

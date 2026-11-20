@@ -1337,6 +1337,7 @@
         "properties": {
           "error": {
             "enum": [
+              "csrf",
               "email_exists",
               "email_not_verified",
               "internal_error",

@@ -149,6 +149,7 @@ func ContractFor() Contract {
 			{core.ErrInvalidEmail, http.StatusBadRequest, "invalid_input", "invalid input"},
 			{core.ErrPasswordTooShort, http.StatusBadRequest, "invalid_input", "invalid input"},
 			{core.ErrPasswordTooLong, http.StatusBadRequest, "invalid_input", "invalid input"},
+			{nil, http.StatusForbidden, "csrf", "cross-origin request rejected"},
 			{nil, http.StatusBadRequest, "invalid_input", "invalid request"},
 			{nil, http.StatusInternalServerError, "internal_error", "internal error"},
 		},
