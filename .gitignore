@@ -31,3 +31,10 @@ go.work.sum
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Private AI-agent workspace (local only)
+.scratch/
+.ai/
+docs/superpowers/
+docs/agents/local/
+*.local.md
