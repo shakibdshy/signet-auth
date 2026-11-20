@@ -10,3 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial project structure, documentation, tooling, and CI configuration.
+- Phase 0 foundation: root-package configuration with secure defaults,
+  composed Store, Mailer, PasswordHasher, RateLimiter and Clock contracts,
+  default User, Account, Session and Token model, sentinel errors, and a
+  router-agnostic HTTP surface with placeholder endpoints.
+- Domain glossary and decision records for the Go version floor and the
+  root-package API boundary.

@@ -32,10 +32,18 @@ database schema.
 - **Small API.** A focused surface that is easy to learn, review, and audit.
 - **Great docs.** Clear, example-driven documentation is part of the product.
 
+## Current state
+
+Phase 0 is in place: the root `signet` package publishes the configuration API,
+the pluggable interfaces and the default data model. No authentication behaviour
+is implemented yet — the HTTP endpoints are wired but return `501`, and the
+middleware does not authenticate the User until Sessions arrive in a later phase.
+
 ## Documentation
 
-Documentation will live in [`docs/`](docs/) as the project takes shape. Runnable
-examples for several routers are planned under [`examples/`](examples/).
+The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) and architectural
+decisions in [`docs/adr/`](docs/adr/). Runnable examples for several routers are
+planned under [`examples/`](examples/).
 
 ## License
 

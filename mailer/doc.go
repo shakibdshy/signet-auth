@@ -1,5 +1,5 @@
-// Package mailer defines the interface Signet will use to deliver transactional
-// email, such as verification links and password-reset messages.
+// Package mailer will hold Signet's email delivery implementations. The Mailer
+// interface and Message type are exported from the root signet package.
 //
 // Applications can plug in any delivery mechanism by implementing that
 // interface: SMTP, a third-party email API, or a no-op implementation for tests.

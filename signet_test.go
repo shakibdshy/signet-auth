@@ -1,9 +1,13 @@
-package signet
+package signet_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/shakibdshy/signet"
+)
 
 func TestVersion(t *testing.T) {
-	if Version == "" {
+	if signet.Version == "" {
 		t.Fatal("Version must not be empty")
 	}
 }
