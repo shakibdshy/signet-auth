@@ -20,7 +20,17 @@ func (c *Client) OAuthCallback(ctx context.Context, in OAuthCallbackInput) (*OAu
 	if c.cfg.OAuth == nil {
 		return nil, ErrOAuthDisabled
 	}
-	return c.oauth.Callback(ctx, in)
+	result, err := c.oauth.Callback(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	// Application hooks are a root concern. Fire the same redacted sign-in
+	// event as the password flow, but only once a User actually signed in —
+	// a pending link token is not a completed sign-in.
+	if result.User != nil {
+		c.cfg.OnSignIn(ctx, redactedUser(result.User))
+	}
+	return result, nil
 }
 
 // LinkOAuthAccount links a provider Account after explicit consent.

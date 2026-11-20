@@ -27,7 +27,7 @@ func (s *Service) Issue(ctx context.Context, userID string, kind core.TokenKind,
 	raw := secret.NewToken()
 	now := s.clock.Now()
 	token := &core.Token{
-		ID:        secret.NewToken(),
+		ID:        secret.NewID(),
 		UserID:    userID,
 		Kind:      kind,
 		Hash:      secret.Digest(raw),

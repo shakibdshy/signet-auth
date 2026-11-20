@@ -26,7 +26,7 @@ func (s *Service) Create(ctx context.Context, userID string) (string, error) {
 	token := secret.NewToken()
 	now := s.clock.Now()
 	session := &core.Session{
-		ID:                secret.NewToken(),
+		ID:                secret.NewID(),
 		UserID:            userID,
 		TokenHash:         secret.Digest(token),
 		CreatedAt:         now,

@@ -2,11 +2,10 @@ package signet
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"strings"
 
 	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/secret"
 )
 
 const credentialProvider = "credential"
@@ -16,32 +15,36 @@ const credentialProvider = "credential"
 //nolint:gosec // G101: fixed timing-equalization input, not a credential.
 const dummyPassword = "signet-anti-enumeration-dummy"
 
-// SignUpInput is re-exported from core.
+// SignUpInput is the input to a sign-up.
 type SignUpInput = core.SignUpInput
 
-// SignUpResult is re-exported from core.
+// SignUpResult is the outcome of a successful sign-up.
 type SignUpResult = core.SignUpResult
 
-// SignInInput is re-exported from core.
+// SignInInput is the input to a sign-in.
 type SignInInput = core.SignInInput
 
-// SignInResult is re-exported from core.
+// SignInResult is the outcome of a successful sign-in.
 type SignInResult = core.SignInResult
 
-// SignOutInput is re-exported from core.
+// SignOutInput is the input to a sign-out.
 type SignOutInput = core.SignOutInput
 
-// SignUp delegates to the auth module.
+// SignUp creates a User and its credential Account, returning the new User.
 func (c *Client) SignUp(ctx context.Context, in SignUpInput) (*SignUpResult, error) {
 	return c.auth.SignUp(ctx, in)
 }
 
-// SignIn delegates to the auth module.
+// SignIn verifies a password, rehashes a stale verifier, creates a Session and
+// returns its raw Session token. Failures are deliberately generic so callers
+// cannot tell whether an email is registered.
 func (c *Client) SignIn(ctx context.Context, in SignInInput) (*SignInResult, error) {
 	return c.auth.SignIn(ctx, in)
 }
 
-// SignOut delegates to the auth module.
+// SignOut revokes the Session identified by a Session token. Unknown or
+// already-revoked tokens are a successful no-op so clients need no special
+// handling for repeated logouts.
 func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	return c.auth.SignOut(ctx, in)
 }
@@ -69,10 +72,4 @@ func (c *Client) allow(ctx context.Context, endpoint, key string) error {
 	return nil
 }
 
-func newID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		panic("signet: crypto/rand unavailable: " + err.Error())
-	}
-	return hex.EncodeToString(buf)
-}
+func newID() string { return secret.NewID() }

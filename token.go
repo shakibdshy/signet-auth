@@ -6,18 +6,18 @@ import "github.com/shakibdshy/signet/internal/core"
 type TokenKind = core.TokenKind
 
 const (
-	// TokenVerifyEmail is re-exported from core.
+	// TokenVerifyEmail proves a request to verify an email address.
 	TokenVerifyEmail = core.TokenVerifyEmail
-	// TokenResetPassword is re-exported from core.
+	// TokenResetPassword proves a request to reset a password.
 	TokenResetPassword = core.TokenResetPassword
 	// TokenOAuthLink proves a request to link an external provider Account.
-	// TokenOAuthLink is re-exported from core.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenOAuthLink = core.TokenOAuthLink
 	// TokenRefresh is a rotating credential used to obtain a new Access token.
-	// TokenRefresh is re-exported from core.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenRefresh = core.TokenRefresh
 	// TokenOAuthState is an OAuth round trip's state, consumed on callback.
-	// TokenOAuthState is re-exported from core.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenOAuthState = core.TokenOAuthState
 )
 

@@ -131,3 +131,46 @@ func TestSystemClock(t *testing.T) {
 		t.Fatalf("Now() = %v, want a time between %v and %v", got, before, after)
 	}
 }
+
+// TestRootSentinelsMatchCore guards the public sentinel surface: every root
+// error must stay bound to its private core value so errors.Is keeps working.
+func TestRootSentinelsMatchCore(t *testing.T) {
+	pairs := []struct {
+		name string
+		root error
+		core error
+	}{
+		{"ErrNotFound", signet.ErrNotFound, core.ErrNotFound},
+		{"ErrInvalidCredentials", signet.ErrInvalidCredentials, core.ErrInvalidCredentials},
+		{"ErrEmailNotVerified", signet.ErrEmailNotVerified, core.ErrEmailNotVerified},
+		{"ErrRateLimited", signet.ErrRateLimited, core.ErrRateLimited},
+		{"ErrTokenExpired", signet.ErrTokenExpired, core.ErrTokenExpired},
+		{"ErrTokenInvalid", signet.ErrTokenInvalid, core.ErrTokenInvalid},
+		{"ErrMissingStore", signet.ErrMissingStore, core.ErrMissingStore},
+		{"ErrMissingMailer", signet.ErrMissingMailer, core.ErrMissingMailer},
+		{"ErrMissingHasher", signet.ErrMissingHasher, core.ErrMissingHasher},
+		{"ErrMissingRateLimiter", signet.ErrMissingRateLimiter, core.ErrMissingRateLimiter},
+		{"ErrInsecureConfig", signet.ErrInsecureConfig, core.ErrInsecureConfig},
+		{"ErrInvalidEmail", signet.ErrInvalidEmail, core.ErrInvalidEmail},
+		{"ErrPasswordTooShort", signet.ErrPasswordTooShort, core.ErrPasswordTooShort},
+		{"ErrPasswordTooLong", signet.ErrPasswordTooLong, core.ErrPasswordTooLong},
+		{"ErrEmailAlreadyExists", signet.ErrEmailAlreadyExists, core.ErrEmailAlreadyExists},
+		{"ErrJWTDisabled", signet.ErrJWTDisabled, core.ErrJWTDisabled},
+		{"ErrInvalidJWTAlgorithm", signet.ErrInvalidJWTAlgorithm, core.ErrInvalidJWTAlgorithm},
+		{"ErrInvalidJWTKey", signet.ErrInvalidJWTKey, core.ErrInvalidJWTKey},
+		{"ErrRefreshReuse", signet.ErrRefreshReuse, core.ErrRefreshReuse},
+		{"ErrInvalidOAuthConfig", signet.ErrInvalidOAuthConfig, core.ErrInvalidOAuthConfig},
+		{"ErrOAuthDisabled", signet.ErrOAuthDisabled, core.ErrOAuthDisabled},
+		{"ErrOAuthProviderNotFound", signet.ErrOAuthProviderNotFound, core.ErrOAuthProviderNotFound},
+		{"ErrOAuthInvalidState", signet.ErrOAuthInvalidState, core.ErrOAuthInvalidState},
+		{"ErrOAuthRedirectNotAllowed", signet.ErrOAuthRedirectNotAllowed, core.ErrOAuthRedirectNotAllowed},
+		{"ErrOAuthEmailNotVerified", signet.ErrOAuthEmailNotVerified, core.ErrOAuthEmailNotVerified},
+		{"ErrOAuthAccountConflict", signet.ErrOAuthAccountConflict, core.ErrOAuthAccountConflict},
+		{"ErrInvalidCSRFConfig", signet.ErrInvalidCSRFConfig, core.ErrInvalidCSRFConfig},
+	}
+	for _, pair := range pairs {
+		if !errors.Is(pair.root, pair.core) {
+			t.Errorf("root sentinel %s is not bound to core", pair.name)
+		}
+	}
+}

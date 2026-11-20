@@ -161,7 +161,7 @@ func (s *Service) Start(ctx context.Context, in core.OAuthStartInput) (*core.OAu
 		return nil, err
 	}
 	if err := s.store.CreateToken(ctx, &core.Token{
-		ID: secret.NewToken(), Kind: core.TokenOAuthState, Hash: secret.Digest(state),
+		ID: secret.NewID(), Kind: core.TokenOAuthState, Hash: secret.Digest(state),
 		ExpiresAt: s.clock.Now().Add(stateTTL), CreatedAt: s.clock.Now(),
 	}); err != nil {
 		return nil, err
@@ -224,7 +224,7 @@ func (s *Service) pendingLink(ctx context.Context, identity *core.OAuthIdentity,
 		return nil, err
 	}
 	if err := s.store.CreateToken(ctx, &core.Token{
-		ID: secret.NewToken(), Kind: core.TokenOAuthLink, Hash: secret.Digest(link),
+		ID: secret.NewID(), Kind: core.TokenOAuthLink, Hash: secret.Digest(link),
 		ExpiresAt: s.clock.Now().Add(linkTTL), CreatedAt: s.clock.Now(),
 	}); err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (s *Service) linkOrCreateUser(ctx context.Context, identity *core.OAuthIden
 		return nil, err
 	}
 	now := s.clock.Now()
-	user = &core.User{ID: secret.NewToken(), Email: email, EmailVerified: true, CreatedAt: now, UpdatedAt: now}
+	user = &core.User{ID: secret.NewID(), Email: email, EmailVerified: true, CreatedAt: now, UpdatedAt: now}
 	if err := s.store.CreateUser(ctx, user); err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (s *Service) linkAccount(ctx context.Context, user *core.User, identity *co
 		return err
 	}
 	return s.store.CreateAccount(ctx, &core.Account{
-		ID: secret.NewToken(), UserID: user.ID, Provider: identity.Provider,
+		ID: secret.NewID(), UserID: user.ID, Provider: identity.Provider,
 		ProviderUserID: identity.ProviderUserID, Email: strings.ToLower(strings.TrimSpace(identity.Email)),
 		EmailVerified: identity.EmailVerified, CreatedAt: s.clock.Now(),
 	})
@@ -283,7 +283,9 @@ func (s *Service) linkAccount(ctx context.Context, user *core.User, identity *co
 func (s *Service) LinkAccount(ctx context.Context, in core.LinkOAuthAccountInput) error {
 	var payload linkPayload
 	if err := s.open(in.LinkToken, &payload); err != nil {
-		return err
+		// A corrupt or tampered link token is reported like any other bad
+		// Token, matching the pre-refactor openLink mapping.
+		return core.ErrTokenInvalid
 	}
 	if !s.clock.Now().Before(payload.ExpiresAt) {
 		return core.ErrTokenInvalid

@@ -192,3 +192,52 @@ func TestOAuthDoesNotLogSecrets(t *testing.T) {
 		t.Errorf("logs leaked OAuth secrets: %q", output)
 	}
 }
+
+func TestOAuthCallbackFiresOnSignInHook(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = fakeMailer{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.OAuth = &signet.OAuthConfig{
+		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
+		RedirectBaseURL:  "https://app.example.com",
+		AllowedRedirects: []string{"https://app.example.com/dashboard"},
+		StateKey:         make([]byte, 32),
+	}
+	var hooked *signet.User
+	cfg.OnSignIn = func(_ context.Context, u *signet.User) {
+		snapshot := *u
+		hooked = &snapshot
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	state := startOAuth(t, client)
+	result, err := client.OAuthCallback(context.Background(), signet.OAuthCallbackInput{Code: "code", State: state})
+	if err != nil {
+		t.Fatalf("OAuthCallback: %v", err)
+	}
+	if result.User == nil {
+		t.Fatal("callback did not return a signed-in User")
+	}
+	if hooked == nil {
+		t.Fatal("OnSignIn did not fire for OAuth sign-in")
+	}
+	if hooked.ID != result.User.ID {
+		t.Errorf("hook user ID = %q, want %q", hooked.ID, result.User.ID)
+	}
+	if hooked.Email != "" || hooked.Name != "" {
+		t.Error("OnSignIn received an unredacted User")
+	}
+}
+
+func TestLinkOAuthAccountCorruptTokenReturnsErrTokenInvalid(t *testing.T) {
+	client, _ := oauthCallbackClient(t, fakeOAuthProvider{name: "google"})
+	err := client.LinkOAuthAccount(context.Background(), signet.LinkOAuthAccountInput{
+		UserID: "user-1", LinkToken: "not-a-valid-link-token",
+	})
+	if !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("corrupt link token error = %v, want ErrTokenInvalid", err)
+	}
+}

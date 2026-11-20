@@ -125,12 +125,12 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 		return nil, err
 	}
 	now := s.deps.Clock.Now()
-	user := &core.User{ID: secret.NewToken(), Email: email, Name: in.Name, CreatedAt: now, UpdatedAt: now}
+	user := &core.User{ID: secret.NewID(), Email: email, Name: in.Name, CreatedAt: now, UpdatedAt: now}
 	if err := s.deps.Store.CreateUser(ctx, user); err != nil {
 		return nil, err
 	}
 	account := &core.Account{
-		ID: secret.NewToken(), UserID: user.ID, Provider: credentialProvider,
+		ID: secret.NewID(), UserID: user.ID, Provider: credentialProvider,
 		ProviderUserID: user.ID, Email: email, PasswordHash: encoded, CreatedAt: now,
 	}
 	if err := s.deps.Store.CreateAccount(ctx, account); err != nil {

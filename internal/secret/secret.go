@@ -22,3 +22,12 @@ func Digest(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }
+
+// NewID returns a 16-byte random identifier encoded as lowercase hex.
+func NewID() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		panic("signet: crypto/rand unavailable: " + err.Error())
+	}
+	return hex.EncodeToString(buf)
+}

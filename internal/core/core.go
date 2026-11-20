@@ -364,6 +364,8 @@ var (
 	ErrMissingStore = errors.New("signet: Config.Store is required")
 	// ErrMissingMailer reports a missing Mailer.
 	ErrMissingMailer = errors.New("signet: Config.Mailer is required")
+	// ErrMissingHasher reports a missing PasswordHasher.
+	ErrMissingHasher = errors.New("signet: Config.PasswordHasher is required")
 	// ErrMissingRateLimiter reports a missing RateLimiter.
 	ErrMissingRateLimiter = errors.New("signet: Config.RateLimiter is required")
 	// ErrInsecureConfig reports an insecure configuration.
