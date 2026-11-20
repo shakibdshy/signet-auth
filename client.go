@@ -6,6 +6,7 @@ import (
 
 	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/csrf"
+	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/oauth"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
@@ -72,9 +73,9 @@ func New(cfg Config) (*Client, error) {
 		jwtCfg = &jwtCopy
 	}
 	exempt := make(map[string]bool)
-	for _, endpoint := range authEndpoints {
-		if endpoint.anonymous {
-			exempt[endpoint.name] = true
+	for _, endpoint := range httpapi.Endpoints {
+		if endpoint.Anonymous {
+			exempt[endpoint.Name] = true
 		}
 	}
 	sessionCookieName := cfg.Cookie.Name

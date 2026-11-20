@@ -401,3 +401,25 @@ var (
 	// ErrInvalidCSRFConfig reports an invalid CSRF key.
 	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
 )
+
+// ListSessionsInput selects the User whose Sessions should be listed.
+type ListSessionsInput struct{ UserID string }
+
+// ListSessionsResult contains safe Session fields.
+type ListSessionsResult struct{ Sessions []*SessionInfo }
+
+// RevokeSessionInput identifies one Session.
+type RevokeSessionInput struct{ SessionID string }
+
+// RevokeAllSessionsInput identifies the User whose Sessions to revoke.
+type RevokeAllSessionsInput struct{ UserID string }
+
+// SessionInfo is the safe representation of a Session.
+type SessionInfo struct {
+	ID                string     `json:"id"`
+	CreatedAt         time.Time  `json:"created_at"`
+	LastSeenAt        time.Time  `json:"last_seen_at"`
+	IdleExpiresAt     time.Time  `json:"idle_expires_at"`
+	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at"`
+	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
+}

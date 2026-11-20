@@ -3,23 +3,23 @@ package signet
 import (
 	"context"
 
-	"github.com/shakibdshy/signet/internal/session"
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 // ListSessionsInput selects the User whose Sessions should be listed.
-type ListSessionsInput struct{ UserID string }
+type ListSessionsInput = core.ListSessionsInput
 
 // ListSessionsResult contains the safe fields of a User's Sessions.
-type ListSessionsResult struct{ Sessions []*SessionInfo }
+type ListSessionsResult = core.ListSessionsResult
 
 // RevokeSessionInput identifies one Session to revoke.
-type RevokeSessionInput struct{ SessionID string }
+type RevokeSessionInput = core.RevokeSessionInput
 
 // RevokeAllSessionsInput identifies the User whose Sessions should be revoked.
-type RevokeAllSessionsInput struct{ UserID string }
+type RevokeAllSessionsInput = core.RevokeAllSessionsInput
 
 // SessionInfo is the safe representation of a Session.
-type SessionInfo = session.Info
+type SessionInfo = core.SessionInfo
 
 // ListSessions returns the Sessions belonging to a User.
 func (c *Client) ListSessions(ctx context.Context, in ListSessionsInput) (*ListSessionsResult, error) {

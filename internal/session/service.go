@@ -4,7 +4,6 @@ package session
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -78,14 +77,14 @@ func (s *Service) RevokeAll(ctx context.Context, userID string) error {
 }
 
 // List returns the safe fields of a User's Sessions.
-func (s *Service) List(ctx context.Context, userID string) ([]*Info, error) {
+func (s *Service) List(ctx context.Context, userID string) ([]*core.SessionInfo, error) {
 	sessions, err := s.store.ListSessionsForUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	info := make([]*Info, 0, len(sessions))
+	info := make([]*core.SessionInfo, 0, len(sessions))
 	for _, session := range sessions {
-		info = append(info, &Info{
+		info = append(info, &core.SessionInfo{
 			ID: session.ID, CreatedAt: session.CreatedAt, LastSeenAt: session.LastSeenAt,
 			IdleExpiresAt: session.IdleExpiresAt, AbsoluteExpiresAt: session.AbsoluteExpiresAt,
 			RevokedAt: session.RevokedAt,
@@ -97,14 +96,4 @@ func (s *Service) List(ctx context.Context, userID string) ([]*Info, error) {
 // ByHash returns the Session for a raw token digest.
 func (s *Service) ByHash(ctx context.Context, digest string) (*core.Session, error) {
 	return s.store.SessionByHash(ctx, digest)
-}
-
-// Info is the safe representation of a Session; root re-exports it.
-type Info struct {
-	ID                string     `json:"id"`
-	CreatedAt         time.Time  `json:"created_at"`
-	LastSeenAt        time.Time  `json:"last_seen_at"`
-	IdleExpiresAt     time.Time  `json:"idle_expires_at"`
-	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at"`
-	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
 }
