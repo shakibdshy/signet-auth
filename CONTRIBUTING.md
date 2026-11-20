@@ -31,6 +31,17 @@ make check   # formatting, vet, lint, tests, and vulnerability scan
 
 Please run `make check` before opening a pull request.
 
+## Code review with OCR
+
+The repository ships a project-local OpenCodeReview plugin under `.opencode/`,
+so these tools are available after restarting OpenCode in this checkout:
+
+- `/ocr-review` reviews code. Examples: "review current workspace",
+  "compare main to HEAD", or "review current changes; focus on auth regressions".
+- `/ocr-health` checks the installed OCR version and its configured model.
+
+Credentials stay in the OCR CLI configuration or environment, never in git.
+
 ## Commit messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
