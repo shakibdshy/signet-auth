@@ -64,11 +64,12 @@ type oasResponse struct {
 }
 
 type generator struct {
-	components map[string]any
-	inProgress map[string]bool
+	components     map[string]any
+	inProgress     map[string]bool
+	optionalFields map[string][]string
 }
 
-func (g *generator) objectSchema(t reflect.Type) any {
+func (g *generator) objectSchema(t reflect.Type, optional []string) any {
 	properties := make(map[string]any)
 	required := []string{}
 	for i := 0; i < t.NumField(); i++ {
@@ -82,7 +83,14 @@ func (g *generator) objectSchema(t reflect.Type) any {
 			name = field.Name
 		}
 		properties[name] = g.schemaFor(field.Type)
-		if !strings.Contains(tag, "omitempty") {
+		skip := strings.Contains(tag, "omitempty")
+		for _, extra := range optional {
+			if extra == name {
+				skip = true
+				break
+			}
+		}
+		if !skip {
 			required = append(required, name)
 		}
 	}
@@ -122,11 +130,11 @@ func (g *generator) schemaFor(t reflect.Type) any {
 	case reflect.Struct:
 		name := t.Name()
 		if name == "" {
-			return g.objectSchema(t)
+			return g.objectSchema(t, nil)
 		}
 		if _, ok := g.components[name]; !ok && !g.inProgress[name] {
 			g.inProgress[name] = true
-			g.components[name] = g.objectSchema(t)
+			g.components[name] = g.objectSchema(t, g.optionalFields[name])
 			delete(g.inProgress, name)
 		}
 		return map[string]any{"$ref": "#/components/schemas/" + name}
@@ -161,7 +169,9 @@ func (g *generator) responseSchema(spec ResponseSpec) any {
 
 // Generate produces an OpenAPI 3.1 document describing the contract.
 func Generate(contract Contract) ([]byte, error) {
-	g := &generator{components: make(map[string]any), inProgress: make(map[string]bool)}
+	g := &generator{
+		components: make(map[string]any), inProgress: make(map[string]bool), optionalFields: contract.OptionalFields,
+	}
 
 	codes := make(map[string]bool)
 	codes["invalid_input"] = true

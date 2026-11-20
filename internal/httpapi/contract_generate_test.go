@@ -51,3 +51,18 @@ func TestGenerateOpenAPIDocument(t *testing.T) {
 		t.Error("SignUpInput must not expose json:\"-\" field rate_limit_key")
 	}
 }
+
+func TestGenerateTokenInputVariants(t *testing.T) {
+	data, err := Generate(ContractFor())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	var doc generatedDoc
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	token := doc.Components.Schemas["TokenInput"]
+	if len(token.Required) != 0 {
+		t.Errorf("TokenInput required = %v, want none (email/password or refresh_token)", token.Required)
+	}
+}

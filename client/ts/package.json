@@ -1,0 +1,23 @@
+{
+  "name": "@shakibdshy/signet-client",
+  "version": "0.1.0",
+  "description": "Generated TypeScript client for the Signet HTTP API",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "generate": "openapi-typescript ../../api/signet.openapi.json -o src/schema.d.ts",
+    "build": "tsc -p tsconfig.json && cp src/schema.d.ts dist/schema.d.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

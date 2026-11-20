@@ -1517,11 +1517,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password",
-          "refresh_token"
-        ],
         "type": "object"
       },
       "TokenPair": {

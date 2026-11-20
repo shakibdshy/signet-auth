@@ -55,6 +55,9 @@ type ErrorSpec struct {
 type Contract struct {
 	Endpoints []ContractEndpoint
 	Errors    []ErrorSpec
+	// OptionalFields overrides tag-derived requiredness for inputs whose Go
+	// struct uses a single shape for mutually exclusive runtime variants.
+	OptionalFields map[string][]string
 }
 
 func typ(t reflect.Type) Schema { return Schema{Type: t} }
@@ -124,6 +127,9 @@ func ContractFor() Contract {
 			{Name: "csrf-token", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("token")}}, Status: http.StatusOK,
 			}}},
+		},
+		OptionalFields: map[string][]string{
+			"TokenInput": {"email", "password", "refresh_token"},
 		},
 		Errors: []ErrorSpec{
 			{core.ErrRateLimited, http.StatusTooManyRequests, "rate_limited", "too many requests"},
