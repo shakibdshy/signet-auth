@@ -14,12 +14,13 @@ import (
 )
 
 var (
-	_ signet.Store                                  = (*testutil.Store)(nil)
-	_                                               = errors.Is(signet.ErrNotFound, core.ErrNotFound)
-	_                                               = errors.Is(signet.ErrMissingHasher, core.ErrMissingHasher)
-	_ func(*core.JWTConfig) error                   = token.ValidateJWTConfig
-	_ func(token.JWTDependencies) *token.JWTService = token.NewJWT
-	_ auth.Argon2idHasher                           = signet.Argon2idHasher{}
+	_ signet.Store                                                  = (*testutil.Store)(nil)
+	_                                                               = errors.Is(signet.ErrNotFound, core.ErrNotFound)
+	_                                                               = errors.Is(signet.ErrMissingHasher, core.ErrMissingHasher)
+	_ func(*core.JWTConfig) error                                   = token.ValidateJWTConfig
+	_ func(token.JWTDependencies) *token.JWTService                 = token.NewJWT
+	_ auth.Argon2idHasher                                           = signet.Argon2idHasher{}
+	_ func(auth.VerificationDependencies) *auth.VerificationService = auth.NewVerification
 )
 
 type fakeUserStore struct{}

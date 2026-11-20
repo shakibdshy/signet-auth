@@ -21,6 +21,7 @@ type Client struct {
 	csrf          *csrf.Guard
 	tokens        *token.Service
 	auth          *auth.Service
+	verification  *auth.VerificationService
 	sessions      *session.Service
 	oauth         *oauth.Service
 }
@@ -104,12 +105,17 @@ func New(cfg Config) (*Client, error) {
 	if cfg.OAuth != nil {
 		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, cfg.RateLimiter, cfg.Logger, c.tokens, c.sessions)
 	}
+	c.verification = auth.NewVerification(auth.VerificationDependencies{
+		Store: cfg.Store, Tokens: c.tokens, Mailer: cfg.Mailer, Templates: cfg.Templates,
+		Clock: cfg.Clock, Limiter: cfg.RateLimiter, Logger: cfg.Logger,
+		AppURL: cfg.AppURL, Password: cfg.Password, Hasher: cfg.PasswordHasher,
+	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: cfg.RateLimiter,
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
-		SendVerification: c.sendVerification, CreateSession: c.createSession,
+		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
 		DummyVerifier: dummy,
 	})
 	return c, nil

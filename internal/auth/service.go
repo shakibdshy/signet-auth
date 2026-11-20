@@ -51,11 +51,11 @@ func (s *Service) logWarn(msg string, attrs ...any) {
 	s.deps.Logger.Warn(msg, append([]any{"at", s.deps.Clock.Now()}, attrs...)...)
 }
 
-func (s *Service) allow(ctx context.Context, endpoint, key string) error {
+func allow(ctx context.Context, limiter core.RateLimiter, endpoint, key string) error {
 	if key == "" {
 		key = "local"
 	}
-	allowed, err := s.deps.Limiter.Allow(ctx, endpoint+"|"+key)
+	allowed, err := limiter.Allow(ctx, endpoint+"|"+key)
 	if err != nil {
 		return err
 	}
@@ -63,6 +63,10 @@ func (s *Service) allow(ctx context.Context, endpoint, key string) error {
 		return core.ErrRateLimited
 	}
 	return nil
+}
+
+func (s *Service) allow(ctx context.Context, endpoint, key string) error {
+	return allow(ctx, s.deps.Limiter, endpoint, key)
 }
 
 func normalizeEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
