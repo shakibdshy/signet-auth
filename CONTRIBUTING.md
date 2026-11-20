@@ -31,6 +31,12 @@ make check   # formatting, vet, lint, tests, and vulnerability scan
 
 Please run `make check` before opening a pull request.
 
+When changing an HTTP request or response shape, update the declarative
+contract in `internal/httpapi/contract.go` and run `make generate`. CI runs
+`make generate-check`, which fails if the committed OpenAPI spec or generated
+TypeScript types are stale. Shape changes are breaking changes for the
+published client and require a major version bump.
+
 ## Code review with OCR
 
 The repository ships a project-local OpenCodeReview plugin under `.opencode/`,

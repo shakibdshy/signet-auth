@@ -3,7 +3,7 @@ GO ?= go
 # Developer tools installed with `go install` land in GOPATH/bin.
 export PATH := $(shell $(GO) env GOPATH)/bin:$(PATH)
 
-.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check
+.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check generate generate-spec generate-types generate-check
 
 test:
 	$(GO) test -race ./...
@@ -48,3 +48,30 @@ tidy:
 	$(GO) mod tidy
 
 check: fmt-check vet lint test vuln
+
+generate-spec:
+	@mkdir -p api
+	$(GO) run ./cmd/signet-openapi > api/signet.openapi.json
+
+generate-types:
+	cd client/ts && npm run generate
+
+generate: generate-spec generate-types
+
+# Regenerate into the working tree, compare with the committed artifacts, and
+# restore the originals so a failure leaves the tree unchanged.
+generate-check:
+	@tmp=$$(mktemp -d); \
+	cp api/signet.openapi.json $$tmp/spec.json; \
+	cp client/ts/src/schema.d.ts $$tmp/schema.d.ts; \
+	$(MAKE) generate >/dev/null || exit 1; \
+	if ! diff -u $$tmp/spec.json api/signet.openapi.json || \
+	   ! diff -u $$tmp/schema.d.ts client/ts/src/schema.d.ts; then \
+		cp $$tmp/spec.json api/signet.openapi.json; \
+		cp $$tmp/schema.d.ts client/ts/src/schema.d.ts; \
+		rm -rf $$tmp; \
+		echo "generated artifacts are stale; run make generate"; \
+		exit 1; \
+	fi; \
+	rm -rf $$tmp; \
+	echo "generated artifacts up to date"

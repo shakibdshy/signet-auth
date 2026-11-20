@@ -170,6 +170,22 @@ any exported name. Adapter packages such as `store/`, `mailer/`, `hash/` and
 `oauth/` remain independently importable. See
 [ADR-0002](docs/adr/0002-public-api-in-root-package.md).
 
+## Typed client for frontend apps
+
+Signet publishes `api/signet.openapi.json`, generated from the declarative
+contract in `internal/httpapi/contract.go`. A generated TypeScript client lives
+in [`client/ts/`](client/ts/) and is published as
+`@shakibdshy/signet-client`.
+
+For a frontend in a separate repo (TanStack Start, Next.js or another React
+app), the backend team merges this base spec into their application's OpenAPI
+spec and publishes a versioned SDK from it. The frontend installs that SDK;
+a breaking response or request change is a major version and fails the
+frontend build at the affected call sites. That is the cross-repo equivalent
+of Hono RPC's `typeof app` — the compiler enforces the contract. `make
+generate-check` in CI prevents the published spec from drifting away from the
+Go handlers. See [`client/ts/README.md`](client/ts/README.md) for usage.
+
 ## Documentation
 
 The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) and architectural

@@ -1,0 +1,62 @@
+name: Signet client contract
+
+on:
+  pull_request:
+  push:
+    tags: ["client-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Contract and client checks
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: client/ts/package-lock.json
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client/ts
+      - name: Check generated artifacts are current
+        run: make generate-check
+      - name: Typecheck the TypeScript client
+        run: npm run typecheck
+        working-directory: client/ts
+      - name: Go checks
+        run: make check
+
+  publish:
+    name: Publish TypeScript client
+    if: startsWith(github.ref, 'refs/tags/client-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+          cache-dependency-path: client/ts/package-lock.json
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client/ts
+      - name: Verify the client compiles
+        run: npm run typecheck
+        working-directory: client/ts
+      - name: Publish
+        run: npm publish --access public
+        working-directory: client/ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
