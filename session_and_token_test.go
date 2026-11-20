@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/testutil"
 )
 
@@ -111,5 +112,12 @@ func TestTokenEndpointIsRateLimited(t *testing.T) {
 	client.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("status = %d, want 429; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSecretDigestIsFixedWidth(t *testing.T) {
+	got := secret.Digest("")
+	if len(got) != 64 {
+		t.Fatalf("digest length = %d, want 64 hex chars", len(got))
 	}
 }

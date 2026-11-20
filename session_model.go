@@ -2,12 +2,9 @@ package signet
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 
 	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/secret"
 )
 
 // Session is one authenticated visit by a User, with its own idle and
@@ -16,13 +13,8 @@ import (
 type Session = core.Session
 
 func newRawSecret() (string, string) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		panic("signet: crypto/rand unavailable: " + err.Error())
-	}
-	token := base64.RawURLEncoding.EncodeToString(buf)
-	digest := sha256.Sum256([]byte(token))
-	return token, hex.EncodeToString(digest[:])
+	token := secret.NewToken()
+	return token, secret.Digest(token)
 }
 
 func (c *Client) createSession(ctx context.Context, userID string) (string, error) {
@@ -43,7 +35,4 @@ func (c *Client) createSession(ctx context.Context, userID string) (string, erro
 	return token, nil
 }
 
-func digestSecret(token string) string {
-	digest := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(digest[:])
-}
+func digestSecret(token string) string { return secret.Digest(token) }
