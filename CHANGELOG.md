@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reorganized the repository into real folders. The root `signet` package is now
+  a façade over private modules in `internal/` (`core`, `auth`, `session`,
+  `token`, `oauth`, `csrf`, `mail`, `secret`, `httpapi`). The public import path
+  and every exported name are unchanged.
 - Examples now use the PostgreSQL adapter against a local Docker/OrbStack
   database, configurable with `SIGNET_DATABASE_URL`.
 - Added a Fiber example module that bridges Signet's `net/http` handlers and
