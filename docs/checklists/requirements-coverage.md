@@ -2,6 +2,12 @@
 
 Fill one file per phase at `docs/checklists/phase-N.md` **before** calling `code-review`. The published spec issue is the source of truth; this document only records the mapping.
 
+## Verification
+
+Verify every row before review: grep each named test function and confirm it exists and asserts the behaviour the row claims. A ticked box without a matching test fails the checklist.
+
+For every security mechanism the spec names, add one **effect test**: assert the observable result, not the mechanism's presence. A PKCE effect test asserts the provider received the verifier at exchange; a state effect test asserts a replayed callback is rejected; a CSRF effect test asserts a cross-site POST is blocked. Checking that `code_challenge=` appears in a URL proves the mechanism was constructed, not that it worked.
+
 Copy this template:
 
 ```md
@@ -18,6 +24,11 @@ Source: issue #N.
 
 | Requirement | Test or explained limitation |
 | --- | --- |
+
+## Security mechanisms → effect tests
+
+| Mechanism | Observable effect asserted | Test |
+| --- | --- | --- |
 
 ## Cross-cutting sweep
 

@@ -14,4 +14,4 @@ Single-context layout: one `GLOSSARY.md` at the repo root and ADRs in `docs/adr/
 
 ## Requirements coverage
 
-Before calling code-review, fill in `docs/checklists/phase-N.md` using the template at `docs/checklists/requirements-coverage.md`: every Testing Decisions line and security requirement must name a test or an explained limitation.
+Before calling code-review, fill in and verify `docs/checklists/phase-N.md` from `docs/checklists/requirements-coverage.md`: every row must name an existing test, and every security mechanism needs an effect test asserting its observable result.

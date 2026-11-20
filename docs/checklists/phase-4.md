@@ -38,6 +38,18 @@ Source: issue #24.
 | vetted OAuth dependency | `golang.org/x/oauth2` used in both adapters |
 | authorization code replay | **limitation:** enforcement belongs to the provider; Signet consumes state once (`TestOAuthStateIsSingleUse`) but does not store authorization codes |
 
+## Security mechanisms → effect tests
+
+| Mechanism | Observable effect asserted | Test |
+| --- | --- | --- |
+| PKCE | provider receives the verifier at exchange | `TestPKCEVerifierReachesProvider` |
+| encrypted state | tampered state is rejected | `TestOAuthCallbackRejectsTamperedState` |
+| single-use state | replayed callback is rejected | `TestOAuthStateIsSingleUse` |
+| verifier confidentiality | verifier absent from the authorization URL | `TestPKCEVerifierIsNotExposedInURL` |
+| verified-only auto-link | unverified email creates no User | `TestOAuthCallbackRequiresExplicitLinkForUnverifiedEmail` |
+| single-use link token | replayed link token fails | `TestOAuthCallbackRequiresExplicitLinkForUnverifiedEmail` |
+| rate limiting | 429 from start and callback | `TestOAuthStartRateLimited`, `TestOAuthCallbackRateLimited` |
+
 ## Cross-cutting sweep
 
 - [x] every rate-limited endpoint has a 429 test
