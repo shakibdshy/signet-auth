@@ -22,6 +22,8 @@ var authEndpoints = []string{
 	"verify-email",
 	"send-password-reset",
 	"reset-password",
+	"oauth/start",
+	"oauth/callback",
 }
 
 type userContextKey struct{}
@@ -62,6 +64,10 @@ func (c *Client) Handler() http.Handler {
 			c.handleSendPasswordReset(w, r)
 		case "reset-password":
 			c.handleResetPassword(w, r)
+		case "oauth/start":
+			c.handleOAuthStart(w, r)
+		case "oauth/callback":
+			c.handleOAuthCallback(w, r)
 		default:
 			http.Error(w, "signet: endpoint not implemented", http.StatusNotImplemented)
 		}
@@ -319,6 +325,54 @@ func (c *Client) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (c *Client) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in OAuthStartInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	result, err := c.OAuthStart(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (c *Client) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	in := OAuthCallbackInput{
+		Code:         r.URL.Query().Get("code"),
+		State:        r.URL.Query().Get("state"),
+		RateLimitKey: clientIP(r),
+	}
+	result, err := c.OAuthCallback(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	target, err := url.Parse(result.Redirect)
+	if err != nil {
+		target = &url.URL{Path: "/"}
+	}
+	if result.LinkToken != "" {
+		query := target.Query()
+		query.Set("link_token", result.LinkToken)
+		target.RawQuery = query.Encode()
+	} else {
+		http.SetCookie(w, c.sessionCookie(result.SessionToken, false))
+	}
+	http.Redirect(w, r, target.String(), http.StatusFound)
+}
+
 func writeAuthError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrRateLimited):
@@ -329,8 +383,14 @@ func writeAuthError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, "email_not_verified", "email not verified")
 	case errors.Is(err, ErrInvalidCredentials):
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
-	case errors.Is(err, ErrJWTDisabled):
+	case errors.Is(err, ErrJWTDisabled), errors.Is(err, ErrOAuthDisabled), errors.Is(err, ErrOAuthProviderNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "not found")
+	case errors.Is(err, ErrOAuthRedirectNotAllowed), errors.Is(err, ErrOAuthInvalidState):
+		writeError(w, http.StatusBadRequest, "invalid_request", "invalid request")
+	case errors.Is(err, ErrOAuthEmailNotVerified):
+		writeError(w, http.StatusForbidden, "oauth_email_not_verified", "email not verified by provider")
+	case errors.Is(err, ErrOAuthAccountConflict):
+		writeError(w, http.StatusConflict, "oauth_account_conflict", "provider account belongs to another user")
 	case errors.Is(err, ErrEmailAlreadyExists):
 		writeError(w, http.StatusBadRequest, "email_exists", "email already registered")
 	case errors.Is(err, ErrInvalidEmail), errors.Is(err, ErrPasswordTooShort),

@@ -1,6 +1,7 @@
 package signet
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -30,6 +31,24 @@ func newRawSecret() (string, string) {
 	token := base64.RawURLEncoding.EncodeToString(buf)
 	digest := sha256.Sum256([]byte(token))
 	return token, hex.EncodeToString(digest[:])
+}
+
+func (c *Client) createSession(ctx context.Context, userID string) (string, error) {
+	token, digest := newRawSecret()
+	now := c.cfg.Clock.Now()
+	session := &Session{
+		ID:                newID(),
+		UserID:            userID,
+		TokenHash:         digest,
+		CreatedAt:         now,
+		LastSeenAt:        now,
+		IdleExpiresAt:     now.Add(c.cfg.Session.IdleTimeout),
+		AbsoluteExpiresAt: now.Add(c.cfg.Session.AbsoluteTimeout),
+	}
+	if err := c.cfg.Store.CreateSession(ctx, session); err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
 func digestSecret(token string) string {

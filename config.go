@@ -44,6 +44,8 @@ type Config struct {
 	AppURL string
 	// Templates renders Signet's transactional email. Defaults to DefaultTemplates.
 	Templates EmailTemplates
+	// OAuth enables external sign-in providers. When nil, OAuth is disabled.
+	OAuth *OAuthConfig
 }
 
 // CookieConfig controls the session cookie. Secure behaviour is the default.

@@ -16,6 +16,9 @@ const (
 	// TokenRefresh is a rotating credential used to obtain a new Access token.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenRefresh TokenKind = "refresh"
+	// TokenOAuthState is an OAuth round trip's state, consumed on callback.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenOAuthState TokenKind = "oauth_state"
 )
 
 // Token is a single-use proof for one sensitive flow. Hash holds the stored

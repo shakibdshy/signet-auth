@@ -157,18 +157,8 @@ func (c *Client) SignIn(ctx context.Context, in SignInInput) (*SignInResult, err
 
 	c.rehashIfNeeded(ctx, account, in.Password, user.ID)
 
-	token, digest := newRawSecret()
-	now := c.cfg.Clock.Now()
-	session := &Session{
-		ID:                newID(),
-		UserID:            user.ID,
-		TokenHash:         digest,
-		CreatedAt:         now,
-		LastSeenAt:        now,
-		IdleExpiresAt:     now.Add(c.cfg.Session.IdleTimeout),
-		AbsoluteExpiresAt: now.Add(c.cfg.Session.AbsoluteTimeout),
-	}
-	if err := c.cfg.Store.CreateSession(ctx, session); err != nil {
+	token, err := c.createSession(ctx, user.ID)
+	if err != nil {
 		return nil, err
 	}
 	c.logInfo("sign_in_success", "user_id", user.ID)

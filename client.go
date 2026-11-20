@@ -41,6 +41,11 @@ func New(cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cfg.OAuth != nil {
+		if len(cfg.OAuth.Providers) == 0 || len(cfg.OAuth.StateKey) != 32 {
+			return nil, ErrInvalidOAuthConfig
+		}
+	}
 	var jwtCfg *JWTConfig
 	if cfg.JWT != nil {
 		jwtCopy := *cfg.JWT

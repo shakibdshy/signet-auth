@@ -31,3 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   defaults, console and SMTP mailer adapters, single-use hashed verification
   and reset Tokens, anti-enumeration, the verified-email sign-in gate, session
   revocation and password-changed notifications.
+- Phase 4 OAuth sign-in: root OAuthProvider contract, Google and GitHub
+  adapters, PKCE with encrypted expiring state, redirect allowlist,
+  verified-only auto-linking, one-time explicit link tokens and session
+  creation on callback.

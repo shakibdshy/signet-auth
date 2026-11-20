@@ -187,3 +187,67 @@ func ExampleClient_ResetPassword() {
 	fmt.Println(err == nil)
 	// Output: true
 }
+
+func exampleState(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return parsed.Query().Get("state")
+}
+
+func ExampleClient_OAuthStart() {
+	cfg := signet.DefaultConfig()
+	cfg.Store = newMemoryStore()
+	cfg.Mailer = fakeMailer{}
+	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.OAuth = &signet.OAuthConfig{
+		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
+		RedirectBaseURL:  "https://app.example.com",
+		AllowedRedirects: []string{"https://app.example.com/dashboard"},
+		StateKey:         make([]byte, 32),
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		panic(err)
+	}
+	result, err := client.OAuthStart(context.Background(), signet.OAuthStartInput{
+		Provider: "google", Redirect: "https://app.example.com/dashboard",
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(strings.Contains(result.URL, "code_challenge="))
+	// Output: true
+}
+
+func ExampleClient_OAuthCallback() {
+	cfg := signet.DefaultConfig()
+	cfg.Store = newMemoryStore()
+	cfg.Mailer = fakeMailer{}
+	cfg.RateLimiter = &recordingLimiter{allow: true}
+	cfg.OAuth = &signet.OAuthConfig{
+		Providers:        []signet.OAuthProvider{fakeOAuthProvider{name: "google"}},
+		RedirectBaseURL:  "https://app.example.com",
+		AllowedRedirects: []string{"https://app.example.com/dashboard"},
+		StateKey:         make([]byte, 32),
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		panic(err)
+	}
+	started, err := client.OAuthStart(context.Background(), signet.OAuthStartInput{
+		Provider: "google", Redirect: "https://app.example.com/dashboard",
+	})
+	if err != nil {
+		panic(err)
+	}
+	result, err := client.OAuthCallback(context.Background(), signet.OAuthCallbackInput{
+		Code: "authorization-code", State: exampleState(started.URL),
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result.User.Email, result.User.EmailVerified)
+	// Output: user@example.com true
+}

@@ -156,10 +156,37 @@ and is for development only because it prints links. The `mailer/smtp` adapter
 uses STARTTLS by default, supports implicit TLS and requires an explicit switch
 for plaintext transport.
 
+## OAuth sign-in
+
+OAuth is opt-in. Register providers, supply their client credentials, set the
+application origin and allowlist the redirect targets:
+
+```go
+cfg.OAuth = &signet.OAuthConfig{
+	Providers:        []signet.OAuthProvider{google.Provider{ClientID: "...", ClientSecret: "..."}},
+	Credentials:      map[string]signet.OAuthCredentials{"google": {ClientID: "..."}},
+	RedirectBaseURL:  "https://app.example.com",
+	AllowedRedirects: []string{"https://app.example.com/dashboard"},
+	StateKey:         signingKey, // 32 bytes
+}
+```
+
+`POST /oauth/start` with `{provider, redirect}` returns the provider
+authorization URL. The flow uses PKCE with an encrypted, expiring state value.
+`GET /oauth/callback` redeems the code, sets the session cookie and redirects to
+the allowlisted target. A verified email matching an existing User auto-links a
+provider Account; a verified email with no match creates a new verified User.
+An unverified email never auto-links — the callback redirects with a one-time
+link token that an authenticated User can pass to `LinkOAuthAccount`.
+
+`oauth/google` and `oauth/github` are the built-in adapters; implement the root
+`OAuthProvider` interface to add more providers without changing the core.
+
 ## Current state
 
-Phase 3 is in place: email verification, password reset, email templates and
-mailer adapters. OAuth and database adapters arrive in later phases.
+Phase 4 is in place: OAuth sign-in with Google and GitHub, PKCE, encrypted
+state, verified-only auto-linking and explicit linking. Database adapters
+arrive in later phases.
 
 ### Limitations
 

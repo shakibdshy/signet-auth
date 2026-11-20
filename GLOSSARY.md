@@ -35,3 +35,7 @@ _Avoid_: session token
 **Refresh token**:
 A long-lived credential used only to obtain a new Access token. It is rotated on every use.
 _Avoid_: session token
+
+**OAuth identity**:
+A provider's assertion about a User's external identity: a provider user ID, an email and whether that email is verified.
+_Avoid_: profile, user info

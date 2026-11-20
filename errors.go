@@ -42,4 +42,18 @@ var (
 	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
+	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
+	ErrInvalidOAuthConfig = errors.New("signet: invalid oauth configuration")
+	// ErrOAuthDisabled reports OAuth use while Config.OAuth is nil.
+	ErrOAuthDisabled = errors.New("signet: oauth is disabled")
+	// ErrOAuthProviderNotFound reports an unregistered provider name.
+	ErrOAuthProviderNotFound = errors.New("signet: oauth provider not found")
+	// ErrOAuthInvalidState reports tampered, expired or mismatched state.
+	ErrOAuthInvalidState = errors.New("signet: invalid oauth state")
+	// ErrOAuthRedirectNotAllowed reports a redirect outside the allowlist.
+	ErrOAuthRedirectNotAllowed = errors.New("signet: oauth redirect not allowed")
+	// ErrOAuthEmailNotVerified reports an OAuth identity without a usable verified email.
+	ErrOAuthEmailNotVerified = errors.New("signet: oauth email not verified")
+	// ErrOAuthAccountConflict reports a provider Account owned by another User.
+	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
 )
