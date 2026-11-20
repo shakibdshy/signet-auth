@@ -79,7 +79,8 @@ func main() {
 
 Mount `auth.Handler()` on any router to expose `/signup`, `/signin`, `/signout`,
 `/sessions`, `/session`, `/token`, `/csrf-token` and the verification, reset and
-OAuth endpoints. Runnable apps for four routers live in [`examples/`](examples/).
+OAuth endpoints. Runnable apps for five routers — standard library, Chi, Echo,
+Gin and Fiber — live in [`examples/`](examples/).
 
 ## Security
 

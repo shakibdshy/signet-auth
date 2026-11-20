@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Examples now use the PostgreSQL adapter against a local Docker/OrbStack
   database, configurable with `SIGNET_DATABASE_URL`.
+- Added a Fiber example module that bridges Signet's `net/http` handlers and
+  middleware with Fiber's `middleware/adaptor`.
 
 ## [0.1.0] - 2026-11-20
 

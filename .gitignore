@@ -10,6 +10,7 @@
 /examples/chi/chi
 /examples/echo/echo
 /examples/gin/gin
+/examples/fiber/fiber
 
 # Test binaries and coverage output
 *.test

@@ -12,7 +12,7 @@ integration:
 	$(GO) test -race -count=1 ./store/postgres/... ./store/sqlite/...
 
 examples:
-	@for dir in examples/stdlib examples/chi examples/echo examples/gin; do \
+	@for dir in examples/stdlib examples/chi examples/echo examples/gin examples/fiber; do \
 		echo "building $$dir"; \
 		(cd $$dir && $(GO) build ./...) || exit 1; \
 	done
