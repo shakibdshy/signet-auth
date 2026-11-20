@@ -1,0 +1,7 @@
+{
+  "name": "signet-opencode-plugins",
+  "private": true,
+  "dependencies": {
+    "@opencode-ai/plugin": "1.19.6"
+  }
+}

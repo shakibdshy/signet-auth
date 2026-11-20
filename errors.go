@@ -1,61 +1,61 @@
 package signet
 
-import "errors"
+import "github.com/shakibdshy/signet/internal/core"
 
 var (
 	// ErrNotFound reports that a User, Account, Session or Token does not exist.
-	ErrNotFound = errors.New("signet: not found")
+	ErrNotFound = core.ErrNotFound
 	// ErrInvalidCredentials reports a failed sign-in attempt.
-	ErrInvalidCredentials = errors.New("signet: invalid credentials")
+	ErrInvalidCredentials = core.ErrInvalidCredentials
 	// ErrEmailNotVerified reports a sign-in blocked by an unverified email.
-	ErrEmailNotVerified = errors.New("signet: email not verified")
+	ErrEmailNotVerified = core.ErrEmailNotVerified
 	// ErrRateLimited reports that an action exceeded its rate limit.
-	ErrRateLimited = errors.New("signet: rate limited")
+	ErrRateLimited = core.ErrRateLimited
 	// ErrTokenExpired reports a Token past its expiry.
-	ErrTokenExpired = errors.New("signet: token expired")
+	ErrTokenExpired = core.ErrTokenExpired
 	// ErrTokenInvalid reports a malformed, unknown or already-used Token.
-	ErrTokenInvalid = errors.New("signet: token invalid")
+	ErrTokenInvalid = core.ErrTokenInvalid
 	// ErrMissingStore reports that Config.Store was not supplied.
-	ErrMissingStore = errors.New("signet: Config.Store is required")
+	ErrMissingStore = core.ErrMissingStore
 	// ErrMissingMailer reports that Config.Mailer was not supplied.
-	ErrMissingMailer = errors.New("signet: Config.Mailer is required")
+	ErrMissingMailer = core.ErrMissingMailer
 	// ErrMissingHasher reports that Config.PasswordHasher was not supplied.
-	ErrMissingHasher = errors.New("signet: Config.PasswordHasher is required")
+	ErrMissingHasher = core.ErrMissingHasher
 	// ErrMissingRateLimiter reports that Config.RateLimiter was not supplied.
-	ErrMissingRateLimiter = errors.New("signet: Config.RateLimiter is required")
+	ErrMissingRateLimiter = core.ErrMissingRateLimiter
 	// ErrInsecureConfig reports a configuration that would weaken cookie
 	// security without the explicit opt-in.
-	ErrInsecureConfig = errors.New("signet: insecure configuration")
+	ErrInsecureConfig = core.ErrInsecureConfig
 	// ErrInvalidEmail reports a missing or malformed email address.
-	ErrInvalidEmail = errors.New("signet: invalid email")
+	ErrInvalidEmail = core.ErrInvalidEmail
 	// ErrPasswordTooShort reports a password below the configured minimum.
-	ErrPasswordTooShort = errors.New("signet: password too short")
+	ErrPasswordTooShort = core.ErrPasswordTooShort
 	// ErrPasswordTooLong reports a password above the configured maximum.
-	ErrPasswordTooLong = errors.New("signet: password too long")
+	ErrPasswordTooLong = core.ErrPasswordTooLong
 	// ErrEmailAlreadyExists reports a sign-up for a registered email.
-	ErrEmailAlreadyExists = errors.New("signet: email already exists")
+	ErrEmailAlreadyExists = core.ErrEmailAlreadyExists
 	// ErrJWTDisabled reports token use while JWT mode is not configured.
-	ErrJWTDisabled = errors.New("signet: jwt mode is disabled")
+	ErrJWTDisabled = core.ErrJWTDisabled
 	// ErrInvalidJWTAlgorithm reports an algorithm outside the allowlist.
-	ErrInvalidJWTAlgorithm = errors.New("signet: invalid jwt algorithm")
+	ErrInvalidJWTAlgorithm = core.ErrInvalidJWTAlgorithm
 	// ErrInvalidJWTKey reports a signing key that does not match the algorithm.
-	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
+	ErrInvalidJWTKey = core.ErrInvalidJWTKey
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
-	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
+	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
-	ErrInvalidOAuthConfig = errors.New("signet: invalid oauth configuration")
+	ErrInvalidOAuthConfig = core.ErrInvalidOAuthConfig
 	// ErrOAuthDisabled reports OAuth use while Config.OAuth is nil.
-	ErrOAuthDisabled = errors.New("signet: oauth is disabled")
+	ErrOAuthDisabled = core.ErrOAuthDisabled
 	// ErrOAuthProviderNotFound reports an unregistered provider name.
-	ErrOAuthProviderNotFound = errors.New("signet: oauth provider not found")
+	ErrOAuthProviderNotFound = core.ErrOAuthProviderNotFound
 	// ErrOAuthInvalidState reports tampered, expired or mismatched state.
-	ErrOAuthInvalidState = errors.New("signet: invalid oauth state")
+	ErrOAuthInvalidState = core.ErrOAuthInvalidState
 	// ErrOAuthRedirectNotAllowed reports a redirect outside the allowlist.
-	ErrOAuthRedirectNotAllowed = errors.New("signet: oauth redirect not allowed")
+	ErrOAuthRedirectNotAllowed = core.ErrOAuthRedirectNotAllowed
 	// ErrOAuthEmailNotVerified reports an OAuth identity without a usable verified email.
-	ErrOAuthEmailNotVerified = errors.New("signet: oauth email not verified")
+	ErrOAuthEmailNotVerified = core.ErrOAuthEmailNotVerified
 	// ErrOAuthAccountConflict reports a provider Account owned by another User.
-	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
+	ErrOAuthAccountConflict = core.ErrOAuthAccountConflict
 	// ErrInvalidCSRFConfig reports a missing or short CSRF signing key.
-	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
+	ErrInvalidCSRFConfig = core.ErrInvalidCSRFConfig
 )
