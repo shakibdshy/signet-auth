@@ -3,6 +3,7 @@ package signet
 import (
 	"time"
 
+	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/mail"
 )
@@ -97,3 +98,81 @@ type EmailTemplates = core.EmailTemplates
 
 // DefaultTemplates is the built-in email template set.
 var DefaultTemplates = mail.DefaultTemplates
+
+// PasswordHasher stores and verifies password verifiers. The encoded value
+// returned by Hash carries its algorithm and parameters so it can be upgraded.
+type PasswordHasher = core.PasswordHasher
+
+// Argon2idHasher stores password verifiers as Argon2id PHC strings. Its zero
+// value uses the OWASP-recommended parameters.
+type Argon2idHasher = auth.Argon2idHasher
+
+// Session is one authenticated visit by a User.
+type Session = core.Session
+
+// SessionInfo is the safe representation of a Session.
+type SessionInfo = core.SessionInfo
+
+// ListSessionsInput selects the User whose Sessions should be listed.
+type ListSessionsInput = core.ListSessionsInput
+
+// ListSessionsResult contains the safe fields of a User's Sessions.
+type ListSessionsResult = core.ListSessionsResult
+
+// RevokeSessionInput identifies one Session to revoke.
+type RevokeSessionInput = core.RevokeSessionInput
+
+// RevokeAllSessionsInput identifies the User whose Sessions should be revoked.
+type RevokeAllSessionsInput = core.RevokeAllSessionsInput
+
+// SignUpInput is the input to a sign-up.
+type SignUpInput = core.SignUpInput
+
+// SignUpResult is the outcome of a successful sign-up.
+type SignUpResult = core.SignUpResult
+
+// SignInInput is the input to a sign-in.
+type SignInInput = core.SignInInput
+
+// SignInResult is the outcome of a successful sign-in.
+type SignInResult = core.SignInResult
+
+// SignOutInput is the input to a sign-out.
+type SignOutInput = core.SignOutInput
+
+// SendVerificationInput requests a verification email for an email address.
+type SendVerificationInput = core.SendVerificationInput
+
+// VerifyEmailInput carries a verification Token.
+type VerifyEmailInput = core.VerifyEmailInput
+
+// SendPasswordResetInput requests a password reset email.
+type SendPasswordResetInput = core.SendPasswordResetInput
+
+// ResetPasswordInput carries a reset Token and the replacement password.
+type ResetPasswordInput = core.ResetPasswordInput
+
+// JWTConfig enables optional bearer-token mode. A nil Config.JWT keeps cookie
+// sessions only.
+type JWTConfig = core.JWTConfig
+
+// TokenInput selects an exchange: supply email and password, or a Refresh token.
+type TokenInput = core.TokenInput
+
+// TokenPair is the result of a token exchange or refresh.
+type TokenPair = core.TokenPair
+
+// OAuthStartInput selects a provider and redirect target.
+type OAuthStartInput = core.OAuthStartInput
+
+// OAuthStartResult carries the provider authorization URL.
+type OAuthStartResult = core.OAuthStartResult
+
+// OAuthCallbackInput carries the provider code and state.
+type OAuthCallbackInput = core.OAuthCallbackInput
+
+// OAuthCallbackResult carries a User or a one-time link token.
+type OAuthCallbackResult = core.OAuthCallbackResult
+
+// LinkOAuthAccountInput carries the link token and authenticated User ID.
+type LinkOAuthAccountInput = core.LinkOAuthAccountInput

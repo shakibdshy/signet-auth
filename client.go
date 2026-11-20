@@ -2,15 +2,24 @@ package signet
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 	"strings"
 
-	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/oauth"
+	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
+
+	"github.com/shakibdshy/signet/internal/auth"
 )
+
+// dummyPassword is hashed once at client construction for timing parity.
+//
+//nolint:gosec // G101: fixed timing-equalization input, not a credential.
+const dummyPassword = "signet-anti-enumeration-dummy"
 
 // Client is a configured Signet instance. It is safe for concurrent use and
 // is intended to be created once at application startup.
@@ -125,24 +134,6 @@ func New(cfg Config) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) requireVerifiedEmail() bool {
-	return c.cfg.RequireVerifiedEmail == nil || *c.cfg.RequireVerifiedEmail
-}
-
-func (c *Client) sendVerificationOnSignUp() bool {
-	return c.cfg.SendVerificationOnSignUp == nil || *c.cfg.SendVerificationOnSignUp
-}
-
-func (c *Client) logInfo(msg string, attrs ...any) {
-	c.cfg.Logger.Info(msg, append([]any{"at", c.cfg.Clock.Now()}, attrs...)...)
-}
-
-func (c *Client) logWarn(msg string, attrs ...any) {
-	c.cfg.Logger.Warn(msg, append([]any{"at", c.cfg.Clock.Now()}, attrs...)...)
-}
-
-func noopHook(context.Context, *User) {}
-
 func withDefaults(cfg Config) Config {
 	defaults := DefaultConfig()
 	if cfg.Clock == nil {
@@ -188,4 +179,224 @@ func withDefaults(cfg Config) Config {
 		cfg.Templates = DefaultTemplates
 	}
 	return cfg
+}
+
+func noopHook(context.Context, *User) {}
+
+func redactedUser(user *User) *User {
+	redactedCopy := *user
+	redactedCopy.Email = ""
+	redactedCopy.Name = ""
+	return &redactedCopy
+}
+
+// SignUp creates a User and its credential Account, returning the new User.
+func (c *Client) SignUp(ctx context.Context, in SignUpInput) (*SignUpResult, error) {
+	return c.auth.SignUp(ctx, in)
+}
+
+// SignIn verifies a password, rehashes a stale verifier, creates a Session and
+// returns its raw Session token. Failures are deliberately generic so callers
+// cannot tell whether an email is registered.
+func (c *Client) SignIn(ctx context.Context, in SignInInput) (*SignInResult, error) {
+	return c.auth.SignIn(ctx, in)
+}
+
+// SignOut revokes the Session identified by a Session token. Unknown or
+// already-revoked tokens are a successful no-op so clients need no special
+// handling for repeated logouts.
+func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
+	return c.auth.SignOut(ctx, in)
+}
+
+// SendVerification sends a verification email. It succeeds for unknown emails
+// so callers cannot enumerate registered Users.
+func (c *Client) SendVerification(ctx context.Context, in SendVerificationInput) error {
+	return c.verification.SendVerification(ctx, in)
+}
+
+// VerifyEmail consumes a verification Token and marks its User verified.
+func (c *Client) VerifyEmail(ctx context.Context, in VerifyEmailInput) error {
+	return c.verification.VerifyEmail(ctx, in)
+}
+
+// SendPasswordReset sends a reset email. It succeeds for unknown emails so
+// callers cannot enumerate registered Users.
+func (c *Client) SendPasswordReset(ctx context.Context, in SendPasswordResetInput) error {
+	return c.verification.SendPasswordReset(ctx, in)
+}
+
+// ResetPassword consumes a reset Token and replaces the credential verifier.
+func (c *Client) ResetPassword(ctx context.Context, in ResetPasswordInput) error {
+	return c.verification.ResetPassword(ctx, in)
+}
+
+// OAuthStart begins an Authorization Code flow with PKCE.
+func (c *Client) OAuthStart(ctx context.Context, in OAuthStartInput) (*OAuthStartResult, error) {
+	if c.cfg.OAuth == nil {
+		return nil, ErrOAuthDisabled
+	}
+	return c.oauth.Start(ctx, in)
+}
+
+// OAuthCallback redeems the provider code.
+func (c *Client) OAuthCallback(ctx context.Context, in OAuthCallbackInput) (*OAuthCallbackResult, error) {
+	if c.cfg.OAuth == nil {
+		return nil, ErrOAuthDisabled
+	}
+	result, err := c.oauth.Callback(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	// Application hooks are a root concern. Fire the same redacted sign-in
+	// event as the password flow, but only once a User actually signed in —
+	// a pending link token is not a completed sign-in.
+	if result.User != nil {
+		c.cfg.OnSignIn(ctx, redactedUser(result.User))
+	}
+	return result, nil
+}
+
+// LinkOAuthAccount links a provider Account after explicit consent.
+func (c *Client) LinkOAuthAccount(ctx context.Context, in LinkOAuthAccountInput) error {
+	if c.cfg.OAuth == nil {
+		return ErrOAuthDisabled
+	}
+	return c.oauth.LinkAccount(ctx, in)
+}
+
+// ExchangeToken issues a TokenPair for credentials, or rotates a Refresh token.
+func (c *Client) ExchangeToken(ctx context.Context, in TokenInput) (*TokenPair, error) {
+	if c.jwtService == nil {
+		return nil, ErrJWTDisabled
+	}
+	return c.jwtService.Exchange(ctx, in)
+}
+
+// VerifyAccessToken validates a bearer token and returns its User.
+func (c *Client) VerifyAccessToken(ctx context.Context, raw string) (*User, error) {
+	if c.jwtService == nil {
+		return nil, ErrJWTDisabled
+	}
+	return c.jwtService.VerifyAccessToken(ctx, raw)
+}
+
+// ListSessions returns the Sessions belonging to a User.
+func (c *Client) ListSessions(ctx context.Context, in ListSessionsInput) (*ListSessionsResult, error) {
+	sessions, err := c.sessions.List(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return &ListSessionsResult{Sessions: sessions}, nil
+}
+
+// RevokeSession revokes one Session. Unknown IDs are a no-op.
+func (c *Client) RevokeSession(ctx context.Context, in RevokeSessionInput) error {
+	return c.sessions.Revoke(ctx, in.SessionID)
+}
+
+// RevokeAllSessions revokes every Session of a User.
+func (c *Client) RevokeAllSessions(ctx context.Context, in RevokeAllSessionsInput) error {
+	return c.sessions.RevokeAll(ctx, in.UserID)
+}
+
+func (c *Client) createSession(ctx context.Context, userID string) (string, error) {
+	return c.sessions.Create(ctx, userID)
+}
+
+func digestSecret(token string) string { return secret.Digest(token) }
+
+// RequireAuth is standard middleware that resolves the Session cookie,
+// enforces its deadlines and attaches the authenticated User to the request.
+func (c *Client) RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := c.authenticate(w, r, true)
+		if !ok {
+			return
+		}
+		ctx := httpapi.WithUser(r.Context(), user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// OptionalAuth attaches the authenticated User when a valid Session is
+// present and passes the request through otherwise.
+func (c *Client) OptionalAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := c.authenticate(w, r, false)
+		if ok {
+			ctx := httpapi.WithUser(r.Context(), user)
+			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (c *Client) currentSession(r *http.Request) (*Session, error) {
+	cookie, err := r.Cookie(c.cookies.Name())
+	if err != nil || cookie.Value == "" {
+		return nil, ErrNotFound
+	}
+	return c.sessions.ByHash(r.Context(), digestSecret(cookie.Value))
+}
+
+func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required bool) (*User, bool) {
+	if c.csrf.Guard(w, r) {
+		return nil, false
+	}
+	deny := func() (*User, bool) {
+		if required {
+			writeError(w, http.StatusUnauthorized, "unauthorized", "authentication required")
+		}
+		return nil, false
+	}
+	cookie, err := r.Cookie(c.cookies.Name())
+	if err != nil || cookie.Value == "" {
+		return deny()
+	}
+	user, err := c.sessions.Resolve(r.Context(), cookie.Value)
+	if err != nil {
+		return deny()
+	}
+	return user, true
+}
+
+// Handler returns a plain http.Handler serving Signet's authentication endpoints.
+func (c *Client) Handler() http.Handler {
+	return httpapi.New(httpAdapter{Client: c}, c.cfg.PathPrefix).Handler()
+}
+
+// httpAdapter exposes the internal helpers the HTTP module needs without
+// changing the public Client interface.
+type httpAdapter struct{ *Client }
+
+func (a httpAdapter) CSRFGuard(w http.ResponseWriter, r *http.Request) bool {
+	return a.csrf.Guard(w, r)
+}
+func (a httpAdapter) ServeCSRFToken(w http.ResponseWriter, r *http.Request) { a.csrf.ServeToken(w, r) }
+func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (string, error) {
+	return a.cookies.SetSessionAndCSRF(w, token)
+}
+func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+func (a httpAdapter) NewSessionCookie(token string, expiring bool) *http.Cookie {
+	return a.cookies.SessionCookie(token, expiring)
+}
+func (a httpAdapter) ClearSessionCookie(w http.ResponseWriter) { a.cookies.ClearSessionCookie(w) }
+func (a httpAdapter) Authenticate(w http.ResponseWriter, r *http.Request, required bool) (*User, bool) {
+	return a.authenticate(w, r, required)
+}
+func (a httpAdapter) CurrentSession(r *http.Request) (*Session, error) {
+	return a.currentSession(r)
+}
+
+// UserFromContext returns the authenticated User carried by a request context.
+func UserFromContext(ctx context.Context) (*User, bool) {
+	user, ok := httpapi.UserFromContext(ctx)
+	return user, ok
+}
+
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": code, "message": message})
 }

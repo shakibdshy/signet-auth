@@ -160,14 +160,15 @@ are planned for later versions.
 
 ## Project layout
 
-The root `signet` package is a public façade: it holds the exported API you
-import — `Client`, the input and result types, interfaces and sentinel errors —
-as aliases of private domain types. Implementations live in private
-`internal/` packages: `core` (domain types), `auth`, `session`, `token`,
-`oauth`, `csrf`, `mail`, `secret` and `httpapi`. These can be reorganized
-without changing the public import path or any exported name. Adapter packages
-such as `store/`, `mailer/`, `hash/` and `oauth/` remain independently
-importable. See [ADR-0002](docs/adr/0002-public-api-in-root-package.md).
+The root `signet` package is a public façade of exactly five files:
+`signet.go` (exported aliases), `client.go` (`Client` and its delegating
+methods), `config.go`, `errors.go` and `doc.go`. All implementation lives in
+private `internal/` packages: `core` (domain types), `auth`, `session`, `token`,
+`oauth`, `csrf`, `mail`, `secret` and `httpapi`. Black-box tests of the public
+API live in [`tests/`](tests/). None of this changes the public import path or
+any exported name. Adapter packages such as `store/`, `mailer/`, `hash/` and
+`oauth/` remain independently importable. See
+[ADR-0002](docs/adr/0002-public-api-in-root-package.md).
 
 ## Documentation
 
