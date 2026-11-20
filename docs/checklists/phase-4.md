@@ -7,8 +7,8 @@ Source: issue #24.
 | Spec line (short quote) | Test |
 | --- | --- |
 | one seam, external `signet_test` package | all root tests use `signet_test` |
-| fake provider and stubbed token endpoint | `fakeOAuthProvider` in `oauth_test.go`; `httptest` servers in `oauth/google/google_test.go` and `oauth/github/github_test.go` |
-| root package plus adapter packages | `oauth_test.go`, `oauth_start_test.go`, `oauth_callback_test.go`, adapter tests |
+| fake provider and stubbed token endpoint | `fakeOAuthProvider` in `oauth_provider_test.go`; `httptest` servers in `oauth/google/google_test.go` and `oauth/github/github_test.go` |
+| root package plus adapter packages | `oauth_provider_test.go`, `oauth_security_test.go`, `oauth_start_test.go`, `oauth_callback_test.go`, adapter tests |
 | OAuth disabled by default | `TestOAuthDisabledByDefault` |
 | unknown provider and disallowed redirect | `TestOAuthStartValidatesRequest` |
 | state tampering and expiry | `TestOAuthCallbackRejectsTamperedState`, `TestOAuthStateExpires` |

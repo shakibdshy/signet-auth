@@ -7,7 +7,7 @@ Source: issue #19.
 | Spec line (short quote) | Test |
 | --- | --- |
 | one seam, external `signet_test` package | all tests in `signet_test`, `console_test`, `smtp_test` |
-| fake Mailer captures messages | `capturingMailer` in `authfakes_test.go` |
+| fake Mailer captures messages | `testutil.Mailer` in `internal/testutil/testutil.go` |
 | console adapter writes to a buffer | `TestMailerWritesMessage` |
 | SMTP adapter via construction validation | `TestNewValidatesConfiguration`, `TestNewAcceptsTLSModes` |
 | sign-up auto-send and opt-out | `TestSignUpSendsVerificationEmail`, `TestSignUpKeepsUserWhenMailFails` |
