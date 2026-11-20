@@ -19,6 +19,7 @@ type Client struct {
 	dummyVerifier string
 	jwtService    *token.JWTService
 	csrf          *csrf.Guard
+	cookies       *httpapi.Cookies
 	tokens        *token.Service
 	auth          *auth.Service
 	verification  *auth.VerificationService
@@ -85,12 +86,15 @@ func New(cfg Config) (*Client, error) {
 		sessionCookieName = "__Host-" + sessionCookieName
 		csrfCookieName = "__Host-" + csrfCookieName
 	}
+	guard := csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
+		cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
+		strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger)
 	c := &Client{
 		cfg:           cfg,
 		dummyVerifier: dummy,
-		csrf: csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
-			cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
-			strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger),
+		csrf:          guard,
+		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
+			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
 		tokens:   token.New(cfg.Store, cfg.Clock),
 		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session),
 	}

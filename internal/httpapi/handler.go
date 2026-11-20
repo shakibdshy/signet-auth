@@ -70,8 +70,6 @@ var Endpoints = []Endpoint{
 	{Name: "csrf-token", Anonymous: true},
 }
 
-type userContextKey struct{}
-
 // Handler returns a plain http.Handler serving Signet's authentication
 // endpoints under Config.PathPrefix.
 func (h *Handler) Handler() http.Handler {
@@ -393,6 +391,3 @@ func clientIP(r *http.Request) string {
 	}
 	return host
 }
-
-// UserFromContext returns the authenticated User carried by a request context,
-// and reports whether one was present.

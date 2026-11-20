@@ -9,6 +9,7 @@ import (
 	"github.com/shakibdshy/signet"
 	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/testutil"
 	"github.com/shakibdshy/signet/internal/token"
 )
@@ -21,6 +22,8 @@ var (
 	_ func(token.JWTDependencies) *token.JWTService                 = token.NewJWT
 	_ auth.Argon2idHasher                                           = signet.Argon2idHasher{}
 	_ func(auth.VerificationDependencies) *auth.VerificationService = auth.NewVerification
+	_ *httpapi.Cookies                                              = (*httpapi.Cookies)(nil)
+	_ func(context.Context) (*core.User, bool)                      = httpapi.UserFromContext
 )
 
 type fakeUserStore struct{}

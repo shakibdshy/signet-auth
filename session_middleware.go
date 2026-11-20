@@ -1,8 +1,9 @@
 package signet
 
 import (
-	"context"
 	"net/http"
+
+	"github.com/shakibdshy/signet/internal/httpapi"
 )
 
 // RequireAuth is standard middleware that resolves the Session cookie,
@@ -13,7 +14,7 @@ func (c *Client) RequireAuth(next http.Handler) http.Handler {
 		if !ok {
 			return
 		}
-		ctx := context.WithValue(r.Context(), userContextKey{}, user)
+		ctx := httpapi.WithUser(r.Context(), user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -24,7 +25,7 @@ func (c *Client) OptionalAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := c.authenticate(w, r, false)
 		if ok {
-			ctx := context.WithValue(r.Context(), userContextKey{}, user)
+			ctx := httpapi.WithUser(r.Context(), user)
 			r = r.WithContext(ctx)
 		}
 		next.ServeHTTP(w, r)
@@ -32,7 +33,7 @@ func (c *Client) OptionalAuth(next http.Handler) http.Handler {
 }
 
 func (c *Client) currentSession(r *http.Request) (*Session, error) {
-	cookie, err := r.Cookie(c.cookieName())
+	cookie, err := r.Cookie(c.cookies.Name())
 	if err != nil || cookie.Value == "" {
 		return nil, ErrNotFound
 	}
@@ -49,7 +50,7 @@ func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required b
 		}
 		return nil, false
 	}
-	cookie, err := r.Cookie(c.cookieName())
+	cookie, err := r.Cookie(c.cookies.Name())
 	if err != nil || cookie.Value == "" {
 		return deny()
 	}
