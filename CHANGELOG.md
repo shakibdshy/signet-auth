@@ -22,3 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Sessions with hashed tokens, redacted hooks and structured events.
   `golang.org/x/crypto` is the only third-party dependency, used for Argon2id
   and bcrypt.
+- Phase 2 session and token support: secure session cookies with derived
+  __Host- prefix, RequireAuth and OptionalAuth with idle and absolute timeout
+  enforcement, a same-origin CSRF guard, session listing and revocation,
+  optional JWT mode with rotating hashed Refresh tokens and replay containment,
+  and the /token endpoint.

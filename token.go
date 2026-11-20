@@ -13,6 +13,9 @@ const (
 	// TokenOAuthLink proves a request to link an external provider Account.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenOAuthLink TokenKind = "oauth_link"
+	// TokenRefresh is a rotating credential used to obtain a new Access token.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenRefresh TokenKind = "refresh"
 )
 
 // Token is a single-use proof for one sensitive flow. Hash holds the stored

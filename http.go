@@ -6,13 +6,18 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 )
 
 var authEndpoints = []string{
 	"signup",
 	"signin",
 	"signout",
+	"sessions",
+	"session",
+	"token",
 	"verify-email",
 	"reset-password",
 }
@@ -28,7 +33,7 @@ func (c *Client) Handler() http.Handler {
 	for _, endpoint := range authEndpoints {
 		routes[prefix+"/"+endpoint] = endpoint
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	base := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpoint, ok := routes[r.URL.Path]
 		if !ok {
 			http.NotFound(w, r)
@@ -41,10 +46,69 @@ func (c *Client) Handler() http.Handler {
 			c.handleSignIn(w, r)
 		case "signout":
 			c.handleSignOut(w, r)
+		case "sessions":
+			c.handleSessions(w, r)
+		case "session":
+			c.handleCurrentSession(w, r)
+		case "token":
+			c.handleToken(w, r)
 		default:
 			http.Error(w, "signet: endpoint not implemented", http.StatusNotImplemented)
 		}
 	})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if c.csrfRejected(w, r) {
+			return
+		}
+		base.ServeHTTP(w, r)
+	})
+}
+
+func isStateChanging(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c *Client) hasSessionCookie(r *http.Request) bool {
+	cookie, err := r.Cookie(c.cookieName())
+	return err == nil && cookie.Value != ""
+}
+
+func (c *Client) csrfRejected(w http.ResponseWriter, r *http.Request) bool {
+	if c.cfg.InsecureDisableCSRF || !isStateChanging(r.Method) || !c.hasSessionCookie(r) || c.isSameOrigin(r) {
+		return false
+	}
+	c.logInfo("csrf_rejected", "path", r.URL.Path)
+	writeError(w, http.StatusForbidden, "csrf", "cross-origin request rejected")
+	return true
+}
+
+func (c *Client) isSameOrigin(r *http.Request) bool {
+	if origin := r.Header.Get("Origin"); origin != "" {
+		parsed, err := url.Parse(origin)
+		if err != nil || !strings.EqualFold(parsed.Host, r.Host) {
+			return false
+		}
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		// A TLS-terminating proxy presents an http request to us while the
+		// browser sent an https Origin; accepting that direction stays safe
+		// because the host must still match exactly.
+		if parsed.Scheme != "" && !strings.EqualFold(parsed.Scheme, scheme) &&
+			(!strings.EqualFold(parsed.Scheme, "https") || scheme != "http") {
+			return false
+		}
+	}
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
+		return false
+	}
+	return true
 }
 
 func (c *Client) handleSignUp(w http.ResponseWriter, r *http.Request) {
@@ -74,10 +138,40 @@ func (c *Client) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	http.SetCookie(w, c.sessionCookie(result.SessionToken, false))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":          result.User,
 		"session_token": result.SessionToken,
 	})
+}
+
+func (c *Client) cookieName() string {
+	if c.cfg.Cookie.Secure && c.cfg.Cookie.Path == "/" && c.cfg.Cookie.Domain == "" {
+		return "__Host-" + c.cfg.Cookie.Name
+	}
+	return c.cfg.Cookie.Name
+}
+
+//nolint:gosec // G124: all attributes come from validated Config; clearing also sets MaxAge and Expires.
+func (c *Client) sessionCookie(value string, expiring bool) *http.Cookie {
+	cookie := &http.Cookie{
+		Name:     c.cookieName(),
+		Value:    value,
+		Path:     c.cfg.Cookie.Path,
+		Domain:   c.cfg.Cookie.Domain,
+		Secure:   c.cfg.Cookie.Secure,
+		HttpOnly: c.cfg.Cookie.HttpOnly,
+		SameSite: c.cfg.Cookie.SameSite,
+	}
+	if expiring {
+		cookie.MaxAge = -1
+		cookie.Expires = time.Unix(1, 0)
+	}
+	return cookie
+}
+
+func (c *Client) clearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, c.sessionCookie("", true))
 }
 
 func (c *Client) handleSignOut(w http.ResponseWriter, r *http.Request) {
@@ -90,15 +184,85 @@ func (c *Client) handleSignOut(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	c.clearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Client) handleSessions(w http.ResponseWriter, r *http.Request) {
+	user, ok := c.authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		result, err := c.ListSessions(r.Context(), ListSessionsInput{UserID: user.ID})
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"sessions": result.Sessions})
+	case http.MethodDelete:
+		if err := c.RevokeAllSessions(r.Context(), RevokeAllSessionsInput{UserID: user.ID}); err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		c.clearSessionCookie(w)
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (c *Client) handleCurrentSession(w http.ResponseWriter, r *http.Request) {
+	if _, ok := c.authenticate(w, r, true); !ok {
+		return
+	}
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	session, err := c.currentSession(r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if err := c.RevokeSession(r.Context(), RevokeSessionInput{SessionID: session.ID}); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	c.clearSessionCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Client) handleToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in TokenInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	pair, err := c.ExchangeToken(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, pair)
 }
 
 func writeAuthError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrRateLimited):
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
+	case errors.Is(err, ErrTokenInvalid), errors.Is(err, ErrTokenExpired), errors.Is(err, ErrRefreshReuse):
+		writeError(w, http.StatusUnauthorized, "invalid_token", "invalid token")
 	case errors.Is(err, ErrInvalidCredentials), errors.Is(err, ErrEmailNotVerified):
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
+	case errors.Is(err, ErrJWTDisabled):
+		writeError(w, http.StatusNotFound, "not_found", "not found")
 	case errors.Is(err, ErrEmailAlreadyExists):
 		writeError(w, http.StatusBadRequest, "email_exists", "email already registered")
 	case errors.Is(err, ErrInvalidEmail), errors.Is(err, ErrPasswordTooShort),
@@ -125,24 +289,6 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
-}
-
-// RequireAuth is standard middleware for handlers that need an authenticated
-// User. It passes requests through until Session resolution lands in Phase 2;
-// it must not be relied on to enforce authentication yet.
-func (c *Client) RequireAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
-	})
-}
-
-// OptionalAuth is standard middleware that attaches an authenticated User to
-// the request context when one is present. It passes requests through until
-// Session resolution lands in Phase 2.
-func (c *Client) OptionalAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
-	})
 }
 
 // UserFromContext returns the authenticated User carried by a request context,

@@ -79,16 +79,61 @@ func main() {
 }
 ```
 
-Mount `auth.Handler()` on any router to expose `/signup`, `/signin` and
-`/signout` as JSON endpoints. Storage adapters ship in a later phase; until
-then, bring your own `Store` implementation.
+Mount `auth.Handler()` on any router to expose `/signup`, `/signin`, `/signout`,
+`/sessions`, `/session` and `/token` as JSON endpoints. Storage adapters ship in
+a later phase; until then, bring your own `Store` implementation.
+
+## Sessions and cookies
+
+The HTTP sign-in endpoint sets a `HttpOnly`, `Secure`, `SameSite=Lax` cookie
+containing the raw Session token; the store keeps only its digest. The cookie
+uses a `__Host-` prefix when Secure, scoped to `/`, with no Domain. Wrap your
+handlers with `auth.RequireAuth` (or `auth.OptionalAuth` for public pages) and
+read the User with `signet.UserFromContext(r.Context())`. Idle and absolute
+timeouts are enforced on every request; expired Sessions are revoked.
+
+State-changing requests carrying the session cookie are same-origin checked via
+`Origin` and `Sec-Fetch-Site`; a failed check returns `403`. Browser clients
+that send neither header are allowed so non-browser clients keep working. Only
+disable this with `InsecureDisableCSRF` when another layer provides equivalent
+protection.
+
+List and revoke Sessions with `ListSessions`, `RevokeSession` and
+`RevokeAllSessions`, or the matching HTTP endpoints. Listing never returns a
+token digest.
+
+```go
+mux := http.NewServeMux()
+mux.Handle("/auth/", auth.Handler())
+mux.Handle("/private", auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, ok := signet.UserFromContext(r.Context())
+	if !ok {
+		return
+	}
+	fmt.Fprintln(w, user.Email)
+})))
+```
+
+## Optional JWT mode
+
+Set `Config.JWT` to issue short-lived Access tokens and rotating Refresh
+tokens for API clients. An explicit signing key and algorithm are required;
+only `HS256`, `RS256` and `EdDSA` are accepted. `POST /token` exchanges
+credentials or a Refresh token. A replayed Refresh token revokes all Sessions
+and Refresh tokens for that User.
+
+```go
+cfg.JWT = &signet.JWTConfig{
+	Algorithm: "HS256",
+	Key:       signingKey, // []byte for HS256, *rsa.PrivateKey for RS256, ed25519.PrivateKey for EdDSA
+}
+```
 
 ## Current state
 
-Phase 1 is in place: email/password sign-up, sign-in and sign-out work through
-both the Go API and the HTTP endpoints, with argon2id verifiers, transparent
-rehash, anti-enumeration, rate limiting, Sessions and redacted hooks. Secure
-cookies, email verification, OAuth and database adapters arrive in later phases.
+Phase 2 is in place: cookie sessions, auth middleware with timeout enforcement,
+CSRF protection, session management and optional JWT mode. Email verification,
+password reset, OAuth and database adapters arrive in later phases.
 
 ### Limitations
 

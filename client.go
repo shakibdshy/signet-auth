@@ -7,6 +7,7 @@ import "context"
 type Client struct {
 	cfg           Config
 	dummyVerifier string
+	jwt           *JWTConfig
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -32,11 +33,23 @@ func New(cfg Config) (*Client, error) {
 		cfg.Logger.Warn("insecure cookie configuration enabled",
 			"setting", "InsecureAllowHTTPCookies")
 	}
+	if cfg.InsecureDisableCSRF {
+		cfg.Logger.Warn("insecure csrf protection disabled",
+			"setting", "InsecureDisableCSRF")
+	}
 	dummy, err := cfg.PasswordHasher.Hash(context.Background(), dummyPassword)
 	if err != nil {
 		return nil, err
 	}
-	return &Client{cfg: cfg, dummyVerifier: dummy}, nil
+	var jwtCfg *JWTConfig
+	if cfg.JWT != nil {
+		jwtCopy := *cfg.JWT
+		if err := validateJWTConfig(&jwtCopy); err != nil {
+			return nil, err
+		}
+		jwtCfg = &jwtCopy
+	}
+	return &Client{cfg: cfg, dummyVerifier: dummy, jwt: jwtCfg}, nil
 }
 
 func (c *Client) logInfo(msg string, attrs ...any) {

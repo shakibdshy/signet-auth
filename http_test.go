@@ -35,26 +35,21 @@ func TestMiddlewareComposes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	middlewares := map[string]func(http.Handler) http.Handler{
-		"RequireAuth":  client.RequireAuth,
-		"OptionalAuth": client.OptionalAuth,
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+	rec := httptest.NewRecorder()
+	client.OptionalAuth(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if !called || rec.Code != http.StatusNoContent {
+		t.Errorf("OptionalAuth: called = %v, status = %d; want true and 204", called, rec.Code)
 	}
-	for name, middleware := range middlewares {
-		t.Run(name, func(t *testing.T) {
-			called := false
-			next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				called = true
-				w.WriteHeader(http.StatusNoContent)
-			})
-			rec := httptest.NewRecorder()
-			middleware(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-			if !called {
-				t.Error("next handler was not called")
-			}
-			if rec.Code != http.StatusNoContent {
-				t.Errorf("status = %d, want %d", rec.Code, http.StatusNoContent)
-			}
-		})
+	called = false
+	rec = httptest.NewRecorder()
+	client.RequireAuth(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if called || rec.Code != http.StatusUnauthorized {
+		t.Errorf("RequireAuth: called = %v, status = %d; want false and 401", called, rec.Code)
 	}
 }
 

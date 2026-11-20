@@ -71,6 +71,9 @@ type TokenStore interface {
 	// ConsumeToken atomically claims and returns an unused Token of the given
 	// kind. A second call for the same proof must fail.
 	ConsumeToken(context.Context, TokenKind, string) (*Token, error)
+	// TokenByHash returns a Token regardless of whether it has been used, so
+	// replay of a consumed Refresh token can be detected.
+	TokenByHash(context.Context, TokenKind, string) (*Token, error)
 	// DeleteTokensForUser removes every Token of a kind owned by a User.
 	DeleteTokensForUser(context.Context, string, TokenKind) error
 }

@@ -26,4 +26,12 @@ _Avoid_: bearer token, session secret
 
 **Token**:
 A single-use proof for one sensitive flow: email verification, password reset, or OAuth account linking.
-_Avoid_: JWT, one-time code
+_Avoid_: one-time code
+
+**Access token**:
+A short-lived bearer credential presented to an API on each request.
+_Avoid_: session token
+
+**Refresh token**:
+A long-lived credential used only to obtain a new Access token. It is rotated on every use.
+_Avoid_: session token

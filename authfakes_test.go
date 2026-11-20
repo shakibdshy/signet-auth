@@ -14,6 +14,7 @@ type memoryStore struct {
 	usersByEmail      map[string]*signet.User
 	accounts          []*signet.Account
 	sessions          map[string]*signet.Session
+	tokens            []*signet.Token
 	failAccountCreate bool
 }
 
@@ -145,11 +146,35 @@ func (s *memoryStore) ListSessionsForUser(_ context.Context, userID string) ([]*
 	return out, nil
 }
 
-func (s *memoryStore) CreateToken(_ context.Context, _ *signet.Token) error { return nil }
-func (s *memoryStore) ConsumeToken(_ context.Context, _ signet.TokenKind, _ string) (*signet.Token, error) {
+func (s *memoryStore) CreateToken(_ context.Context, token *signet.Token) error {
+	s.tokens = append(s.tokens, token)
+	return nil
+}
+func (s *memoryStore) ConsumeToken(_ context.Context, kind signet.TokenKind, hash string) (*signet.Token, error) {
+	token, err := s.TokenByHash(context.Background(), kind, hash)
+	if err != nil || token.UsedAt != nil {
+		return nil, signet.ErrNotFound
+	}
+	used := time.Now()
+	token.UsedAt = &used
+	return token, nil
+}
+func (s *memoryStore) TokenByHash(_ context.Context, kind signet.TokenKind, hash string) (*signet.Token, error) {
+	for _, token := range s.tokens {
+		if token.Kind == kind && token.Hash == hash {
+			return token, nil
+		}
+	}
 	return nil, signet.ErrNotFound
 }
-func (s *memoryStore) DeleteTokensForUser(_ context.Context, _ string, _ signet.TokenKind) error {
+func (s *memoryStore) DeleteTokensForUser(_ context.Context, userID string, kind signet.TokenKind) error {
+	remaining := s.tokens[:0]
+	for _, token := range s.tokens {
+		if token.UserID != userID || token.Kind != kind {
+			remaining = append(remaining, token)
+		}
+	}
+	s.tokens = remaining
 	return nil
 }
 
@@ -209,6 +234,10 @@ func (h *rehashFailureHasher) NeedsRehash(string) bool { return true }
 type fixedClock struct{ at time.Time }
 
 func (c fixedClock) Now() time.Time { return c.at }
+
+type adjustableClock struct{ at time.Time }
+
+func (c *adjustableClock) Now() time.Time { return c.at }
 
 var errTestStore = &testStoreError{}
 

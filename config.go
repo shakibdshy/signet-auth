@@ -27,6 +27,13 @@ type Config struct {
 	Password                 PasswordConfig
 	PathPrefix               string
 	InsecureAllowHTTPCookies bool
+	// InsecureDisableCSRF turns off the same-origin guard for cookie-based
+	// state changes. It logs a warning and should only be used when another
+	// layer provides equivalent protection.
+	InsecureDisableCSRF bool
+	// JWT enables optional bearer-token mode. When nil, only cookie sessions
+	// are available.
+	JWT *JWTConfig
 }
 
 // CookieConfig controls the session cookie. Secure behaviour is the default.

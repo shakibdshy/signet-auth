@@ -49,6 +49,9 @@ func (fakeTokenStore) CreateToken(context.Context, *signet.Token) error { return
 func (fakeTokenStore) ConsumeToken(context.Context, signet.TokenKind, string) (*signet.Token, error) {
 	return nil, nil
 }
+func (fakeTokenStore) TokenByHash(context.Context, signet.TokenKind, string) (*signet.Token, error) {
+	return nil, nil
+}
 func (fakeTokenStore) DeleteTokensForUser(context.Context, string, signet.TokenKind) error {
 	return nil
 }

@@ -34,4 +34,12 @@ var (
 	ErrPasswordTooLong = errors.New("signet: password too long")
 	// ErrEmailAlreadyExists reports a sign-up for a registered email.
 	ErrEmailAlreadyExists = errors.New("signet: email already exists")
+	// ErrJWTDisabled reports token use while JWT mode is not configured.
+	ErrJWTDisabled = errors.New("signet: jwt mode is disabled")
+	// ErrInvalidJWTAlgorithm reports an algorithm outside the allowlist.
+	ErrInvalidJWTAlgorithm = errors.New("signet: invalid jwt algorithm")
+	// ErrInvalidJWTKey reports a signing key that does not match the algorithm.
+	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
+	// ErrRefreshReuse reports replay of a consumed Refresh token.
+	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 )
