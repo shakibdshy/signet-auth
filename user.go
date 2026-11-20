@@ -5,13 +5,13 @@ import "time"
 // User is the person whose identity Signet manages. A User is the stable
 // subject that Accounts and Sessions belong to.
 type User struct {
-	ID            string
-	Email         string
-	EmailVerified bool
-	Name          string
-	Disabled      bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID            string    `json:"id"`
+	Email         string    `json:"email"`
+	EmailVerified bool      `json:"email_verified"`
+	Name          string    `json:"name"`
+	Disabled      bool      `json:"disabled"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // Account is a named way a User authenticates: either a credential or a link

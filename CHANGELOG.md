@@ -16,3 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   router-agnostic HTTP surface with placeholder endpoints.
 - Domain glossary and decision records for the Go version floor and the
   root-package API boundary.
+- Phase 1 email and password authentication: programmatic and HTTP sign-up,
+  sign-in and sign-out, Argon2id verifiers with OWASP parameters, a bcrypt
+  adapter, transparent rehash, anti-enumeration timing, rate limiting,
+  Sessions with hashed tokens, redacted hooks and structured events.
+  `golang.org/x/crypto` is the only third-party dependency, used for Argon2id
+  and bcrypt.

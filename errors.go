@@ -26,4 +26,12 @@ var (
 	// ErrInsecureConfig reports a configuration that would weaken cookie
 	// security without the explicit opt-in.
 	ErrInsecureConfig = errors.New("signet: insecure configuration")
+	// ErrInvalidEmail reports a missing or malformed email address.
+	ErrInvalidEmail = errors.New("signet: invalid email")
+	// ErrPasswordTooShort reports a password below the configured minimum.
+	ErrPasswordTooShort = errors.New("signet: password too short")
+	// ErrPasswordTooLong reports a password above the configured maximum.
+	ErrPasswordTooLong = errors.New("signet: password too long")
+	// ErrEmailAlreadyExists reports a sign-up for a registered email.
+	ErrEmailAlreadyExists = errors.New("signet: email already exists")
 )

@@ -5,7 +5,8 @@ import "context"
 // Client is a configured Signet instance. It is safe for concurrent use and
 // is intended to be created once at application startup.
 type Client struct {
-	cfg Config
+	cfg           Config
+	dummyVerifier string
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -16,9 +17,6 @@ func New(cfg Config) (*Client, error) {
 	}
 	if cfg.Mailer == nil {
 		return nil, ErrMissingMailer
-	}
-	if cfg.PasswordHasher == nil {
-		return nil, ErrMissingHasher
 	}
 	if cfg.RateLimiter == nil {
 		return nil, ErrMissingRateLimiter
@@ -34,7 +32,19 @@ func New(cfg Config) (*Client, error) {
 		cfg.Logger.Warn("insecure cookie configuration enabled",
 			"setting", "InsecureAllowHTTPCookies")
 	}
-	return &Client{cfg: cfg}, nil
+	dummy, err := cfg.PasswordHasher.Hash(context.Background(), dummyPassword)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{cfg: cfg, dummyVerifier: dummy}, nil
+}
+
+func (c *Client) logInfo(msg string, attrs ...any) {
+	c.cfg.Logger.Info(msg, append([]any{"at", c.cfg.Clock.Now()}, attrs...)...)
+}
+
+func (c *Client) logWarn(msg string, attrs ...any) {
+	c.cfg.Logger.Warn(msg, append([]any{"at", c.cfg.Clock.Now()}, attrs...)...)
 }
 
 func noopHook(context.Context, *User) {}
@@ -46,6 +56,9 @@ func withDefaults(cfg Config) Config {
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = defaults.Logger
+	}
+	if cfg.PasswordHasher == nil {
+		cfg.PasswordHasher = defaults.PasswordHasher
 	}
 	if cfg.Cookie.Name == "" {
 		cfg.Cookie.Name = defaults.Cookie.Name

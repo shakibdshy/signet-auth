@@ -18,8 +18,12 @@ _Avoid_: password record, user password
 
 **Session**:
 One authenticated visit by a User, with its own idle and absolute lifetimes.
-_Avoid_: login, cookie, token
+_Avoid_: login, cookie
+
+**Session token**:
+The raw value a Session presents when authenticating. It is stored only as a digest and is distinct from a Token.
+_Avoid_: bearer token, session secret
 
 **Token**:
 A single-use proof for one sensitive flow: email verification, password reset, or OAuth account linking.
-_Avoid_: session token, JWT, secret
+_Avoid_: JWT, one-time code

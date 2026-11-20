@@ -27,7 +27,8 @@ func (fakeAccountStore) AccountsForUser(context.Context, string) ([]*signet.Acco
 func (fakeAccountStore) AccountByProvider(context.Context, string, string) (*signet.Account, error) {
 	return nil, nil
 }
-func (fakeAccountStore) DeleteAccount(context.Context, string) error { return nil }
+func (fakeAccountStore) UpdateAccount(context.Context, *signet.Account) error { return nil }
+func (fakeAccountStore) DeleteAccount(context.Context, string) error          { return nil }
 
 type fakeSessionStore struct{}
 

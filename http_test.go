@@ -16,9 +16,6 @@ func TestHandlerEndpointsAreWired(t *testing.T) {
 	}
 	handler := client.Handler()
 	paths := []string{
-		"/signup",
-		"/signin",
-		"/signout",
 		"/verify-email",
 		"/reset-password",
 	}

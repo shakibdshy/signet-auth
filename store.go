@@ -39,6 +39,9 @@ type AccountStore interface {
 	AccountsForUser(context.Context, string) ([]*Account, error)
 	// AccountByProvider returns an Account for a provider and its user ID.
 	AccountByProvider(context.Context, string, string) (*Account, error)
+	// UpdateAccount persists changes to an existing Account, including a
+	// rehashed password verifier on the credential Account.
+	UpdateAccount(context.Context, *Account) error
 	// DeleteAccount removes the Account with the given ID.
 	DeleteAccount(context.Context, string) error
 }

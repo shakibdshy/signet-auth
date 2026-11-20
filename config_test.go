@@ -55,7 +55,6 @@ func TestNewRequiresDependencies(t *testing.T) {
 	}{
 		{"store", func(c *signet.Config) { c.Store = nil }, signet.ErrMissingStore},
 		{"mailer", func(c *signet.Config) { c.Mailer = nil }, signet.ErrMissingMailer},
-		{"hasher", func(c *signet.Config) { c.PasswordHasher = nil }, signet.ErrMissingHasher},
 		{"limiter", func(c *signet.Config) { c.RateLimiter = nil }, signet.ErrMissingRateLimiter},
 	}
 	for _, tt := range tests {
@@ -96,6 +95,14 @@ func TestNewAllowsInsecureCookiesWhenOptedIn(t *testing.T) {
 	}
 	if !strings.Contains(logs.String(), "insecure") {
 		t.Errorf("expected a warning about insecure cookies, got %q", logs.String())
+	}
+}
+
+func TestNewSuppliesDefaultHasher(t *testing.T) {
+	cfg := completeConfig()
+	cfg.PasswordHasher = nil
+	if _, err := signet.New(cfg); err != nil {
+		t.Fatalf("New() error = %v, want nil with the default hasher", err)
 	}
 }
 

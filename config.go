@@ -58,8 +58,9 @@ type PasswordConfig struct {
 // succeed.
 func DefaultConfig() Config {
 	return Config{
-		Clock:  SystemClock{},
-		Logger: slog.Default(),
+		Clock:          SystemClock{},
+		Logger:         slog.Default(),
+		PasswordHasher: Argon2idHasher{},
 		Cookie: CookieConfig{
 			Name:     "signet_session",
 			Path:     "/",

@@ -32,12 +32,71 @@ database schema.
 - **Small API.** A focused surface that is easy to learn, review, and audit.
 - **Great docs.** Clear, example-driven documentation is part of the product.
 
+## Quickstart
+
+Email and password authentication is available from Go and as plain `net/http`
+endpoints. Supply implementations of the `Store`, `Mailer` and `RateLimiter`
+interfaces; `DefaultConfig()` provides secure defaults for everything else,
+including the password hasher.
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/shakibdshy/signet"
+)
+
+func main() {
+	cfg := signet.DefaultConfig()
+	cfg.Store = myStore        // implements signet.Store
+	cfg.Mailer = myMailer      // implements signet.Mailer
+	cfg.RateLimiter = myLimiter // implements signet.RateLimiter
+
+	auth, err := signet.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = auth.SignUp(context.Background(), signet.SignUpInput{
+		Email:    "user@example.com",
+		Password: "correct horse battery staple",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := auth.SignIn(context.Background(), signet.SignInInput{
+		Email:    "user@example.com",
+		Password: "correct horse battery staple",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = result.SessionToken // raw Session token; store only its digest yourself
+}
+```
+
+Mount `auth.Handler()` on any router to expose `/signup`, `/signin` and
+`/signout` as JSON endpoints. Storage adapters ship in a later phase; until
+then, bring your own `Store` implementation.
+
 ## Current state
 
-Phase 0 is in place: the root `signet` package publishes the configuration API,
-the pluggable interfaces and the default data model. No authentication behaviour
-is implemented yet — the HTTP endpoints are wired but return `501`, and the
-middleware does not authenticate the User until Sessions arrive in a later phase.
+Phase 1 is in place: email/password sign-up, sign-in and sign-out work through
+both the Go API and the HTTP endpoints, with argon2id verifiers, transparent
+rehash, anti-enumeration, rate limiting, Sessions and redacted hooks. Secure
+cookies, email verification, OAuth and database adapters arrive in later phases.
+
+### Limitations
+
+Sign-up writes the User and its credential Account in two store calls. If the second fails, Signet deletes the new User on a best-effort basis; true cross-database atomicity arrives with the storage adapters.
+
+### Dependencies
+
+The only third-party dependency is `golang.org/x/crypto`, used for Argon2id and bcrypt. Everything else is the standard library.
 
 ## Documentation
 
