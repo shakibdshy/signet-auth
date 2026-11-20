@@ -1,6 +1,11 @@
 package signet
 
-import "context"
+import (
+	"context"
+	"strings"
+
+	"github.com/shakibdshy/signet/internal/csrf"
+)
 
 // Client is a configured Signet instance. It is safe for concurrent use and
 // is intended to be created once at application startup.
@@ -8,7 +13,7 @@ type Client struct {
 	cfg           Config
 	dummyVerifier string
 	jwt           *JWTConfig
-	csrf          *csrfGuard
+	csrf          *csrf.Guard
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -64,11 +69,19 @@ func New(cfg Config) (*Client, error) {
 			exempt[endpoint.name] = true
 		}
 	}
+	sessionCookieName := cfg.Cookie.Name
+	csrfCookieName := "signet_csrf"
+	if cfg.Cookie.Secure && cfg.Cookie.Path == "/" && cfg.Cookie.Domain == "" {
+		sessionCookieName = "__Host-" + sessionCookieName
+		csrfCookieName = "__Host-" + csrfCookieName
+	}
 	return &Client{
 		cfg:           cfg,
 		dummyVerifier: dummy,
 		jwt:           jwtCfg,
-		csrf:          newCSRFGuard(cfg, exempt),
+		csrf: csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
+			cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
+			strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger),
 	}, nil
 }
 
