@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/token"
 )
@@ -16,6 +17,7 @@ type Client struct {
 	jwt           *JWTConfig
 	csrf          *csrf.Guard
 	tokens        *token.Service
+	auth          *auth.Service
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -77,7 +79,7 @@ func New(cfg Config) (*Client, error) {
 		sessionCookieName = "__Host-" + sessionCookieName
 		csrfCookieName = "__Host-" + csrfCookieName
 	}
-	return &Client{
+	c := &Client{
 		cfg:           cfg,
 		dummyVerifier: dummy,
 		jwt:           jwtCfg,
@@ -85,7 +87,18 @@ func New(cfg Config) (*Client, error) {
 			cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 			strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger),
 		tokens: token.New(cfg.Store, cfg.Clock),
-	}, nil
+	}
+	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
+	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
+	c.auth = auth.New(auth.Dependencies{
+		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: cfg.RateLimiter,
+		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
+		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
+		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
+		SendVerification: c.sendVerification, CreateSession: c.createSession,
+		DummyVerifier: dummy,
+	})
+	return c, nil
 }
 
 func (c *Client) requireVerifiedEmail() bool {

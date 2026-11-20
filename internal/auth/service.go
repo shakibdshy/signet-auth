@@ -1,0 +1,216 @@
+// Package auth implements Signet's email/password flows.
+package auth
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"strings"
+
+	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/secret"
+)
+
+const credentialProvider = "credential"
+
+// dummyPassword is hashed once at construction so unknown-email sign-ins do
+// comparable work. It is never logged.
+//
+//nolint:gosec // G101: fixed timing-equalization input, not a credential.
+const dummyPassword = "signet-anti-enumeration-dummy"
+
+// Dependencies holds the resolved configuration and cross-module callbacks
+// the auth service needs.
+type Dependencies struct {
+	Store                    core.Store
+	Hasher                   core.PasswordHasher
+	Limiter                  core.RateLimiter
+	Clock                    core.Clock
+	Logger                   *slog.Logger
+	Password                 core.PasswordConfig
+	RequireVerifiedEmail     bool
+	SendVerificationOnSignUp bool
+	OnSignUp                 func(context.Context, *core.User)
+	OnSignIn                 func(context.Context, *core.User)
+	SendVerification         func(context.Context, *core.User) error
+	CreateSession            func(context.Context, string) (string, error)
+	DummyVerifier            string
+}
+
+// Service implements the email/password flows.
+type Service struct{ deps Dependencies }
+
+// New returns an auth Service.
+func New(deps Dependencies) *Service { return &Service{deps: deps} }
+
+func (s *Service) logInfo(msg string, attrs ...any) {
+	s.deps.Logger.Info(msg, append([]any{"at", s.deps.Clock.Now()}, attrs...)...)
+}
+
+func (s *Service) logWarn(msg string, attrs ...any) {
+	s.deps.Logger.Warn(msg, append([]any{"at", s.deps.Clock.Now()}, attrs...)...)
+}
+
+func (s *Service) allow(ctx context.Context, endpoint, key string) error {
+	if key == "" {
+		key = "local"
+	}
+	allowed, err := s.deps.Limiter.Allow(ctx, endpoint+"|"+key)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return core.ErrRateLimited
+	}
+	return nil
+}
+
+func normalizeEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
+
+func redacted(user *core.User) *core.User {
+	redactedCopy := *user
+	redactedCopy.Email = ""
+	redactedCopy.Name = ""
+	return &redactedCopy
+}
+
+func (s *Service) dummyVerify(ctx context.Context, password string) {
+	if s.deps.DummyVerifier == "" {
+		return
+	}
+	_, _ = s.deps.Hasher.Verify(ctx, s.deps.DummyVerifier, password)
+}
+
+func (s *Service) rehashIfNeeded(ctx context.Context, account *core.Account, password, userID string) {
+	if !s.deps.Hasher.NeedsRehash(account.PasswordHash) {
+		return
+	}
+	rehashed, err := s.deps.Hasher.Hash(ctx, password)
+	if err != nil {
+		s.logWarn("rehash_failed", "user_id", userID, "error", err)
+		return
+	}
+	updated := *account
+	updated.PasswordHash = rehashed
+	if err := s.deps.Store.UpdateAccount(ctx, &updated); err != nil {
+		s.logWarn("rehash_failed", "user_id", userID, "error", err)
+		return
+	}
+	s.logInfo("rehash", "user_id", userID)
+}
+
+// SignUp creates a User and its credential Account.
+func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUpResult, error) {
+	email := normalizeEmail(in.Email)
+	if email == "" {
+		return nil, core.ErrInvalidEmail
+	}
+	if len(in.Password) < s.deps.Password.MinLength {
+		return nil, core.ErrPasswordTooShort
+	}
+	if len(in.Password) > s.deps.Password.MaxLength {
+		return nil, core.ErrPasswordTooLong
+	}
+	if err := s.allow(ctx, "signup", in.RateLimitKey); err != nil {
+		return nil, err
+	}
+	if _, err := s.deps.Store.UserByEmail(ctx, email); err == nil {
+		return nil, core.ErrEmailAlreadyExists
+	} else if !errors.Is(err, core.ErrNotFound) {
+		return nil, err
+	}
+
+	encoded, err := s.deps.Hasher.Hash(ctx, in.Password)
+	if err != nil {
+		return nil, err
+	}
+	now := s.deps.Clock.Now()
+	user := &core.User{ID: secret.NewToken(), Email: email, Name: in.Name, CreatedAt: now, UpdatedAt: now}
+	if err := s.deps.Store.CreateUser(ctx, user); err != nil {
+		return nil, err
+	}
+	account := &core.Account{
+		ID: secret.NewToken(), UserID: user.ID, Provider: credentialProvider,
+		ProviderUserID: user.ID, Email: email, PasswordHash: encoded, CreatedAt: now,
+	}
+	if err := s.deps.Store.CreateAccount(ctx, account); err != nil {
+		_ = s.deps.Store.DeleteUser(ctx, user.ID)
+		return nil, err
+	}
+	s.logInfo("sign_up", "user_id", user.ID)
+	s.deps.OnSignUp(ctx, redacted(user))
+	if s.deps.SendVerificationOnSignUp {
+		if err := s.deps.SendVerification(ctx, user); err != nil {
+			return nil, err
+		}
+	}
+	return &core.SignUpResult{User: user}, nil
+}
+
+// SignIn verifies a password, rehashes if needed and creates a Session.
+func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignInResult, error) {
+	email := normalizeEmail(in.Email)
+	if email == "" {
+		return nil, core.ErrInvalidEmail
+	}
+	if len(in.Password) < s.deps.Password.MinLength {
+		return nil, core.ErrPasswordTooShort
+	}
+	if len(in.Password) > s.deps.Password.MaxLength {
+		return nil, core.ErrPasswordTooLong
+	}
+	if err := s.allow(ctx, "signin", in.RateLimitKey); err != nil {
+		return nil, err
+	}
+	user, err := s.deps.Store.UserByEmail(ctx, email)
+	if err != nil || user.Disabled {
+		s.dummyVerify(ctx, in.Password)
+		s.logInfo("sign_in_failure", "reason", "unavailable")
+		return nil, core.ErrInvalidCredentials
+	}
+	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
+	if err != nil {
+		s.dummyVerify(ctx, in.Password)
+		s.logInfo("sign_in_failure", "reason", "unavailable")
+		return nil, core.ErrInvalidCredentials
+	}
+	ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.Password)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		s.logInfo("sign_in_failure", "reason", "mismatch")
+		return nil, core.ErrInvalidCredentials
+	}
+	if s.deps.RequireVerifiedEmail && !user.EmailVerified {
+		s.logInfo("sign_in_failure", "reason", "unverified")
+		return nil, core.ErrEmailNotVerified
+	}
+	s.rehashIfNeeded(ctx, account, in.Password, user.ID)
+	sessionToken, err := s.deps.CreateSession(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	s.logInfo("sign_in_success", "user_id", user.ID)
+	s.deps.OnSignIn(ctx, redacted(user))
+	return &core.SignInResult{User: user, SessionToken: sessionToken}, nil
+}
+
+// SignOut revokes the Session identified by a Session token.
+func (s *Service) SignOut(ctx context.Context, in core.SignOutInput) error {
+	if in.SessionToken == "" {
+		return nil
+	}
+	session, err := s.deps.Store.SessionByHash(ctx, secret.Digest(in.SessionToken))
+	if errors.Is(err, core.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := s.deps.Store.DeleteSession(ctx, session.ID); err != nil {
+		return err
+	}
+	s.logInfo("sign_out", "user_id", session.UserID)
+	return nil
+}
