@@ -3,7 +3,7 @@ GO ?= go
 # Developer tools installed with `go install` land in GOPATH/bin.
 export PATH := $(shell $(GO) env GOPATH)/bin:$(PATH)
 
-.PHONY: test integration examples cover lint vet vuln fmt fmt-check tidy check
+.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check
 
 test:
 	$(GO) test -race ./...
@@ -15,6 +15,12 @@ examples:
 	@for dir in examples/stdlib examples/chi examples/echo examples/gin examples/fiber; do \
 		echo "building $$dir"; \
 		(cd $$dir && $(GO) build ./...) || exit 1; \
+	done
+
+fuzz:
+	@for target in FuzzArgonVerifier FuzzSessionTokenSignOut FuzzJSONRequestBodies FuzzOAuthState FuzzCSRFToken; do \
+		echo "fuzzing $$target"; \
+		$(GO) test -fuzz=$$target -fuzztime=10s . || exit 1; \
 	done
 
 cover:

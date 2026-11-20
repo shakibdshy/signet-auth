@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   database, configurable with `SIGNET_DATABASE_URL`.
 - Added a Fiber example module that bridges Signet's `net/http` handlers and
   middleware with Fiber's `middleware/adaptor`.
+- Added fuzz targets for Argon2 verifier parsing, Session tokens, JSON request
+  bodies, OAuth state and CSRF tokens, with a `make fuzz` target and a bounded
+  CI run.
 
 ## [0.1.0] - 2026-11-20
 

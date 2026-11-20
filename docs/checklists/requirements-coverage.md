@@ -1,6 +1,6 @@
 # Requirements coverage
 
-Fill one file per phase at `docs/checklists/phase-N.md` **before** calling `code-review`. The published spec issue is the source of truth; this document only records the mapping.
+Fill one file per phase at `docs/checklists/phase-N.md` **before** calling `code-review`. Cross-cutting work that is not a phase uses a descriptive name instead, such as `fuzz-testing.md`. The published spec issue is the source of truth; this document only records the mapping.
 
 ## Verification
 

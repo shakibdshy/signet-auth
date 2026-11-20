@@ -56,6 +56,10 @@ jobs:
       - name: Build examples
         run: make examples
 
+      - name: Fuzz
+        if: matrix.go == '1.27' && matrix.os == 'ubuntu-latest'
+        run: make fuzz
+
       - name: Vulnerability scan
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
