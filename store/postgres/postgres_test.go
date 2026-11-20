@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
@@ -23,7 +24,7 @@ func TestStorePassesConformance(t *testing.T) {
 				"POSTGRES_USER": "test", "POSTGRES_PASSWORD": "test", "POSTGRES_DB": "test",
 			},
 			ExposedPorts: []string{"5432/tcp"},
-			WaitingFor:   wait.ForListeningPort("5432/tcp"),
+			WaitingFor:   wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		},
 		Started: true,
 	})
@@ -46,6 +47,16 @@ func TestStorePassesConformance(t *testing.T) {
 		t.Fatalf("pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
+
+	for attempt := 0; attempt < 30; attempt++ {
+		if err := pool.Ping(ctx); err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatalf("ping: %v", err)
+	}
 
 	store := postgres.New(pool)
 	if err := store.Migrate(ctx); err != nil {
