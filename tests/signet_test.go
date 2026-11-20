@@ -1,4 +1,4 @@
-package signet_test
+package tests
 
 import (
 	"testing"

@@ -20,7 +20,7 @@ examples:
 fuzz:
 	@for target in FuzzArgonVerifier FuzzSessionTokenSignOut FuzzJSONRequestBodies FuzzOAuthState FuzzCSRFToken; do \
 		echo "fuzzing $$target"; \
-		$(GO) test -fuzz=$$target -fuzztime=10s . || exit 1; \
+		$(GO) test -fuzz=$$target -fuzztime=10s ./tests || exit 1; \
 	done
 
 cover:
