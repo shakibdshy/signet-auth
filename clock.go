@@ -1,13 +1,14 @@
 package signet
 
-import "time"
+import (
+	"time"
+
+	"github.com/shakibdshy/signet/internal/core"
+)
 
 // Clock supplies the current time so time-dependent behaviour can be tested
 // without waiting.
-type Clock interface {
-	// Now returns the current time.
-	Now() time.Time
-}
+type Clock = core.Clock
 
 // SystemClock is the production Clock, backed by time.Now.
 type SystemClock struct{}

@@ -6,21 +6,17 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 const verificationTokenTTL = 24 * time.Hour
 
 // SendVerificationInput requests a verification email for an email address.
-type SendVerificationInput struct {
-	Email        string `json:"email"`
-	RateLimitKey string `json:"-"`
-}
+type SendVerificationInput = core.SendVerificationInput
 
 // VerifyEmailInput carries a verification Token.
-type VerifyEmailInput struct {
-	Token        string `json:"token"`
-	RateLimitKey string `json:"-"`
-}
+type VerifyEmailInput = core.VerifyEmailInput
 
 // SendVerification sends a verification email. It succeeds for unknown emails
 // so callers cannot enumerate registered Users.

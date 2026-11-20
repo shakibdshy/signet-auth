@@ -5,19 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"strings"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 // OAuthStartInput selects a provider and the approved redirect target.
-type OAuthStartInput struct {
-	Provider     string `json:"provider"`
-	Redirect     string `json:"redirect"`
-	RateLimitKey string `json:"-"`
-}
+type OAuthStartInput = core.OAuthStartInput
 
 // OAuthStartResult carries the provider authorization URL.
-type OAuthStartResult struct {
-	URL string `json:"url"`
-}
+type OAuthStartResult = core.OAuthStartResult
 
 // OAuthStart begins an Authorization Code flow with PKCE and encrypted state.
 func (c *Client) OAuthStart(ctx context.Context, in OAuthStartInput) (*OAuthStartResult, error) {

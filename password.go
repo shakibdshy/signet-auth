@@ -10,19 +10,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/shakibdshy/signet/internal/core"
 	"golang.org/x/crypto/argon2"
 )
 
 // PasswordHasher stores and verifies password verifiers. The encoded value
 // returned by Hash carries its algorithm and parameters so it can be upgraded.
-type PasswordHasher interface {
-	// Hash returns an encoded verifier for a password.
-	Hash(context.Context, string) (string, error)
-	// Verify reports whether a password matches an encoded verifier.
-	Verify(context.Context, string, string) (bool, error)
-	// NeedsRehash reports whether an encoded verifier should be upgraded.
-	NeedsRehash(string) bool
-}
+type PasswordHasher = core.PasswordHasher
 
 // Default Argon2id parameters follow the OWASP Password Storage Cheat Sheet:
 // 19 MiB of memory, two iterations and parallelism one.

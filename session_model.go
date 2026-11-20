@@ -6,22 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"time"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 // Session is one authenticated visit by a User, with its own idle and
 // absolute lifetimes. The raw session secret is never persisted; TokenHash
 // holds the digest used to look a Session up.
-type Session struct {
-	ID                string
-	UserID            string
-	TokenHash         string
-	CreatedAt         time.Time
-	LastSeenAt        time.Time
-	IdleExpiresAt     time.Time
-	AbsoluteExpiresAt time.Time
-	RevokedAt         *time.Time
-}
+type Session = core.Session
 
 func newRawSecret() (string, string) {
 	buf := make([]byte, 32)

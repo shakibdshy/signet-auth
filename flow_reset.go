@@ -4,22 +4,17 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 const resetTokenTTL = time.Hour
 
 // SendPasswordResetInput requests a password reset email.
-type SendPasswordResetInput struct {
-	Email        string `json:"email"`
-	RateLimitKey string `json:"-"`
-}
+type SendPasswordResetInput = core.SendPasswordResetInput
 
 // ResetPasswordInput carries a reset Token and the replacement password.
-type ResetPasswordInput struct {
-	Token        string `json:"token"`
-	NewPassword  string `json:"new_password"`
-	RateLimitKey string `json:"-"`
-}
+type ResetPasswordInput = core.ResetPasswordInput
 
 // SendPasswordReset sends a reset email. It succeeds for unknown emails so
 // callers cannot enumerate registered Users.

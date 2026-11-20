@@ -4,30 +4,20 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 // OAuthCallbackInput carries the provider's code and the encrypted state.
-type OAuthCallbackInput struct {
-	Code         string `json:"code"`
-	State        string `json:"state"`
-	RateLimitKey string `json:"-"`
-}
+type OAuthCallbackInput = core.OAuthCallbackInput
 
 // OAuthCallbackResult carries either a signed-in User with a Session token or
 // a one-time token for explicit linking.
-type OAuthCallbackResult struct {
-	User         *User
-	SessionToken string
-	LinkToken    string
-	Redirect     string
-}
+type OAuthCallbackResult = core.OAuthCallbackResult
 
 // LinkOAuthAccountInput carries the one-time link token and the authenticated
 // User who is linking the provider Account.
-type LinkOAuthAccountInput struct {
-	UserID    string `json:"user_id"`
-	LinkToken string `json:"link_token"`
-}
+type LinkOAuthAccountInput = core.LinkOAuthAccountInput
 
 // OAuthCallback completes the Authorization Code flow.
 func (c *Client) OAuthCallback(ctx context.Context, in OAuthCallbackInput) (*OAuthCallbackResult, error) {

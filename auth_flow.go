@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 const credentialProvider = "credential"
@@ -17,35 +19,19 @@ const credentialProvider = "credential"
 const dummyPassword = "signet-anti-enumeration-dummy"
 
 // SignUpInput is the input to a sign-up.
-type SignUpInput struct {
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	Name         string `json:"name"`
-	RateLimitKey string `json:"-"`
-}
+type SignUpInput = core.SignUpInput
 
 // SignUpResult is the outcome of a successful sign-up.
-type SignUpResult struct {
-	User *User
-}
+type SignUpResult = core.SignUpResult
 
 // SignInInput is the input to a sign-in.
-type SignInInput struct {
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	RateLimitKey string `json:"-"`
-}
+type SignInInput = core.SignInInput
 
 // SignInResult is the outcome of a successful sign-in.
-type SignInResult struct {
-	User         *User
-	SessionToken string
-}
+type SignInResult = core.SignInResult
 
 // SignOutInput is the input to a sign-out.
-type SignOutInput struct {
-	SessionToken string `json:"session_token"`
-}
+type SignOutInput = core.SignOutInput
 
 // SignUp creates a User and its credential Account, returning the new User.
 func (c *Client) SignUp(ctx context.Context, in SignUpInput) (*SignUpResult, error) {

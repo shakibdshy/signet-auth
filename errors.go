@@ -1,61 +1,58 @@
 package signet
 
-import "errors"
+import "github.com/shakibdshy/signet/internal/core"
 
 var (
-	// ErrNotFound reports that a User, Account, Session or Token does not exist.
-	ErrNotFound = errors.New("signet: not found")
-	// ErrInvalidCredentials reports a failed sign-in attempt.
-	ErrInvalidCredentials = errors.New("signet: invalid credentials")
-	// ErrEmailNotVerified reports a sign-in blocked by an unverified email.
-	ErrEmailNotVerified = errors.New("signet: email not verified")
-	// ErrRateLimited reports that an action exceeded its rate limit.
-	ErrRateLimited = errors.New("signet: rate limited")
-	// ErrTokenExpired reports a Token past its expiry.
-	ErrTokenExpired = errors.New("signet: token expired")
-	// ErrTokenInvalid reports a malformed, unknown or already-used Token.
-	ErrTokenInvalid = errors.New("signet: token invalid")
-	// ErrMissingStore reports that Config.Store was not supplied.
-	ErrMissingStore = errors.New("signet: Config.Store is required")
-	// ErrMissingMailer reports that Config.Mailer was not supplied.
-	ErrMissingMailer = errors.New("signet: Config.Mailer is required")
-	// ErrMissingHasher reports that Config.PasswordHasher was not supplied.
-	ErrMissingHasher = errors.New("signet: Config.PasswordHasher is required")
-	// ErrMissingRateLimiter reports that Config.RateLimiter was not supplied.
-	ErrMissingRateLimiter = errors.New("signet: Config.RateLimiter is required")
-	// ErrInsecureConfig reports a configuration that would weaken cookie
-	// security without the explicit opt-in.
-	ErrInsecureConfig = errors.New("signet: insecure configuration")
-	// ErrInvalidEmail reports a missing or malformed email address.
-	ErrInvalidEmail = errors.New("signet: invalid email")
-	// ErrPasswordTooShort reports a password below the configured minimum.
-	ErrPasswordTooShort = errors.New("signet: password too short")
-	// ErrPasswordTooLong reports a password above the configured maximum.
-	ErrPasswordTooLong = errors.New("signet: password too long")
-	// ErrEmailAlreadyExists reports a sign-up for a registered email.
-	ErrEmailAlreadyExists = errors.New("signet: email already exists")
-	// ErrJWTDisabled reports token use while JWT mode is not configured.
-	ErrJWTDisabled = errors.New("signet: jwt mode is disabled")
-	// ErrInvalidJWTAlgorithm reports an algorithm outside the allowlist.
-	ErrInvalidJWTAlgorithm = errors.New("signet: invalid jwt algorithm")
-	// ErrInvalidJWTKey reports a signing key that does not match the algorithm.
-	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
-	// ErrRefreshReuse reports replay of a consumed Refresh token.
-	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
-	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
-	ErrInvalidOAuthConfig = errors.New("signet: invalid oauth configuration")
-	// ErrOAuthDisabled reports OAuth use while Config.OAuth is nil.
-	ErrOAuthDisabled = errors.New("signet: oauth is disabled")
-	// ErrOAuthProviderNotFound reports an unregistered provider name.
-	ErrOAuthProviderNotFound = errors.New("signet: oauth provider not found")
-	// ErrOAuthInvalidState reports tampered, expired or mismatched state.
-	ErrOAuthInvalidState = errors.New("signet: invalid oauth state")
-	// ErrOAuthRedirectNotAllowed reports a redirect outside the allowlist.
-	ErrOAuthRedirectNotAllowed = errors.New("signet: oauth redirect not allowed")
-	// ErrOAuthEmailNotVerified reports an OAuth identity without a usable verified email.
-	ErrOAuthEmailNotVerified = errors.New("signet: oauth email not verified")
-	// ErrOAuthAccountConflict reports a provider Account owned by another User.
-	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
-	// ErrInvalidCSRFConfig reports a missing or short CSRF signing key.
-	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
+	// ErrNotFound is re-exported from core.
+	ErrNotFound = core.ErrNotFound
+	// ErrInvalidCredentials is re-exported from core.
+	ErrInvalidCredentials = core.ErrInvalidCredentials
+	// ErrEmailNotVerified is re-exported from core.
+	ErrEmailNotVerified = core.ErrEmailNotVerified
+	// ErrRateLimited is re-exported from core.
+	ErrRateLimited = core.ErrRateLimited
+	// ErrTokenExpired is re-exported from core.
+	ErrTokenExpired = core.ErrTokenExpired
+	// ErrTokenInvalid is re-exported from core.
+	ErrTokenInvalid = core.ErrTokenInvalid
+	// ErrMissingStore is re-exported from core.
+	ErrMissingStore = core.ErrMissingStore
+	// ErrMissingMailer is re-exported from core.
+	ErrMissingMailer = core.ErrMissingMailer
+	// ErrMissingRateLimiter is re-exported from core.
+	ErrMissingRateLimiter = core.ErrMissingRateLimiter
+	// ErrInsecureConfig is re-exported from core.
+	ErrInsecureConfig = core.ErrInsecureConfig
+	// ErrInvalidEmail is re-exported from core.
+	ErrInvalidEmail = core.ErrInvalidEmail
+	// ErrPasswordTooShort is re-exported from core.
+	ErrPasswordTooShort = core.ErrPasswordTooShort
+	// ErrPasswordTooLong is re-exported from core.
+	ErrPasswordTooLong = core.ErrPasswordTooLong
+	// ErrEmailAlreadyExists is re-exported from core.
+	ErrEmailAlreadyExists = core.ErrEmailAlreadyExists
+	// ErrJWTDisabled is re-exported from core.
+	ErrJWTDisabled = core.ErrJWTDisabled
+	// ErrInvalidJWTAlgorithm is re-exported from core.
+	ErrInvalidJWTAlgorithm = core.ErrInvalidJWTAlgorithm
+	// ErrInvalidJWTKey is re-exported from core.
+	ErrInvalidJWTKey = core.ErrInvalidJWTKey
+	// ErrRefreshReuse is re-exported from core.
+	ErrRefreshReuse = core.ErrRefreshReuse
+	// ErrInvalidOAuthConfig is re-exported from core.
+	ErrInvalidOAuthConfig = core.ErrInvalidOAuthConfig
+	// ErrOAuthDisabled is re-exported from core.
+	ErrOAuthDisabled = core.ErrOAuthDisabled
+	// ErrOAuthProviderNotFound is re-exported from core.
+	ErrOAuthProviderNotFound = core.ErrOAuthProviderNotFound
+	// ErrOAuthInvalidState is re-exported from core.
+	ErrOAuthInvalidState = core.ErrOAuthInvalidState
+	// ErrOAuthRedirectNotAllowed is re-exported from core.
+	ErrOAuthRedirectNotAllowed = core.ErrOAuthRedirectNotAllowed
+	// ErrOAuthEmailNotVerified is re-exported from core.
+	ErrOAuthEmailNotVerified = core.ErrOAuthEmailNotVerified
+	// ErrOAuthAccountConflict is re-exported from core.
+	ErrOAuthAccountConflict = core.ErrOAuthAccountConflict
+	// ErrInvalidCSRFConfig is re-exported from core.
+	ErrInvalidCSRFConfig = core.ErrInvalidCSRFConfig
 )

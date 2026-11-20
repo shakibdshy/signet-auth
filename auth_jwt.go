@@ -8,32 +8,18 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 // JWTConfig enables optional bearer-token mode. A nil Config.JWT keeps cookie
 // sessions only.
-type JWTConfig struct {
-	Key        any
-	Algorithm  string
-	AccessTTL  time.Duration
-	RefreshTTL time.Duration
-	Issuer     string
-}
+type JWTConfig = core.JWTConfig
 
 // TokenInput selects an exchange: supply email and password, or a Refresh token.
-type TokenInput struct {
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	RefreshToken string `json:"refresh_token"`
-	RateLimitKey string `json:"-"`
-}
+type TokenInput = core.TokenInput
 
 // TokenPair is the result of a token exchange or refresh.
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
-}
+type TokenPair = core.TokenPair
 
 const (
 	defaultAccessTTL  = 15 * time.Minute

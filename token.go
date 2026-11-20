@@ -1,34 +1,26 @@
 package signet
 
-import "time"
+import "github.com/shakibdshy/signet/internal/core"
 
 // TokenKind identifies the sensitive flow a Token proves.
-type TokenKind string
+type TokenKind = core.TokenKind
 
 const (
-	// TokenVerifyEmail proves a request to verify an email address.
-	TokenVerifyEmail TokenKind = "verify_email"
-	// TokenResetPassword proves a request to reset a password.
-	TokenResetPassword TokenKind = "reset_password"
+	// TokenVerifyEmail is re-exported from core.
+	TokenVerifyEmail = core.TokenVerifyEmail
+	// TokenResetPassword is re-exported from core.
+	TokenResetPassword = core.TokenResetPassword
 	// TokenOAuthLink proves a request to link an external provider Account.
-	//nolint:gosec // G101: a kind discriminator, not a credential.
-	TokenOAuthLink TokenKind = "oauth_link"
+	// TokenOAuthLink is re-exported from core.
+	TokenOAuthLink = core.TokenOAuthLink
 	// TokenRefresh is a rotating credential used to obtain a new Access token.
-	//nolint:gosec // G101: a kind discriminator, not a credential.
-	TokenRefresh TokenKind = "refresh"
+	// TokenRefresh is re-exported from core.
+	TokenRefresh = core.TokenRefresh
 	// TokenOAuthState is an OAuth round trip's state, consumed on callback.
-	//nolint:gosec // G101: a kind discriminator, not a credential.
-	TokenOAuthState TokenKind = "oauth_state"
+	// TokenOAuthState is re-exported from core.
+	TokenOAuthState = core.TokenOAuthState
 )
 
 // Token is a single-use proof for one sensitive flow. Hash holds the stored
 // form of the proof; the raw value is never persisted.
-type Token struct {
-	ID        string
-	UserID    string
-	Kind      TokenKind
-	Hash      string
-	ExpiresAt time.Time
-	UsedAt    *time.Time
-	CreatedAt time.Time
-}
+type Token = core.Token

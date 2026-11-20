@@ -5,27 +5,16 @@ import (
 	htmltemplate "html/template"
 	"io"
 	texttemplate "text/template"
-	"time"
+
+	"github.com/shakibdshy/signet/internal/core"
 )
 
 // TemplateData is the information available to an email template.
-type TemplateData struct {
-	Email     string
-	Name      string
-	URL       string
-	ExpiresAt time.Time
-}
+type TemplateData = core.TemplateData
 
 // EmailTemplates renders the transactional email Signet sends. Applications
 // can replace the defaults by setting Config.Templates.
-type EmailTemplates interface {
-	// VerifyEmail renders the email that proves ownership of an email address.
-	VerifyEmail(TemplateData) Message
-	// ResetPassword renders the email that starts a password reset.
-	ResetPassword(TemplateData) Message
-	// PasswordChanged renders the notification sent after a successful reset.
-	PasswordChanged(TemplateData) Message
-}
+type EmailTemplates = core.EmailTemplates
 
 type defaultTemplates struct {
 	verifyHTML  *htmltemplate.Template
