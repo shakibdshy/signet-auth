@@ -6,6 +6,7 @@ import (
 
 	"github.com/shakibdshy/signet/internal/auth"
 	"github.com/shakibdshy/signet/internal/csrf"
+	"github.com/shakibdshy/signet/internal/oauth"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
 )
@@ -20,6 +21,7 @@ type Client struct {
 	tokens        *token.Service
 	auth          *auth.Service
 	sessions      *session.Service
+	oauth         *oauth.Service
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -93,6 +95,9 @@ func New(cfg Config) (*Client, error) {
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
+	if cfg.OAuth != nil {
+		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, cfg.RateLimiter, cfg.Logger, c.tokens, c.sessions)
+	}
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: cfg.RateLimiter,
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
