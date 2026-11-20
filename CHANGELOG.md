@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added fuzz targets for Argon2 verifier parsing, Session tokens, JSON request
   bodies, OAuth state and CSRF tokens, with a `make fuzz` target and a bounded
   CI run.
+- Refactored CSRF into one private module: signing, validation, cookie policy,
+  same-origin checks and exemptions now sit behind a single internal seam.
+  No public interface changed.
 
 ## [0.1.0] - 2026-11-20
 

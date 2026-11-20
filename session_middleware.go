@@ -42,7 +42,7 @@ func (c *Client) currentSession(r *http.Request) (*Session, error) {
 }
 
 func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required bool) (*User, bool) {
-	if c.csrfRejected(w, r) {
+	if c.csrf.Guard(w, r) {
 		return nil, false
 	}
 	deny := func() (*User, bool) {

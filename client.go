@@ -8,6 +8,7 @@ type Client struct {
 	cfg           Config
 	dummyVerifier string
 	jwt           *JWTConfig
+	csrf          *csrfGuard
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -57,7 +58,18 @@ func New(cfg Config) (*Client, error) {
 		}
 		jwtCfg = &jwtCopy
 	}
-	return &Client{cfg: cfg, dummyVerifier: dummy, jwt: jwtCfg}, nil
+	exempt := make(map[string]bool)
+	for _, endpoint := range authEndpoints {
+		if endpoint.anonymous {
+			exempt[endpoint.name] = true
+		}
+	}
+	return &Client{
+		cfg:           cfg,
+		dummyVerifier: dummy,
+		jwt:           jwtCfg,
+		csrf:          newCSRFGuard(cfg, exempt),
+	}, nil
 }
 
 func (c *Client) requireVerifiedEmail() bool {

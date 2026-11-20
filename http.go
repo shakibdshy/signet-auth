@@ -74,83 +74,29 @@ func (c *Client) Handler() http.Handler {
 		case "oauth/callback":
 			c.handleOAuthCallback(w, r)
 		case "csrf-token":
-			c.handleCSRFToken(w, r)
+			c.csrf.ServeToken(w, r)
 		default:
 			http.Error(w, "signet: endpoint not implemented", http.StatusNotImplemented)
 		}
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if c.csrfRejected(w, r) {
+		if c.csrf.Guard(w, r) {
 			return
 		}
 		base.ServeHTTP(w, r)
 	})
 }
 
-func isStateChanging(method string) bool {
-	switch method {
-	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
-		return true
-	default:
-		return false
+func (c *Client) setSessionAndCSRFCookies(w http.ResponseWriter, sessionToken string) (string, error) {
+	if c.cfg.JWTOnly {
+		return "", nil
 	}
-}
-
-func (c *Client) hasSessionCookie(r *http.Request) bool {
-	cookie, err := r.Cookie(c.cookieName())
-	return err == nil && cookie.Value != ""
-}
-
-func (c *Client) csrfRejected(w http.ResponseWriter, r *http.Request) bool {
-	if c.cfg.InsecureDisableCSRF || !isStateChanging(r.Method) || !c.hasSessionCookie(r) || c.csrfExempt(r.URL.Path) {
-		return false
-	}
-	token := r.Header.Get(csrfHeader)
-	cookie, err := r.Cookie(c.csrfCookieName())
-	if c.isSameOrigin(r) && err == nil && token != "" && token == cookie.Value && c.validCSRFToken(token) {
-		return false
-	}
-	c.logInfo("csrf_rejected", "path", r.URL.Path)
-	writeError(w, http.StatusForbidden, "csrf", "cross-origin request rejected")
-	return true
-}
-
-func (c *Client) handleCSRFToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	token, err := c.issueCSRFToken()
+	csrfToken, err := c.csrf.IssueAndSetCookie(w)
 	if err != nil {
-		writeAuthError(w, err)
-		return
+		return "", err
 	}
-	c.setCSRFCookie(w, token)
-	writeJSON(w, http.StatusOK, map[string]string{"token": token})
-}
-
-func (c *Client) isSameOrigin(r *http.Request) bool {
-	if origin := r.Header.Get("Origin"); origin != "" {
-		parsed, err := url.Parse(origin)
-		if err != nil || !strings.EqualFold(parsed.Host, r.Host) {
-			return false
-		}
-		scheme := "http"
-		if r.TLS != nil {
-			scheme = "https"
-		}
-		// A TLS-terminating proxy presents an http request to us while the
-		// browser sent an https Origin; accepting that direction stays safe
-		// because the host must still match exactly.
-		if parsed.Scheme != "" && !strings.EqualFold(parsed.Scheme, scheme) &&
-			(!strings.EqualFold(parsed.Scheme, "https") || scheme != "http") {
-			return false
-		}
-	}
-	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
-		return false
-	}
-	return true
+	http.SetCookie(w, c.sessionCookie(sessionToken, false))
+	return csrfToken, nil
 }
 
 func (c *Client) handleSignUp(w http.ResponseWriter, r *http.Request) {
