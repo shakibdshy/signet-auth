@@ -117,6 +117,9 @@ func ContractFor() Contract {
 			{Name: "reset-password", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.ResetPasswordInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "change-password", Auth: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.ChangePasswordInput{}), Status: http.StatusOK,
+			}}},
 			{Name: "oauth/start", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.OAuthStartInput{}),
 				Response: ResponseSpec{Ref: "OAuthStartResult"}, Status: http.StatusOK,

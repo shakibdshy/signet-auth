@@ -31,8 +31,8 @@ func TestGenerateOpenAPIDocument(t *testing.T) {
 	if doc.OpenAPI != "3.1.0" {
 		t.Errorf("openapi = %q, want 3.1.0", doc.OpenAPI)
 	}
-	if len(doc.Paths) != 13 {
-		t.Errorf("paths = %d, want 13", len(doc.Paths))
+	if len(doc.Paths) != len(ContractFor().Endpoints) {
+		t.Errorf("paths = %d, want %d", len(doc.Paths), len(ContractFor().Endpoints))
 	}
 	signup, ok := doc.Paths["/signup"]
 	if !ok || len(signup.Post) == 0 {

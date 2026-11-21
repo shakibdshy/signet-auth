@@ -18,6 +18,7 @@ type API interface {
 	SignUp(context.Context, core.SignUpInput) (*core.SignUpResult, error)
 	SignIn(context.Context, core.SignInInput) (*core.SignInResult, error)
 	SignOut(context.Context, core.SignOutInput) error
+	ChangePassword(context.Context, core.ChangePasswordInput) error
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
 	RevokeSession(context.Context, core.RevokeSessionInput) error
 	RevokeAllSessions(context.Context, core.RevokeAllSessionsInput) error
@@ -65,6 +66,7 @@ var Endpoints = []Endpoint{
 	{Name: "verify-email"},
 	{Name: "send-password-reset"},
 	{Name: "reset-password"},
+	{Name: "change-password"},
 	{Name: "oauth/start", Anonymous: true},
 	{Name: "oauth/callback", Anonymous: true},
 	{Name: "csrf-token", Anonymous: true},
@@ -105,6 +107,8 @@ func (h *Handler) Handler() http.Handler {
 			h.handleSendPasswordReset(w, r)
 		case "reset-password":
 			h.handleResetPassword(w, r)
+		case "change-password":
+			h.handleChangePassword(w, r)
 		case "oauth/start":
 			h.handleOAuthStart(w, r)
 		case "oauth/callback":
@@ -291,6 +295,25 @@ func (h *Handler) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	in.RateLimitKey = clientIP(r)
 	if err := h.api.ResetPassword(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.ChangePasswordInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.RateLimitKey = clientIP(r)
+	if err := h.api.ChangePassword(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
 	}

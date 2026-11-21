@@ -2,7 +2,11 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/shakibdshy/signet"
@@ -145,5 +149,102 @@ func TestChangePasswordRateLimited(t *testing.T) {
 	}
 	if store.Accounts[0].PasswordHash != verifier {
 		t.Error("rate-limited change mutated the verifier")
+	}
+}
+
+func changePasswordHTTPClient(t *testing.T) (*signet.Client, *testutil.Store) {
+	t.Helper()
+	client, store, _ := changePasswordClient(t, true)
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{
+		Email: "user@example.com", Password: "correct horse", Name: "Ada",
+	}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	return client, store
+}
+
+func changePasswordSignIn(t *testing.T, client *signet.Client) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/signin", strings.NewReader(`{"email":"user@example.com","password":"correct horse"}`))
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("HTTP sign-in = %d, body %s", rec.Code, rec.Body.String())
+	}
+	return rec
+}
+
+func TestChangePasswordHTTPEndpoint(t *testing.T) {
+	client, store := changePasswordHTTPClient(t)
+	ctx := context.Background()
+	signInRec := changePasswordSignIn(t, client)
+	var csrf struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := json.Unmarshal(signInRec.Body.Bytes(), &csrf); err != nil {
+		t.Fatalf("decode sign-in response: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/change-password", strings.NewReader(`{"current_password":"correct horse","new_password":"a much better password"}`))
+	for _, c := range signInRec.Result().Cookies() {
+		req.AddCookie(c)
+	}
+	req.Header.Set("X-CSRF-Token", csrf.CSRFToken)
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	ok, _ := (signet.Argon2idHasher{}).Verify(ctx, store.Accounts[0].PasswordHash, "a much better password")
+	if !ok {
+		t.Error("new password verifier was not stored")
+	}
+}
+
+func TestChangePasswordHTTPWrongPassword(t *testing.T) {
+	client, store := changePasswordHTTPClient(t)
+	verifier := store.Accounts[0].PasswordHash
+	signInRec := changePasswordSignIn(t, client)
+	var csrf struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := json.Unmarshal(signInRec.Body.Bytes(), &csrf); err != nil {
+		t.Fatalf("decode sign-in response: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/change-password", strings.NewReader(`{"current_password":"wrong","new_password":"a much better password"}`))
+	for _, c := range signInRec.Result().Cookies() {
+		req.AddCookie(c)
+	}
+	req.Header.Set("X-CSRF-Token", csrf.CSRFToken)
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "invalid_credentials") {
+		t.Fatalf("status/body = %d %s, want 401 invalid_credentials", rec.Code, rec.Body.String())
+	}
+	if store.Accounts[0].PasswordHash != verifier {
+		t.Error("verifier changed on failed change")
+	}
+}
+
+func TestChangePasswordHTTPRequiresAuth(t *testing.T) {
+	client, _ := changePasswordHTTPClient(t)
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/change-password", strings.NewReader(`{}`)))
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", rec.Code)
+	}
+}
+
+func TestChangePasswordHTTPRequiresCSRF(t *testing.T) {
+	client, _ := changePasswordHTTPClient(t)
+	signInRec := changePasswordSignIn(t, client)
+	req := httptest.NewRequest(http.MethodPost, "/change-password", strings.NewReader(`{"current_password":"correct horse","new_password":"a much better password"}`))
+	for _, c := range signInRec.Result().Cookies() {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"csrf"`) {
+		t.Fatalf("status/body = %d %s, want 403 csrf", rec.Code, rec.Body.String())
 	}
 }
