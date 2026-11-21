@@ -199,6 +199,10 @@ Go handlers. See [`client/ts/README.md`](client/ts/README.md) for usage.
 
 ## Documentation
 
+The developer documentation site lives in [`docs-site/`](docs-site/) — a
+self-contained Fumadocs app whose API reference is generated from the committed
+OpenAPI contract. Run `npm install && npm run dev` there to browse it locally.
+
 The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) and architectural
 decisions in [`docs/adr/`](docs/adr/). Runnable examples are in [`examples/`](examples/).
 

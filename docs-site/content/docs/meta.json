@@ -1,0 +1,14 @@
+{
+  "title": "Signet docs",
+  "pages": [
+    "index",
+    "---Guides---",
+    "quickstart",
+    "sessions",
+    "oauth",
+    "jwt",
+    "frontend-client",
+    "---Reference---",
+    "openapi"
+  ]
+}

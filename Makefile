@@ -3,7 +3,7 @@ GO ?= go
 # Developer tools installed with `go install` land in GOPATH/bin.
 export PATH := $(shell $(GO) env GOPATH)/bin:$(PATH)
 
-.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check generate generate-spec generate-types generate-check
+.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check generate generate-spec generate-types generate-check docs-site
 
 test:
 	$(GO) test -race ./...
@@ -58,6 +58,9 @@ generate-types:
 	cd client/ts && npm run generate
 
 generate: generate-spec generate-types
+
+docs-site:
+	cd docs-site && npm run sync:spec && npm run types:check && npm run build
 
 # Regenerate into the working tree, compare with the committed artifacts, and
 # restore the originals so a failure leaves the tree unchanged.

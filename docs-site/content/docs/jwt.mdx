@@ -1,0 +1,26 @@
+---
+title: JWT mode
+description: Bearer access and refresh tokens for API clients.
+---
+
+Cookie sessions are the default. Set `Config.JWT` to issue short-lived Access
+tokens and rotating Refresh tokens as well:
+
+```go
+cfg.JWT = &signet.JWTConfig{
+    Algorithm: "HS256",
+    Key:       key,       // []byte for HS256
+    Issuer:    "signet",
+}
+```
+
+Only `HS256`, `RS256` and `EdDSA` are accepted, with a matching key type.
+`POST /token` exchanges credentials or a Refresh token for a `TokenPair`;
+`VerifyAccessToken` validates a bearer token and returns its User.
+
+Refresh tokens rotate on every use. Replaying a consumed Refresh token is treated
+as theft: Signet revokes every Session and every kind of Token for that User and
+returns `ErrRefreshReuse`.
+
+Set `JWTOnly` for API-only applications: no session cookies are issued and no
+CSRF key is required.

@@ -1,0 +1,53 @@
+---
+title: Sessions and cookies
+description: How Signet authenticates requests and protects browser flows.
+---
+
+## Resolving a Session
+
+A Session token is a 32-byte opaque value. Only its SHA-256 digest is persisted.
+Wrap your handlers with `RequireAuth`, or `OptionalAuth` for public pages that
+still want to know who the User is:
+
+```go
+mux.Handle("/private", auth.RequireAuth(privateHandler))
+
+func privateHandler(w http.ResponseWriter, r *http.Request) {
+    user, ok := signet.UserFromContext(r.Context())
+    // ...
+}
+```
+
+Every request enforces the idle and absolute timeouts and extends the idle window
+on success. Expired Sessions are deleted.
+
+## Listing and revoking
+
+```go
+auth.ListSessions(ctx, signet.ListSessionsInput{UserID: user.ID})
+auth.RevokeSession(ctx, signet.RevokeSessionInput{SessionID: id})
+auth.RevokeAllSessions(ctx, signet.RevokeAllSessionsInput{UserID: user.ID})
+```
+
+Listing returns only safe fields — never a token digest.
+
+## Cookies and CSRF
+
+By default the session cookie is `HttpOnly`, `Secure`, `SameSite=Lax` and named
+`__Host-signet_session` where the `__Host-` prefix is valid. State-changing
+requests carrying a session cookie must present a signed CSRF token in the
+`X-CSRF-Token` header, obtained from `GET /csrf-token` or the sign-in response.
+`Origin` and `Sec-Fetch-Site` are checked too.
+
+The two `Insecure*` options exist for local development only; using them emits a
+warning through your logger.
+
+## Opt-in docs endpoint
+
+`signet.DocsHandler()` serves the generated OpenAPI document at `/openapi.json`
+and a Scalar reference at `/`. It is not mounted by `Client.Handler()` — mount it
+yourself and decide whether to protect it:
+
+```go
+mux.Handle("/docs/", http.StripPrefix("/docs", signet.DocsHandler()))
+```

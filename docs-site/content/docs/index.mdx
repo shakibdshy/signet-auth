@@ -1,0 +1,30 @@
+---
+title: Signet
+description: Secure-by-default, embeddable authentication for Go.
+---
+
+Signet is a Go library for adding authentication to your application. You own the
+database schema and the router; Signet provides the flows, the security checks and
+a small typed API.
+
+- **Embedded, not a service.** Import `github.com/shakibdshy/signet` and create a
+  `Client` once at startup.
+- **Router-agnostic.** `Client.Handler()` returns a standard `http.Handler`;
+  `RequireAuth` and `OptionalAuth` are standard middleware.
+- **Bring your own schema.** Store is an interface with bundled PostgreSQL and
+  SQLite adapters; migrations are explicit and never run automatically.
+- **Secure by default.** Argon2id verifiers, hashed single-use Tokens, signed
+  double-submit CSRF, PKCE and generic failure messages.
+
+<Cards>
+  <Card title="Quickstart" href="/docs/quickstart" />
+  <Card title="Sessions and cookies" href="/docs/sessions" />
+  <Card title="Frontend client" href="/docs/frontend-client" />
+  <Card title="HTTP API reference" href="/docs/openapi" />
+</Cards>
+
+## Where things live
+
+The public API is a five-file façade at the module root. Implementations sit in
+private `internal/` packages, and the OpenAPI contract is generated from a
+declarative table so the published spec cannot drift from the handlers.

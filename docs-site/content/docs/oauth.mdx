@@ -1,0 +1,30 @@
+---
+title: OAuth sign-in
+description: Google and GitHub sign-in with PKCE and verified-only linking.
+---
+
+Register providers through `Config.OAuth` with a 32-byte `StateKey`, an
+application origin and an exact redirect allowlist:
+
+```go
+cfg.OAuth = &signet.OAuthConfig{
+    Providers: []signet.OAuthProvider{
+        google.New(google.Config{ClientID: id, ClientSecret: secret}),
+        github.New(github.Config{ClientID: id, ClientSecret: secret}),
+    },
+    RedirectBaseURL:  "https://api.example.com",
+    AllowedRedirects: []string{"https://app.example.com/dashboard"},
+    StateKey:         stateKey, // 32 bytes
+}
+```
+
+`POST /oauth/start` returns the provider authorization URL. `GET /oauth/callback`
+redeems the code, consumes the encrypted single-use state, and redirects to the
+allowlisted target with a new session cookie.
+
+Signet requires PKCE, encrypts and expires the state, and only auto-links a
+provider identity when its email is verified. An unverified identity yields a
+one-time link token for explicit account linking via `LinkOAuthAccount`.
+
+You can add another provider by implementing the public `OAuthProvider` interface —
+no change to Signet internals is needed.

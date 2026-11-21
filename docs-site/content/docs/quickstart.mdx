@@ -1,0 +1,59 @@
+---
+title: Quickstart
+description: Add sign-up and sign-in to a Go application in a few lines.
+---
+
+## Install
+
+```bash
+go get github.com/shakibdshy/signet
+```
+
+## Configure a Client
+
+A `Store`, `Mailer`, `RateLimiter` and 32-byte CSRF key are required. Bundled
+adapters live in `store/sqlite`, `store/postgres` and `mailer/console` (development
+only).
+
+```go
+cfg := signet.DefaultConfig()
+cfg.Store = myStore
+cfg.Mailer = console.New(os.Stdout)
+cfg.RateLimiter = myLimiter
+cfg.CSRFKey = key // 32 random bytes
+cfg.AppURL = "https://app.example.com"
+
+auth, err := signet.New(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+`DefaultConfig()` supplies secure defaults for cookies, sessions and passwords.
+Insecure options are named `Insecure*` and emit warnings when used.
+
+## Use the programmatic API
+
+```go
+_, err := auth.SignUp(ctx, signet.SignUpInput{
+    Email: "user@example.com", Password: "correct horse battery staple",
+})
+result, err := auth.SignIn(ctx, signet.SignInInput{
+    Email: "user@example.com", Password: "correct horse battery staple",
+})
+```
+
+## Or mount the HTTP API
+
+```go
+mux.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
+```
+
+This exposes `/signup`, `/signin`, `/signout`, `/sessions`, `/session`, `/token`,
+`/csrf-token` and the verification, reset and OAuth endpoints under your prefix.
+State-changing requests require a signed CSRF token — see [Sessions and cookies](/docs/sessions).
+
+<Callout title="Development only">
+`mailer/console` prints messages instead of sending them. Use `mailer/smtp` in
+production; STARTTLS is the default.
+</Callout>

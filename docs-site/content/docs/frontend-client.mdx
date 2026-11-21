@@ -1,0 +1,45 @@
+---
+title: Frontend client
+description: Type-safe auth calls from a React app in a separate repository.
+---
+
+Signet publishes `api/signet.openapi.json`, generated from the same declarative
+contract the handlers use. The `@shakibdshy/signet-client` package is generated
+from that spec, giving a frontend compile-time checked methods and a typed error
+union.
+
+```bash
+npm install @shakibdshy/signet-client
+```
+
+```ts
+import { createSignetClient, SignetApiError } from '@shakibdshy/signet-client';
+
+const auth = createSignetClient({ baseURL: 'https://api.example.com' });
+
+const { user } = await auth.signUp({
+  email: 'user@example.com',
+  password: 'correct horse battery staple',
+  name: 'Ada',
+});
+
+try {
+  await auth.signIn({ email: 'user@example.com', password: 'wrong' });
+} catch (err) {
+  if (err instanceof SignetApiError && err.code === 'invalid_credentials') {
+    // show a generic sign-in error
+  }
+}
+```
+
+Cookies are included on every request. The CSRF token is fetched lazily from
+`GET /csrf-token`, cached, and sent as `X-CSRF-Token` on state-changing calls.
+After a sign-in the token is refreshed from the response.
+
+## With a separate backend repository
+
+The backend team merges this base spec into its own application spec and publishes
+a versioned SDK. The frontend installs that SDK; a breaking server shape change is
+a major version and fails the build at the affected call sites. The compiler — not
+a shared Git repository — is the contract. See the HTTP API reference for the
+exact request and response shapes.
