@@ -20,6 +20,7 @@
     "http-api",
     "go-api",
     "configuration",
-    "errors"
+    "errors",
+    "status"
   ]
 }
