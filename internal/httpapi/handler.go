@@ -19,6 +19,8 @@ type API interface {
 	SignIn(context.Context, core.SignInInput) (*core.SignInResult, error)
 	SignOut(context.Context, core.SignOutInput) error
 	ChangePassword(context.Context, core.ChangePasswordInput) error
+	RequestEmailChange(context.Context, core.ChangeEmailInput) error
+	VerifyEmailChange(context.Context, core.VerifyEmailChangeInput) error
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
 	RevokeSession(context.Context, core.RevokeSessionInput) error
 	RevokeAllSessions(context.Context, core.RevokeAllSessionsInput) error
@@ -67,6 +69,8 @@ var Endpoints = []Endpoint{
 	{Name: "send-password-reset"},
 	{Name: "reset-password"},
 	{Name: "change-password"},
+	{Name: "change-email"},
+	{Name: "verify-change-email"},
 	{Name: "oauth/start", Anonymous: true},
 	{Name: "oauth/callback", Anonymous: true},
 	{Name: "csrf-token", Anonymous: true},
@@ -109,6 +113,10 @@ func (h *Handler) Handler() http.Handler {
 			h.handleResetPassword(w, r)
 		case "change-password":
 			h.handleChangePassword(w, r)
+		case "change-email":
+			h.handleChangeEmail(w, r)
+		case "verify-change-email":
+			h.handleVerifyEmailChange(w, r)
 		case "oauth/start":
 			h.handleOAuthStart(w, r)
 		case "oauth/callback":
@@ -318,6 +326,39 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	in.UserID = user.ID
 	in.RateLimitKey = clientIP(r)
 	if err := h.api.ChangePassword(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleChangeEmail(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.ChangeEmailInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.RateLimitKey = clientIP(r)
+	if err := h.api.RequestEmailChange(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleVerifyEmailChange(w http.ResponseWriter, r *http.Request) {
+	var in core.VerifyEmailChangeInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	if err := h.api.VerifyEmailChange(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
 	}

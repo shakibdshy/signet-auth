@@ -4,7 +4,7 @@ import "testing"
 
 func TestAllTokenKindsCoversEveryDeclaredKind(t *testing.T) {
 	declared := map[TokenKind]bool{
-		TokenVerifyEmail: true, TokenResetPassword: true, TokenOAuthLink: true,
+		TokenVerifyEmail: true, TokenChangeEmail: true, TokenResetPassword: true, TokenOAuthLink: true,
 		TokenRefresh: true, TokenOAuthState: true,
 	}
 	if len(AllTokenKinds) != len(declared) {

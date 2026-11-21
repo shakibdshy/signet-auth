@@ -217,6 +217,16 @@ func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	return c.auth.SignOut(ctx, in)
 }
 
+// RequestEmailChange issues a single-use proof to a new email address.
+func (c *Client) RequestEmailChange(ctx context.Context, in ChangeEmailInput) error {
+	return c.verification.RequestEmailChange(ctx, in)
+}
+
+// VerifyEmailChange consumes an email-change proof and commits the new address.
+func (c *Client) VerifyEmailChange(ctx context.Context, in VerifyEmailChangeInput) error {
+	return c.verification.VerifyEmailChange(ctx, in)
+}
+
 // ChangePassword replaces an authenticated User's password and revokes their Sessions and Tokens.
 func (c *Client) ChangePassword(ctx context.Context, in ChangePasswordInput) error {
 	return c.verification.ChangePassword(ctx, in)

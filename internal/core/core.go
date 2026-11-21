@@ -49,7 +49,7 @@ type Session struct {
 // checks that must revoke every kind iterate this list so a new kind cannot be
 // silently omitted.
 var AllTokenKinds = []TokenKind{
-	TokenVerifyEmail, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
+	TokenVerifyEmail, TokenChangeEmail, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -58,6 +58,8 @@ type TokenKind string
 const (
 	// TokenVerifyEmail proves a request to verify an email address.
 	TokenVerifyEmail TokenKind = "verify_email"
+	// TokenChangeEmail proves a request to change a User's email address.
+	TokenChangeEmail TokenKind = "change_email"
 	// TokenResetPassword proves a request to reset a password.
 	TokenResetPassword TokenKind = "reset_password"
 	// TokenOAuthLink proves a request to link an external provider Account.
@@ -312,6 +314,28 @@ type ChangePasswordInput struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
 	RateLimitKey    string `json:"-"`
+}
+
+// ChangeEmailInput carries the new address and the current password for an
+// authenticated User.
+type ChangeEmailInput struct {
+	UserID          string `json:"-"`
+	NewEmail        string `json:"new_email"`
+	CurrentPassword string `json:"current_password"`
+	RateLimitKey    string `json:"-"`
+}
+
+// VerifyEmailChangeInput carries the single-use proof from the emailed link.
+type VerifyEmailChangeInput struct {
+	Token        string `json:"token"`
+	RateLimitKey string `json:"-"`
+}
+
+// EmailChangeTemplates renders the message that confirms an email change.
+// It is optional: applications may keep their existing EmailTemplates
+// implementation and Signet will use a built-in default.
+type EmailChangeTemplates interface {
+	ChangeEmail(TemplateData) Message
 }
 
 // TokenInput selects a token exchange.

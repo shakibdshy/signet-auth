@@ -20,6 +20,8 @@ from the declarative contract into the [API reference](/docs/openapi).
 | --- | --- | --- | --- | --- | --- | --- |
 | POST `/signup` | no | exempt | 201 `{"user":User}` | `email_exists` 400, `invalid_input` 400, `rate_limited` 429 | Creating a User and its credential Account. | [signup](/docs/openapi/signup_post) |
 | POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | `invalid_credentials` 401, `email_not_verified` 403, `rate_limited` 429 | Exchanging credentials for a Session; sets cookies and returns the CSRF token. | [signin](/docs/openapi/signin_post) |
+| POST `/change-email` | yes | required | 200 | `invalid_credentials` 401, `invalid_email` 400, `email_exists` 400, `rate_limited` 429 | Issue a proof to a new address. | [change-email](/docs/openapi/change-email_post) |
+| POST `/verify-change-email` | no | required | 200 | `invalid_token` 401, `email_exists` 400, `rate_limited` 429 | Commit a verified email change. | [verify-change-email](/docs/openapi/verify-change-email_post) |
 | POST `/change-password` | yes | required | 200 | `invalid_credentials` 401, `invalid_input` 400, `rate_limited` 429 | Replace an authenticated User's password; revokes all Sessions and Tokens. | [change-password](/docs/openapi/change-password_post) |
 | POST `/signout` | no | required | 204 | `csrf` 403, `invalid_input` 400 | Ending the current Session and clearing its cookie. | [signout](/docs/openapi/signout_post) |
 | GET `/sessions` | yes | n/a | 200 `{"sessions":[SessionInfo]}` | `unauthorized` 401, `csrf` 403 | Listing the authenticated User's Sessions. | [sessions](/docs/openapi/sessions_get) |

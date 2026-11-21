@@ -129,3 +129,7 @@ Import `github.com/shakibdshy/signet/mailer/smtp`.
 | InsecureAllowPlaintext | bool | false | Required to permit plaintext; emits a warning. |
 
 TLS minimum is 1.2. See [Mail](/docs/mail) for the full setup.
+
+## Token kinds
+
+`TokenVerifyEmail`, `TokenChangeEmail`, `TokenResetPassword`, `TokenOAuthLink`, `TokenRefresh` and `TokenOAuthState` distinguish the single-use proofs Signet issues. New kinds must be added to the canonical revocation list.

@@ -64,6 +64,8 @@ type TokenKind = core.TokenKind
 const (
 	// TokenVerifyEmail proves a request to verify an email address.
 	TokenVerifyEmail = core.TokenVerifyEmail
+	// TokenChangeEmail proves a request to change a User's email address.
+	TokenChangeEmail = core.TokenChangeEmail
 	// TokenResetPassword proves a request to reset a password.
 	TokenResetPassword = core.TokenResetPassword
 	// TokenOAuthLink proves a request to link an external provider Account.
@@ -139,6 +141,12 @@ type SignInResult = core.SignInResult
 
 // SignOutInput is the input to a sign-out.
 type SignOutInput = core.SignOutInput
+
+// ChangeEmailInput carries the new address and current password for an authenticated User.
+type ChangeEmailInput = core.ChangeEmailInput
+
+// VerifyEmailChangeInput carries the proof from an email-change message.
+type VerifyEmailChangeInput = core.VerifyEmailChangeInput
 
 // ChangePasswordInput carries the current and new password for an authenticated User.
 type ChangePasswordInput = core.ChangePasswordInput

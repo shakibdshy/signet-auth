@@ -169,6 +169,103 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 	return nil
 }
 
+// RequestEmailChange issues a single-use proof to the new address. The old
+// address remains active until VerifyEmailChange succeeds.
+func (s *VerificationService) RequestEmailChange(ctx context.Context, in core.ChangeEmailInput) error {
+	if in.UserID == "" || in.CurrentPassword == "" {
+		return core.ErrInvalidCredentials
+	}
+	email := normalizeEmail(in.NewEmail)
+	if !strings.Contains(email, "@") || strings.HasPrefix(email, "@") || strings.HasSuffix(email, "@") {
+		return core.ErrInvalidEmail
+	}
+	if err := allow(ctx, s.deps.Limiter, "change_email", in.RateLimitKey); err != nil {
+		return err
+	}
+	user, err := s.deps.Store.UserByID(ctx, in.UserID)
+	if err != nil {
+		return err
+	}
+	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
+	if err != nil {
+		return err
+	}
+	ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.CurrentPassword)
+	if err != nil || !ok {
+		if err != nil {
+			return err
+		}
+		return core.ErrInvalidCredentials
+	}
+	if existing, err := s.deps.Store.UserByEmail(ctx, email); err == nil {
+		if existing.ID != user.ID {
+			return core.ErrEmailAlreadyExists
+		}
+		return core.ErrInvalidEmail
+	}
+	if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, core.TokenChangeEmail); err != nil {
+		return err
+	}
+	raw, _, err := s.deps.Tokens.IssueWithData(ctx, user.ID, core.TokenChangeEmail, verificationTokenTTL, email)
+	if err != nil {
+		return err
+	}
+	data := core.TemplateData{
+		Email: email, Name: user.Name,
+		URL: s.emailLink("/verify-email-change", raw), ExpiresAt: s.deps.Clock.Now().Add(verificationTokenTTL),
+	}
+	msg := s.changeEmailMessage(data)
+	if err := s.deps.Mailer.Send(ctx, msg); err != nil {
+		s.logWarn("email_change_notification_failed", "user_id", user.ID, "error", err)
+		return err
+	}
+	s.logInfo("email_change_requested", "user_id", user.ID)
+	return nil
+}
+
+// VerifyEmailChange consumes the proof and commits the new address.
+func (s *VerificationService) VerifyEmailChange(ctx context.Context, in core.VerifyEmailChangeInput) error {
+	if in.Token == "" {
+		return core.ErrTokenInvalid
+	}
+	if err := allow(ctx, s.deps.Limiter, "verify_email_change", in.RateLimitKey); err != nil {
+		return err
+	}
+	proof, err := s.deps.Tokens.Consume(ctx, core.TokenChangeEmail, in.Token)
+	if err != nil {
+		return err
+	}
+	email, err := token.ParseData(in.Token)
+	if err != nil {
+		return core.ErrTokenInvalid
+	}
+	if existing, err := s.deps.Store.UserByEmail(ctx, email); err == nil && existing.ID != proof.UserID {
+		return core.ErrEmailAlreadyExists
+	}
+	user, err := s.deps.Store.UserByID(ctx, proof.UserID)
+	if err != nil {
+		return err
+	}
+	user.Email = email
+	user.EmailVerified = false
+	if err := s.deps.Store.UpdateUser(ctx, user); err != nil {
+		return err
+	}
+	s.logInfo("email_changed", "user_id", user.ID)
+	return nil
+}
+
+func (s *VerificationService) changeEmailMessage(data core.TemplateData) core.Message {
+	if templates, ok := s.deps.Templates.(core.EmailChangeTemplates); ok {
+		return templates.ChangeEmail(data)
+	}
+	return core.Message{
+		To: data.Email, Subject: "Verify your email change",
+		TextBody: "Confirm your new email address:\n" + data.URL + "\n",
+		HTMLBody: "<p>Confirm your new email address: <a href=\"" + data.URL + "\">link</a></p>",
+	}
+}
+
 // ChangePasswordInput validation is pure so its edge cases can be unit tested.
 func validateChangePassword(in core.ChangePasswordInput, minLength, maxLength int) error {
 	if in.UserID == "" || in.CurrentPassword == "" {
