@@ -217,6 +217,16 @@ func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	return c.auth.SignOut(ctx, in)
 }
 
+// RequestUserDeletion sends a single-use proof to the User's current email.
+func (c *Client) RequestUserDeletion(ctx context.Context, in RequestDeleteUserInput) error {
+	return c.verification.RequestUserDeletion(ctx, in)
+}
+
+// DeleteUser consumes the proof and removes the User and all child records.
+func (c *Client) DeleteUser(ctx context.Context, in ConfirmDeleteUserInput) error {
+	return c.verification.DeleteUser(ctx, in)
+}
+
 // RequestEmailChange issues a single-use proof to a new email address.
 func (c *Client) RequestEmailChange(ctx context.Context, in ChangeEmailInput) error {
 	return c.verification.RequestEmailChange(ctx, in)

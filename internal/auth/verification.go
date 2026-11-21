@@ -169,6 +169,85 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 	return nil
 }
 
+// RequestUserDeletion sends a single-use proof to the User's current email.
+func (s *VerificationService) RequestUserDeletion(ctx context.Context, in core.RequestDeleteUserInput) error {
+	if in.UserID == "" {
+		return core.ErrInvalidCredentials
+	}
+	if err := allow(ctx, s.deps.Limiter, "delete_user", in.RateLimitKey); err != nil {
+		return err
+	}
+	user, err := s.deps.Store.UserByID(ctx, in.UserID)
+	if err != nil {
+		return err
+	}
+	if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, core.TokenDeleteUser); err != nil {
+		return err
+	}
+	ttl := 24 * time.Hour
+	raw, _, err := s.deps.Tokens.Issue(ctx, user.ID, core.TokenDeleteUser, ttl)
+	if err != nil {
+		return err
+	}
+	data := core.TemplateData{Email: user.Email, Name: user.Name,
+		URL: s.emailLink("/confirm-delete-user", raw), ExpiresAt: s.deps.Clock.Now().Add(ttl)}
+	msg := s.deleteUserMessage(data)
+	if err := s.deps.Mailer.Send(ctx, msg); err != nil {
+		s.logWarn("delete_user_notification_failed", "user_id", user.ID, "error", err)
+		return err
+	}
+	s.logInfo("delete_user_requested", "user_id", user.ID)
+	return nil
+}
+
+// DeleteUser consumes the proof and removes the User's children explicitly
+// before the User row, following ADR 0006.
+func (s *VerificationService) DeleteUser(ctx context.Context, in core.ConfirmDeleteUserInput) error {
+	if in.Token == "" {
+		return core.ErrTokenInvalid
+	}
+	if err := allow(ctx, s.deps.Limiter, "confirm_delete_user", in.RateLimitKey); err != nil {
+		return err
+	}
+	proof, err := s.deps.Tokens.Consume(ctx, core.TokenDeleteUser, in.Token)
+	if err != nil {
+		return err
+	}
+	if err := s.deps.Store.DeleteSessionsForUser(ctx, proof.UserID); err != nil {
+		return err
+	}
+	for _, kind := range core.AllTokenKinds {
+		if err := s.deps.Store.DeleteTokensForUser(ctx, proof.UserID, kind); err != nil {
+			return err
+		}
+	}
+	accounts, err := s.deps.Store.AccountsForUser(ctx, proof.UserID)
+	if err != nil {
+		return err
+	}
+	for _, account := range accounts {
+		if err := s.deps.Store.DeleteAccount(ctx, account.ID); err != nil {
+			return err
+		}
+	}
+	if err := s.deps.Store.DeleteUser(ctx, proof.UserID); err != nil {
+		return err
+	}
+	s.logInfo("user_deleted", "user_id", proof.UserID)
+	return nil
+}
+
+func (s *VerificationService) deleteUserMessage(data core.TemplateData) core.Message {
+	if templates, ok := s.deps.Templates.(core.DeleteUserTemplates); ok {
+		return templates.DeleteUser(data)
+	}
+	return core.Message{
+		To: data.Email, Subject: "Confirm account deletion",
+		TextBody: "Confirm deletion of your account:\n" + data.URL + "\n",
+		HTMLBody: "<p>Confirm deletion: <a href=\"" + data.URL + "\">link</a></p>",
+	}
+}
+
 // RequestEmailChange issues a single-use proof to the new address. The old
 // address remains active until VerifyEmailChange succeeds.
 func (s *VerificationService) RequestEmailChange(ctx context.Context, in core.ChangeEmailInput) error {

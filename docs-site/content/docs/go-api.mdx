@@ -24,6 +24,8 @@ only `github.com/shakibdshy/signet`.
 | `SignUp(ctx, SignUpInput) (*SignUpResult, error)` | Create a User and its credential Account. |
 | `SignIn(ctx, SignInInput) (*SignInResult, error)` | Verify a password, rehash if needed, create a Session. |
 | `SignOut(ctx, SignOutInput) error` | Revoke the Session named by the token; unknown tokens are a no-op. |
+| `RequestUserDeletion(ctx, RequestDeleteUserInput) error` | Issue a proof to confirm account deletion. |
+| `DeleteUser(ctx, ConfirmDeleteUserInput) error` | Consume the proof and remove the User and children. |
 | `RequestEmailChange(ctx, ChangeEmailInput) error` | Issue a single-use proof to a new email address. |
 | `VerifyEmailChange(ctx, VerifyEmailChangeInput) error` | Consume the proof and commit the new address. |
 | `ChangePassword(ctx, ChangePasswordInput) error` | Verify the current password, revoke all Sessions and Tokens, then replace the verifier. |
@@ -51,7 +53,7 @@ only `github.com/shakibdshy/signet`.
 - **Configuration:** `Config`, `CookieConfig`, `SessionConfig`, `PasswordConfig`, `JWTConfig`,
   `OAuthConfig`.
 - **Inputs and results:** `SignUpInput`, `SignUpResult`, `SignInInput`, `SignInResult`,
-  `SignOutInput`, `ChangeEmailInput`, `VerifyEmailChangeInput`, `ChangePasswordInput`, `SendVerificationInput`, `VerifyEmailInput`, `SendPasswordResetInput`,
+  `SignOutInput`, `RequestDeleteUserInput`, `ConfirmDeleteUserInput`, `ChangeEmailInput`, `VerifyEmailChangeInput`, `ChangePasswordInput`, `SendVerificationInput`, `VerifyEmailInput`, `SendPasswordResetInput`,
   `ResetPasswordInput`, `TokenInput`, `TokenPair`, `OAuthStartInput`, `OAuthStartResult`,
   `OAuthCallbackInput`, `OAuthCallbackResult`, `LinkOAuthAccountInput`, `ListSessionsInput`,
   `ListSessionsResult`, `RevokeSessionInput`, `RevokeAllSessionsInput`, `TemplateData`, `Message`.

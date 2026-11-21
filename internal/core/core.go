@@ -49,7 +49,7 @@ type Session struct {
 // checks that must revoke every kind iterate this list so a new kind cannot be
 // silently omitted.
 var AllTokenKinds = []TokenKind{
-	TokenVerifyEmail, TokenChangeEmail, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
+	TokenVerifyEmail, TokenChangeEmail, TokenDeleteUser, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -58,6 +58,8 @@ type TokenKind string
 const (
 	// TokenVerifyEmail proves a request to verify an email address.
 	TokenVerifyEmail TokenKind = "verify_email"
+	// TokenDeleteUser proves a request to delete an Account.
+	TokenDeleteUser TokenKind = "delete_user"
 	// TokenChangeEmail proves a request to change a User's email address.
 	TokenChangeEmail TokenKind = "change_email"
 	// TokenResetPassword proves a request to reset a password.
@@ -314,6 +316,23 @@ type ChangePasswordInput struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
 	RateLimitKey    string `json:"-"`
+}
+
+// RequestDeleteUserInput identifies the User requesting account deletion.
+type RequestDeleteUserInput struct {
+	UserID       string `json:"-"`
+	RateLimitKey string `json:"-"`
+}
+
+// ConfirmDeleteUserInput carries the single-use proof from the deletion email.
+type ConfirmDeleteUserInput struct {
+	Token        string `json:"token"`
+	RateLimitKey string `json:"-"`
+}
+
+// DeleteUserTemplates renders the message that confirms account deletion.
+type DeleteUserTemplates interface {
+	DeleteUser(TemplateData) Message
 }
 
 // ChangeEmailInput carries the new address and the current password for an

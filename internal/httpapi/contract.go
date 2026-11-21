@@ -118,6 +118,12 @@ func ContractFor() Contract {
 			{Name: "reset-password", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.ResetPasswordInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "request-account-deletion", Auth: true, Methods: []Method{{
+				Verb: "POST", Status: http.StatusOK,
+			}}},
+			{Name: "confirm-account-deletion", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.ConfirmDeleteUserInput{}), Status: http.StatusOK,
+			}}},
 			{Name: "change-email", Auth: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.ChangeEmailInput{}), Status: http.StatusOK,
 			}}},

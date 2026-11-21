@@ -21,6 +21,8 @@ type API interface {
 	ChangePassword(context.Context, core.ChangePasswordInput) error
 	RequestEmailChange(context.Context, core.ChangeEmailInput) error
 	VerifyEmailChange(context.Context, core.VerifyEmailChangeInput) error
+	RequestUserDeletion(context.Context, core.RequestDeleteUserInput) error
+	DeleteUser(context.Context, core.ConfirmDeleteUserInput) error
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
 	RevokeSession(context.Context, core.RevokeSessionInput) error
 	RevokeAllSessions(context.Context, core.RevokeAllSessionsInput) error
@@ -71,6 +73,8 @@ var Endpoints = []Endpoint{
 	{Name: "change-password"},
 	{Name: "change-email"},
 	{Name: "verify-change-email"},
+	{Name: "request-account-deletion"},
+	{Name: "confirm-account-deletion"},
 	{Name: "oauth/start", Anonymous: true},
 	{Name: "oauth/callback", Anonymous: true},
 	{Name: "csrf-token", Anonymous: true},
@@ -117,6 +121,10 @@ func (h *Handler) Handler() http.Handler {
 			h.handleChangeEmail(w, r)
 		case "verify-change-email":
 			h.handleVerifyEmailChange(w, r)
+		case "request-account-deletion":
+			h.handleRequestAccountDeletion(w, r)
+		case "confirm-account-deletion":
+			h.handleConfirmAccountDeletion(w, r)
 		case "oauth/start":
 			h.handleOAuthStart(w, r)
 		case "oauth/callback":
@@ -359,6 +367,33 @@ func (h *Handler) handleVerifyEmailChange(w http.ResponseWriter, r *http.Request
 	}
 	in.RateLimitKey = clientIP(r)
 	if err := h.api.VerifyEmailChange(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleRequestAccountDeletion(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	in := core.RequestDeleteUserInput{UserID: user.ID, RateLimitKey: clientIP(r)}
+	if err := h.api.RequestUserDeletion(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleConfirmAccountDeletion(w http.ResponseWriter, r *http.Request) {
+	var in core.ConfirmDeleteUserInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = clientIP(r)
+	if err := h.api.DeleteUser(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
 	}
