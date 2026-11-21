@@ -8,6 +8,7 @@
     "oauth",
     "jwt",
     "frontend-client",
+    "complete-example",
     "verification-and-reset",
     "storage",
     "mail",

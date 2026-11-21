@@ -8,6 +8,9 @@ import (
 	"github.com/shakibdshy/signet/internal/mail"
 )
 
+// RateLimitRule overrides the limiter and key prefix for one endpoint.
+type RateLimitRule = core.RateLimitRule
+
 // Version is the current Signet version. It remains a development placeholder
 // until the first release is tagged.
 const Version = "0.0.0-dev"

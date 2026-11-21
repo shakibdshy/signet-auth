@@ -1,0 +1,212 @@
+---
+title: Complete example
+description: One Go program configuring Signet and using the user lifecycle features.
+---
+
+This page shows a complete `main.go` using SQLite, the console mailer, fresh Sessions,
+per-endpoint rate limits and trusted proxies. Copy it into a new module, then run
+`go mod tidy` and `go run .`.
+
+For production, replace the console mailer with [SMTP](/docs/mail) and read the
+[Configuration](/docs/configuration) and [Deployment](/docs/deployment) guides.
+
+## main.go
+
+```go
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"database/sql"
+	"errors"
+	"log"
+	"net/http"
+	"net/netip"
+	"os"
+	"sync"
+	"time"
+
+	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/mailer/console"
+	"github.com/shakibdshy/signet/store/sqlite"
+	_ "modernc.org/sqlite"
+)
+
+// memoryLimiter counts hits per key. Replace it with a shared store in production.
+type memoryLimiter struct {
+	mu   sync.Mutex
+	hits map[string]int
+}
+
+func (l *memoryLimiter) Allow(_ context.Context, key string) (bool, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.hits[key]++
+	return l.hits[key] <= 10, nil
+}
+
+func main() {
+	ctx := context.Background()
+
+	// 1. Open SQLite. foreign_keys=1 keeps account and session cascades enabled.
+	db, err := sql.Open("sqlite", "file:signet.db?_pragma=foreign_keys(1)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	store := sqlite.New(db)
+	if err := store.Migrate(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	// 2. CSRF tokens are HMAC-signed; the key must be exactly 32 bytes.
+	csrfKey := make([]byte, 32)
+	if _, err := rand.Read(csrfKey); err != nil {
+		log.Fatal(err)
+	}
+
+	// 3. Start from secure defaults, then supply required dependencies.
+	cfg := signet.DefaultConfig()
+	cfg.Store = store
+	cfg.Mailer = console.New(os.Stdout) // development only
+	cfg.RateLimiter = &memoryLimiter{hits: make(map[string]int)}
+	cfg.CSRFKey = csrfKey
+	cfg.AppURL = "http://localhost:8080"
+	cfg.PathPrefix = "/auth"
+
+	// 4. Local development: skip verification. Leave these unset in production.
+	off := false
+	cfg.RequireVerifiedEmail = &off
+	cfg.SendVerificationOnSignUp = &off
+
+	// 5. Require a Session authenticated within the last 5 minutes for
+	// protected routes. A zero FreshAge disables the check.
+	cfg.Session.FreshAge = 5 * time.Minute
+
+	// 6. Per-endpoint rules use published endpoint names.
+	cfg.RateLimitRules = map[string]signet.RateLimitRule{
+		"signin": {
+			Limiter:   &memoryLimiter{hits: make(map[string]int)},
+			KeyPrefix: "login",
+		},
+	}
+
+	// 7. Trust localhost proxies only. With an empty list, X-Forwarded-For
+	// is ignored and the connection address is the rate-limit key.
+	cfg.TrustedProxies = []netip.Prefix{
+		netip.MustParsePrefix("127.0.0.0/8"),
+	}
+
+	// 8. Build the Client. New validates cfg and applies defaults.
+	auth, err := signet.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 9. Mount the HTTP API under /auth.
+	mux := http.NewServeMux()
+	mux.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
+
+	// 10. Protect a route with the fresh-Session middleware.
+	mux.Handle("/account", auth.RequireFreshSession(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := signet.UserFromContext(r.Context())
+		if !ok {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte("fresh session for " + user.Email))
+	})))
+
+	// 11. Optional: exercise the Go API directly.
+	demonstrateGoAPI(ctx, auth)
+
+	log.Println("listening on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", mux))
+}
+
+func demonstrateGoAPI(ctx context.Context, auth *signet.Client) {
+	signUp, err := auth.SignUp(ctx, signet.SignUpInput{
+		Email: "user@example.com", Password: "correct horse", Name: "Ada",
+	})
+	if err != nil && !errors.Is(err, signet.ErrEmailAlreadyExists) {
+		log.Printf("sign up: %v", err)
+		return
+	}
+
+	result, err := auth.SignIn(ctx, signet.SignInInput{
+		Email: "user@example.com", Password: "correct horse",
+	})
+	if err != nil {
+		log.Printf("sign in: %v", err)
+		return
+	}
+	userID := result.User.ID
+
+	if err := auth.VerifyFreshSession(ctx, result.SessionToken); err != nil {
+		log.Printf("fresh session: %v", err)
+	}
+
+	if err := auth.ChangePassword(ctx, signet.ChangePasswordInput{
+		UserID: userID, CurrentPassword: "correct horse", NewPassword: "new strong password",
+	}); err != nil {
+		log.Printf("change password: %v", err)
+	}
+
+	if err := auth.RequestEmailChange(ctx, signet.ChangeEmailInput{
+		UserID: userID, NewEmail: "new@example.com", CurrentPassword: "new strong password",
+	}); err != nil {
+		log.Printf("request email change: %v", err)
+		return
+	}
+
+	// Read the raw token from the emailed link, then confirm the change.
+	rawEmailToken := tokenFromEmailLink()
+	if err := auth.VerifyEmailChange(ctx, signet.VerifyEmailChangeInput{Token: rawEmailToken}); err != nil {
+		log.Printf("verify email change: %v", err)
+	}
+
+	if err := auth.RequestUserDeletion(ctx, signet.RequestDeleteUserInput{UserID: userID}); err != nil {
+		log.Printf("request deletion: %v", err)
+		return
+	}
+
+	rawDeleteToken := tokenFromEmailLink()
+	if err := auth.DeleteUser(ctx, signet.ConfirmDeleteUserInput{Token: rawDeleteToken}); err != nil {
+		log.Printf("delete user: %v", err)
+	}
+
+	_ = signUp
+}
+
+func tokenFromEmailLink() string {
+	// The console mailer prints a URL containing ?token=... .
+	// Extract that value in your application or frontend.
+	return "RAW_TOKEN_FROM_EMAIL"
+}
+```
+
+## How the flow works
+
+1. `sqlite.New(db)` adapts your database to Signet's four `Store` contracts. `Migrate` creates the tables.
+2. `DefaultConfig()` sets secure cookie and session defaults. You supply the Store, Mailer, RateLimiter and CSRFKey.
+3. `signet.New(cfg)` validates config, applies remaining defaults and constructs the internal services.
+4. `auth.Handler()` exposes every HTTP endpoint under `PathPrefix`. Browser clients must fetch a CSRF token and send `X-CSRF-Token` on state-changing requests.
+5. Go methods call the same services directly. They do not make an HTTP request and do not need CSRF tokens.
+6. Email change and account deletion send a single-use proof. The raw token appears only in the emailed link. Call `VerifyEmailChange` or `DeleteUser` with that token.
+7. `RequireFreshSession` checks Session `CreatedAt`. `LastSeenAt` is never used for freshness.
+
+## HTTP endpoints in this example
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /auth/signup` | Create a User |
+| `POST /auth/signin` | Create a Session and return a CSRF token |
+| `GET /auth/csrf-token` | Issue another CSRF token |
+| `POST /auth/change-password` | Change password; requires session and CSRF |
+| `POST /auth/change-email` | Request email change; requires session and CSRF |
+| `POST /auth/verify-change-email` | Confirm email change with the emailed token |
+| `POST /auth/request-account-deletion` | Request deletion proof; requires session and CSRF |
+| `POST /auth/confirm-account-deletion` | Delete the account with the emailed token |
+
+The authenticated endpoints derive the User ID from the session cookie. Do not send `user_id` in request bodies.
