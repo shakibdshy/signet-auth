@@ -59,3 +59,27 @@ State-changing requests require a signed CSRF token — see [Sessions and cookie
 `mailer/console` prints messages instead of sending them. Use `mailer/smtp` in
 production; STARTTLS is the default.
 </Callout>
+
+## Sign out
+
+```go
+if err := auth.SignOut(ctx, signet.SignOutInput{SessionToken: result.SessionToken}); err != nil {
+    log.Fatal(err)
+}
+```
+
+The HTTP equivalent is `POST /signout`, which also clears the session cookie.
+
+## Runnable examples
+
+Five separate Go modules show the same API with different routers: `examples/stdlib`,
+`examples/chi`, `examples/echo`, `examples/gin` and `examples/fiber`. Each uses a
+PostgreSQL database, defaulting to
+`postgres://signet:signet@localhost:5432/signet?sslmode=disable`; override it with
+`SIGNET_DATABASE_URL`. They call `Migrate(ctx)` at startup, use the console mailer and an
+in-memory limiter, mount auth under `/auth`, and disable email verification for local
+convenience. Copy one as the starting point for your application.
+
+<Callout title="JWT-only applications">
+`Config.JWTOnly` skips session cookies, so no `CSRFKey` is required. See [JWT](/docs/jwt).
+</Callout>

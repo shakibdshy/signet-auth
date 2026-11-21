@@ -8,6 +8,7 @@
     "oauth",
     "jwt",
     "frontend-client",
+    "verification-and-reset",
     "---Reference---",
     "openapi",
     "http-api",

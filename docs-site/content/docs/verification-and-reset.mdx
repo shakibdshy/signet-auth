@@ -1,0 +1,67 @@
+---
+title: Verification and reset
+description: Email verification and password reset flows, their Tokens, and how to disable verification.
+---
+
+Signet uses single-use **Tokens** for both flows. Only their SHA-256 digests are stored,
+they are checked in constant time, and consumption is atomic. Verification Tokens live 24
+hours; reset Tokens live 1 hour.
+
+## How the emailed link is built
+
+`Config.AppURL` must be set. The default templates build:
+
+```
+<AppURL>/verify?token=<RAW_TOKEN>
+<AppURL>/reset?token=<RAW_TOKEN>
+```
+
+A user-facing app should serve those pages, extract `token` from the query string and call
+the matching HTTP endpoint. The raw Token is never stored, so it cannot be recovered later.
+
+## Verifying an email
+
+1. Sign-up sends a verification Token by default. You can also call `POST /send-verification`.
+2. The message links to `/verify?token=...`.
+3. Call `POST /verify-email` with `{"token":"<RAW_TOKEN>"}` (or
+   `auth.VerifyEmail(ctx, signet.VerifyEmailInput{Token: raw})`).
+
+The Token is consumed on success; replay returns `ErrTokenInvalid`.
+
+## Resetting a password
+
+1. `POST /send-password-reset` with the email address issues a reset Token.
+2. The message links to `/reset?token=...`.
+3. `POST /reset-password` with `{"token":"...","new_password":"..."}` sets the new verifier.
+
+Before changing the verifier, Signet deletes all reset Tokens and **all Sessions** of that
+User, then sends the password-changed notification. A stolen link or an old Session cannot
+keep access after a successful reset.
+
+## Anti-enumeration
+
+For an unknown email, both send endpoints return 200 without sending mail. They still
+generate and digest a Token and render a template so the work done is comparable to the
+registered-email path. Mail transport time itself remains a signal; eliminating that needs
+queued delivery, which Signet does not provide.
+
+## Disabling verification
+
+Both fields are `*bool` and nil means true:
+
+```go
+off := false
+cfg.RequireVerifiedEmail = &off     // sign-in no longer checks verification
+cfg.SendVerificationOnSignUp = &off // no verification Token or email
+```
+
+Set both for a password-only setup. See [Configuration](/docs/configuration).
+
+## Templates and local development
+
+`EmailTemplates` has three methods: `VerifyEmail`, `ResetPassword` and `PasswordChanged`.
+`DefaultTemplates` renders HTML with `html/template` and plain text with `text/template`;
+replace it via `Config.Templates` to use your own wording.
+
+In local development the example apps use the console mailer, which prints the whole
+message to the backend terminal — that is where you find the raw Token. See [Mail](/docs/mail).

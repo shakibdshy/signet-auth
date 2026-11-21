@@ -19,7 +19,8 @@ func privateHandler(w http.ResponseWriter, r *http.Request) {
 ```
 
 Every request enforces the idle and absolute timeouts and extends the idle window
-on success. Expired Sessions are deleted.
+on success. The defaults are 30 minutes idle and 24 hours absolute. Expired and revoked
+Sessions are deleted, and a Session belonging to a disabled User is rejected.
 
 ## Listing and revoking
 
@@ -29,7 +30,8 @@ auth.RevokeSession(ctx, signet.RevokeSessionInput{SessionID: id})
 auth.RevokeAllSessions(ctx, signet.RevokeAllSessionsInput{UserID: user.ID})
 ```
 
-Listing returns only safe fields — never a token digest.
+Listing returns only safe fields — never a token digest. Revoke calls are successful
+no-ops for unknown IDs, so repeated logouts need no special handling.
 
 ## Cookies and CSRF
 
@@ -38,6 +40,10 @@ By default the session cookie is `HttpOnly`, `Secure`, `SameSite=Lax` and named
 requests carrying a session cookie must present a signed CSRF token in the
 `X-CSRF-Token` header, obtained from `GET /csrf-token` or the sign-in response.
 `Origin` and `Sec-Fetch-Site` are checked too.
+
+The CSRF token is HMAC-SHA256 over a random nonce and an expiry (24-byte nonce, 12-hour
+TTL). It is read from `X-CSRF-Token`. Clearing a session cookie sets `MaxAge=-1` and an
+expiry in the past.
 
 The two `Insecure*` options exist for local development only; using them emits a
 warning through your logger.

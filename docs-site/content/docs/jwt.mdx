@@ -14,13 +14,17 @@ cfg.JWT = &signet.JWTConfig{
 }
 ```
 
-Only `HS256`, `RS256` and `EdDSA` are accepted, with a matching key type.
+Only `HS256`, `RS256` and `EdDSA` are accepted, with a matching key type. Access Tokens
+default to 15 minutes and Refresh Tokens to 30 days; `TokenPair.ExpiresIn` reports the
+access lifetime in seconds.
 `POST /token` exchanges credentials or a Refresh token for a `TokenPair`;
 `VerifyAccessToken` validates a bearer token and returns its User.
 
 Refresh tokens rotate on every use. Replaying a consumed Refresh token is treated
 as theft: Signet revokes every Session and every kind of Token for that User and
 returns `ErrRefreshReuse`.
+
+Calling an exchange or verification method without `Config.JWT` returns `ErrJWTDisabled`.
 
 Set `JWTOnly` for API-only applications: no session cookies are issued and no
 CSRF key is required.
