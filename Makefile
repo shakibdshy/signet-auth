@@ -60,7 +60,7 @@ generate-types:
 generate: generate-spec generate-types
 
 docs-site:
-	cd docs-site && npm run sync:spec && npm run types:check && npm run build
+	cd docs-site && npm run docs:check && npm run sync:spec && npm run types:check && npm run build
 
 # Regenerate into the working tree, compare with the committed artifacts, and
 # restore the originals so a failure leaves the tree unchanged.
