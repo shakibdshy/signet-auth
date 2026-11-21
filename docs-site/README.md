@@ -18,6 +18,26 @@ npm run build
 `make generate`. The OpenAPI reference pages are generated at build time from
 `openapi/signet.openapi.json` — they are not hand-written.
 
+## Playground base URL
+
+The published spec has no `servers` entry, because Signet can be mounted under any
+prefix. The docs site injects one for the playground only. Set
+`NEXT_PUBLIC_SIGNET_API_URL` to the full endpoint prefix of your backend; it
+defaults to `http://localhost:8080/auth`, which is where the bundled stdlib
+example mounts `auth.Handler()`:
+
+```bash
+NEXT_PUBLIC_SIGNET_API_URL=http://localhost:8080/auth npm run dev
+```
+
+Playground requests go through the same-origin `/api/proxy` route, which is
+allowlisted to that backend origin so it cannot be used as an open proxy. For a
+deployed docs site, set the variable to your public API origin before building.
+
+Note that authenticated endpoints still need a session cookie. The playground
+does not manage cookies, so use the docs reference for request/response shapes
+and a real client (the generated TypeScript client) for end-to-end flows.
+
 ## Content
 
 - `content/docs/` — guides (quickstart, sessions, OAuth, JWT, frontend client).
