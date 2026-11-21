@@ -217,6 +217,11 @@ func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	return c.auth.SignOut(ctx, in)
 }
 
+// ChangePassword replaces an authenticated User's password and revokes their Sessions and Tokens.
+func (c *Client) ChangePassword(ctx context.Context, in ChangePasswordInput) error {
+	return c.verification.ChangePassword(ctx, in)
+}
+
 // SendVerification sends a verification email. It succeeds for unknown emails
 // so callers cannot enumerate registered Users.
 func (c *Client) SendVerification(ctx context.Context, in SendVerificationInput) error {

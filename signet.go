@@ -140,6 +140,9 @@ type SignInResult = core.SignInResult
 // SignOutInput is the input to a sign-out.
 type SignOutInput = core.SignOutInput
 
+// ChangePasswordInput carries the current and new password for an authenticated User.
+type ChangePasswordInput = core.ChangePasswordInput
+
 // SendVerificationInput requests a verification email for an email address.
 type SendVerificationInput = core.SendVerificationInput
 

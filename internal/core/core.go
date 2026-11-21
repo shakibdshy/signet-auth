@@ -299,6 +299,14 @@ type ResetPasswordInput struct {
 	RateLimitKey string `json:"-"`
 }
 
+// ChangePasswordInput carries the authenticated User ID and the old and new passwords.
+type ChangePasswordInput struct {
+	UserID          string `json:"-"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	RateLimitKey    string `json:"-"`
+}
+
 // TokenInput selects a token exchange.
 type TokenInput struct {
 	Email        string `json:"email"`
