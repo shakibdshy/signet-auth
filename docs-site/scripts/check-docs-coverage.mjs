@@ -93,6 +93,13 @@ if (process.argv.includes("--self-test")) {
     { symbols: collectSymbols(), errors: new Set(read("errors.go").match(/\bErr[A-Z]\w*\b/g) || []), pages: requiredPages },
     mdxFiles(docsDir),
   );
+  // The site builds its API reference from its own copy of the generated spec.
+  // It must match the root artifact or newly added endpoints never render.
+  const published = read("api/signet.openapi.json");
+  const siteSpec = read("docs-site/openapi/signet.openapi.json");
+  if (published !== siteSpec) {
+    problems.push("STALE docs-site spec: run `npm run sync:spec` in docs-site");
+  }
   if (problems.length) {
     console.error(problems.join("\n"));
     console.error(`\n${problems.length} documentation coverage problem(s).`);
