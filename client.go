@@ -14,12 +14,20 @@ import (
 	"github.com/shakibdshy/signet/internal/token"
 
 	"github.com/shakibdshy/signet/internal/auth"
+	"github.com/shakibdshy/signet/openapi"
 )
 
 // dummyPassword is hashed once at client construction for timing parity.
 //
 //nolint:gosec // G101: fixed timing-equalization input, not a credential.
 const dummyPassword = "signet-anti-enumeration-dummy"
+
+// DocsHandler returns an http.Handler serving the generated OpenAPI document at
+// /openapi.json and an interactive reference at /. Mount it deliberately — it is
+// not part of Client.Handler() and applications decide whether to protect it.
+func DocsHandler() http.Handler {
+	return httpapi.DocsHandler(openapi.Spec())
+}
 
 // Client is a configured Signet instance. It is safe for concurrent use and
 // is intended to be created once at application startup.

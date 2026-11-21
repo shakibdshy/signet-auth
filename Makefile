@@ -50,8 +50,9 @@ tidy:
 check: fmt-check vet lint test vuln
 
 generate-spec:
-	@mkdir -p api
+	@mkdir -p api openapi
 	$(GO) run ./cmd/signet-openapi > api/signet.openapi.json
+	cp api/signet.openapi.json openapi/signet.openapi.json
 
 generate-types:
 	cd client/ts && npm run generate
@@ -63,11 +64,14 @@ generate: generate-spec generate-types
 generate-check:
 	@tmp=$$(mktemp -d); \
 	cp api/signet.openapi.json $$tmp/spec.json; \
+	cp openapi/signet.openapi.json $$tmp/embedded.json; \
 	cp client/ts/src/schema.d.ts $$tmp/schema.d.ts; \
 	$(MAKE) generate >/dev/null || exit 1; \
 	if ! diff -u $$tmp/spec.json api/signet.openapi.json || \
+	   ! diff -u $$tmp/embedded.json openapi/signet.openapi.json || \
 	   ! diff -u $$tmp/schema.d.ts client/ts/src/schema.d.ts; then \
 		cp $$tmp/spec.json api/signet.openapi.json; \
+		cp $$tmp/embedded.json openapi/signet.openapi.json; \
 		cp $$tmp/schema.d.ts client/ts/src/schema.d.ts; \
 		rm -rf $$tmp; \
 		echo "generated artifacts are stale; run make generate"; \

@@ -177,6 +177,17 @@ contract in `internal/httpapi/contract.go`. A generated TypeScript client lives
 in [`client/ts/`](client/ts/) and is published as
 `@shakibdshy/signet-client`.
 
+To browse the API locally, mount `signet.DocsHandler()` in your application. It
+serves the generated spec at `/openapi.json` and a Scalar reference page at `/`:
+
+```go
+mux.Handle("/docs/", http.StripPrefix("/docs", signet.DocsHandler()))
+```
+
+It is deliberately separate from `auth.Handler()` — nothing is exposed unless
+you mount it, and you decide whether to protect the route. The viewer loads
+Scalar from a CDN; the spec itself is embedded in the module.
+
 For a frontend in a separate repo (TanStack Start, Next.js or another React
 app), the backend team merges this base spec into their application's OpenAPI
 spec and publishes a versioned SDK from it. The frontend installs that SDK;

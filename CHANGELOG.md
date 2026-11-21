@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Optional `signet.DocsHandler()` serves the generated OpenAPI document and a
+  Scalar reference page. Mount it deliberately; the authentication handler is
+  unchanged.
+
 ### Changed
 
 - Reorganized the repository into real folders. The root `signet` package is now
