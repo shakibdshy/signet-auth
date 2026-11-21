@@ -28,6 +28,7 @@ auth, err := signet.New(cfg)
 | --- | --- | --- | --- |
 | Store | Store | required — `ErrMissingStore` | Persistence contract. See [Storage](/docs/storage). |
 | Mailer | Mailer | required — `ErrMissingMailer` | Delivers verification/reset messages. See [Mail](/docs/mail). |
+| RateLimitRules | map[string]RateLimitRule | empty | Per-endpoint limiter/key overrides; keys must match published endpoint names. |
 | RateLimiter | RateLimiter | required — `ErrMissingRateLimiter` | Boolean gate called with `endpoint+"|"+key`. |
 | PasswordHasher | PasswordHasher | default `Argon2idHasher{}` | Verifier algorithm and rehash policy. |
 | Clock | Clock | default `SystemClock{}` | Injected time source for tests and TTLs. |

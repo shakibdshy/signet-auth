@@ -9,6 +9,7 @@ import (
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/oauth"
+	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
@@ -61,6 +62,16 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	limiter := ratelimit.New(cfg.RateLimiter, cfg.RateLimitRules)
+	known := make(map[string]bool, len(httpapi.Endpoints))
+	for _, endpoint := range httpapi.Endpoints {
+		known[endpoint.Name] = true
+	}
+	for name := range cfg.RateLimitRules {
+		if !known[name] {
+			return nil, ErrInvalidRateLimitRule
+		}
+	}
 	if cfg.InsecureAllowHTTPCookies {
 		// Security-relevant deviation: the explicit switch is required, and the
 		// warning is emitted through the application's own logger.
@@ -118,21 +129,21 @@ func New(cfg Config) (*Client, error) {
 	if jwtCfg != nil {
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
-			Limiter: cfg.RateLimiter, Logger: cfg.Logger, SignIn: c.SignIn,
+			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
 		})
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
 	if cfg.OAuth != nil {
-		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, cfg.RateLimiter, cfg.Logger, c.tokens, c.sessions)
+		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
 	}
 	c.verification = auth.NewVerification(auth.VerificationDependencies{
 		Store: cfg.Store, Tokens: c.tokens, Mailer: cfg.Mailer, Templates: cfg.Templates,
-		Clock: cfg.Clock, Limiter: cfg.RateLimiter, Logger: cfg.Logger,
+		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
 		AppURL: cfg.AppURL, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 	})
 	c.auth = auth.New(auth.Dependencies{
-		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: cfg.RateLimiter,
+		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,

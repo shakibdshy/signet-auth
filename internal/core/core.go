@@ -155,6 +155,12 @@ type RateLimiter interface {
 	Allow(context.Context, string) (bool, error)
 }
 
+// RateLimitRule overrides the limiter and/or key prefix for one endpoint.
+type RateLimitRule struct {
+	Limiter   RateLimiter
+	KeyPrefix string
+}
+
 // Clock supplies the current time.
 type Clock interface {
 	Now() time.Time
@@ -213,6 +219,7 @@ type Config struct {
 	Mailer                   Mailer
 	PasswordHasher           PasswordHasher
 	RateLimiter              RateLimiter
+	RateLimitRules           map[string]RateLimitRule
 	Clock                    Clock
 	Logger                   *slog.Logger
 	OnSignUp                 func(context.Context, *User)
@@ -421,6 +428,8 @@ var (
 	ErrTokenExpired = errors.New("signet: token expired")
 	// ErrTokenInvalid reports an invalid Token.
 	ErrTokenInvalid = errors.New("signet: token invalid")
+	// ErrInvalidRateLimitRule reports a rule for an unknown endpoint name.
+	ErrInvalidRateLimitRule = errors.New("signet: invalid rate limit rule")
 	// ErrSessionNotFresh reports a Session outside the freshness window.
 	ErrSessionNotFresh = errors.New("signet: session not fresh")
 	// ErrMissingStore reports a missing Store.
