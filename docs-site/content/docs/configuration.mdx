@@ -1,0 +1,131 @@
+---
+title: Configuration
+description: Every Config field, its default, and which settings are required.
+---
+
+`signet.New(cfg Config)` validates the required dependencies, then fills blank fields from
+`DefaultConfig()`. Always start from `DefaultConfig()` — a zero `Config{}` leaves cookies
+insecure and is rejected with `ErrInsecureConfig`.
+
+```go
+cfg := signet.DefaultConfig()
+cfg.Store = myStore
+cfg.Mailer = myMailer
+cfg.RateLimiter = myLimiter
+cfg.CSRFKey = csrfKey // exactly 32 bytes
+cfg.AppURL = "https://app.example.com"
+auth, err := signet.New(cfg)
+```
+
+<Callout title="Secure defaults">
+`DefaultConfig()` sets `Cookie.Secure` and `Cookie.HttpOnly` to true, `SameSite=Lax`,
+`PathPrefix="/"`, and `Path="/"`. Do not disable the `Insecure*` options in production.
+</Callout>
+
+## Top-level Config
+
+| Field | Type | Required / default | Purpose |
+| --- | --- | --- | --- |
+| Store | Store | required — `ErrMissingStore` | Persistence contract. See [Storage](/docs/storage). |
+| Mailer | Mailer | required — `ErrMissingMailer` | Delivers verification/reset messages. See [Mail](/docs/mail). |
+| RateLimiter | RateLimiter | required — `ErrMissingRateLimiter` | Boolean gate called with `endpoint+"|"+key`. |
+| PasswordHasher | PasswordHasher | default `Argon2idHasher{}` | Verifier algorithm and rehash policy. |
+| Clock | Clock | default `SystemClock{}` | Injected time source for tests and TTLs. |
+| Logger | *slog.Logger | default `slog.Default()` | Receives structured events and security warnings. |
+| OnSignUp | func(context.Context, *User) | default no-op | Redacted hook after sign-up. |
+| OnSignIn | func(context.Context, *User) | default no-op | Redacted hook after sign-in, including OAuth sign-in. |
+| Cookie | CookieConfig | see below | Session cookie policy. |
+| Session | SessionConfig | see below | Session lifetimes. |
+| Password | PasswordConfig | see below | Accepted password lengths. |
+| PathPrefix | string | default `/` | Mount path for `Client.Handler()`. |
+| InsecureAllowHTTPCookies | bool | default false | Permits `Secure=false` or `HttpOnly=false`; emits a warning. |
+| InsecureDisableCSRF | bool | default false | Disables the CSRF guard; emits a warning. |
+| JWT | *JWTConfig | default nil = cookie sessions only | Bearer access/refresh tokens. See [JWT](/docs/jwt). |
+| RequireVerifiedEmail | *bool | default nil = **true** | Block sign-in for unverified Users. Set a `false` pointer to disable. |
+| SendVerificationOnSignUp | *bool | default nil = **true** | Issue a verification Token on sign-up. Set a `false` pointer to disable. |
+| AppURL | string | no default; set for email flows | Origin used to build `/verify` and `/reset` links. |
+| Templates | EmailTemplates | default `DefaultTemplates` | Renders verification, reset and changed-password messages. |
+| OAuth | *OAuthConfig | default nil = OAuth disabled | External sign-in providers. See [OAuth](/docs/oauth). |
+| CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
+| JWTOnly | bool | default false | API-only mode: no session cookies and no CSRF key required. |
+
+Hooks receive a **redacted** User: `Email` and `Name` are blanked so callbacks cannot leak
+personal data into logs. See [Security](/docs/security).
+
+### Disabling email verification
+
+Both switches are independent `*bool` fields; nil means the secure default (`true`):
+
+```go
+off := false
+cfg.RequireVerifiedEmail = &off     // sign-in no longer checks verification
+cfg.SendVerificationOnSignUp = &off // no verification Token is issued
+```
+
+Set both for a fully password-only setup. See [Verification and reset](/docs/verification-and-reset).
+
+## CookieConfig
+
+| Field | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| Name | string | `signet_session` | Cookie name, prefixed with `__Host-` where valid. |
+| Domain | string | empty | Cookie domain. A non-empty domain suppresses the `__Host-` prefix. |
+| Path | string | `/` | Cookie path. |
+| SameSite | http.SameSite | `SameSiteLaxMode` | SameSite attribute. |
+| Secure | bool | true | Require HTTPS. |
+| HttpOnly | bool | true | Hide from JavaScript. |
+
+The `__Host-` prefix is applied when `Secure` is true, `Path` is `/` and `Domain` is empty.
+CSRF cookies are deliberately **not** `HttpOnly` so the frontend can copy the token into
+a header.
+
+## SessionConfig
+
+| Field | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| IdleTimeout | time.Duration | 30m | Extended on each successful request. |
+| AbsoluteTimeout | time.Duration | 24h | Fixed at Session creation; never extended. |
+
+## PasswordConfig
+
+| Field | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| MinLength | int | 8 | Shortest accepted password. |
+| MaxLength | int | 128 | Longest accepted password; bounds hashing work. |
+
+## JWTConfig
+
+| Field | Type | Default / constraint | Purpose |
+| --- | --- | --- | --- |
+| Algorithm | string | required: `HS256`, `RS256`, `EdDSA` | Signing algorithm. |
+| Key | any | required: `[]byte`, `*rsa.PrivateKey`, `ed25519.PrivateKey` | Signing key matching the algorithm. |
+| AccessTTL | time.Duration | 15m | Access token lifetime. |
+| RefreshTTL | time.Duration | 30 * 24h | Refresh token lifetime. |
+| Issuer | string | optional | Claim checked on verification. |
+
+`TokenPair.ExpiresIn` reports `AccessTTL` in seconds.
+
+## OAuthConfig
+
+| Field | Type | Default / constraint | Purpose |
+| --- | --- | --- | --- |
+| Providers | []OAuthProvider | required when OAuth is set | `google.Provider` / `github.Provider` or a custom implementation. |
+| RedirectBaseURL | string | required | API origin used to build the callback URL. |
+| AllowedRedirects | []string | required | Exact allowlist of post-login destinations. |
+| StateKey | []byte | exactly 32 bytes | AES-GCM key for OAuth state and link Tokens. |
+
+## SMTP mailer Config
+
+Import `github.com/shakibdshy/signet/mailer/smtp`.
+
+| Field | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| Host | string | required | SMTP host. |
+| Port | string | 587 / 465 / 25 by TLS mode | SMTP port. |
+| Username | string | empty | SMTP username. |
+| Password | string | empty | SMTP password; keep it in secrets, never in source. |
+| From | string | required | Sender address. |
+| TLS | TLSMode | `StartTLS` | `StartTLS`, `ImplicitTLS` or `InsecurePlaintext`. |
+| InsecureAllowPlaintext | bool | false | Required to permit plaintext; emits a warning. |
+
+TLS minimum is 1.2. See [Mail](/docs/mail) for the full setup.

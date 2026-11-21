@@ -9,6 +9,8 @@
     "jwt",
     "frontend-client",
     "---Reference---",
-    "openapi"
+    "openapi",
+    "configuration",
+    "errors"
   ]
 }
