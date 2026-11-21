@@ -197,6 +197,9 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 		return err
 	}
 	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
+	if errors.Is(err, core.ErrNotFound) {
+		return core.ErrInvalidCredentials
+	}
 	if err != nil {
 		return err
 	}

@@ -13,14 +13,14 @@ import (
 	"github.com/shakibdshy/signet/internal/testutil"
 )
 
-func changePasswordClient(t *testing.T, allow bool) (*signet.Client, *testutil.Store, *testutil.Mailer) {
+func changePasswordClient(t *testing.T) (*signet.Client, *testutil.Store, *testutil.Mailer) {
 	t.Helper()
 	store := testutil.NewStore()
 	mailer := &testutil.Mailer{}
 	cfg := testutil.NewConfig()
 	cfg.Store = store
 	cfg.Mailer = mailer
-	cfg.RateLimiter = &testutil.Limiter{Allowed: allow}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	client, err := signet.New(cfg)
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -30,7 +30,7 @@ func changePasswordClient(t *testing.T, allow bool) (*signet.Client, *testutil.S
 
 func changePasswordSetup(t *testing.T) (*signet.Client, *testutil.Store, *testutil.Mailer, string) {
 	t.Helper()
-	client, store, mailer := changePasswordClient(t, true)
+	client, store, mailer := changePasswordClient(t)
 	ctx := context.Background()
 	if _, err := client.SignUp(ctx, signet.SignUpInput{
 		Email: "user@example.com", Password: "correct horse", Name: "Ada",
@@ -121,7 +121,7 @@ func TestChangePasswordOutOfBoundsHasNoSideEffects(t *testing.T) {
 }
 
 func TestChangePasswordRateLimited(t *testing.T) {
-	client, store, _ := changePasswordClient(t, true)
+	client, store, _ := changePasswordClient(t)
 	ctx := context.Background()
 	signUp, err := client.SignUp(ctx, signet.SignUpInput{
 		Email: "user@example.com", Password: "correct horse", Name: "Ada",
@@ -154,7 +154,7 @@ func TestChangePasswordRateLimited(t *testing.T) {
 
 func changePasswordHTTPClient(t *testing.T) (*signet.Client, *testutil.Store) {
 	t.Helper()
-	client, store, _ := changePasswordClient(t, true)
+	client, store, _ := changePasswordClient(t)
 	ctx := context.Background()
 	if _, err := client.SignUp(ctx, signet.SignUpInput{
 		Email: "user@example.com", Password: "correct horse", Name: "Ada",
@@ -246,5 +246,55 @@ func TestChangePasswordHTTPRequiresCSRF(t *testing.T) {
 	client.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"csrf"`) {
 		t.Fatalf("status/body = %d %s, want 403 csrf", rec.Code, rec.Body.String())
+	}
+}
+
+func TestChangePasswordOAuthOnlyUserReturnsGenericCredentialError(t *testing.T) {
+	client, store, _ := changePasswordClient(t)
+	ctx := context.Background()
+	// Create a User and a provider Account but no credential Account.
+	user := &signet.User{ID: "oauth-user", Email: "oauth@example.com", EmailVerified: true}
+	if err := store.CreateUser(ctx, user); err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	if err := store.CreateAccount(ctx, &signet.Account{
+		ID: "oauth-account", UserID: user.ID, Provider: "google", ProviderUserID: "provider-1",
+	}); err != nil {
+		t.Fatalf("CreateAccount: %v", err)
+	}
+	verifierBefore := len(store.Accounts)
+	err := client.ChangePassword(ctx, signet.ChangePasswordInput{
+		UserID: user.ID, CurrentPassword: "correct horse", NewPassword: "a much better password",
+	})
+	if !errors.Is(err, signet.ErrInvalidCredentials) {
+		t.Fatalf("error = %v, want ErrInvalidCredentials", err)
+	}
+	if len(store.Accounts) != verifierBefore {
+		t.Error("OAuth-only change mutated Accounts")
+	}
+}
+
+func TestChangePasswordHTTPRejectsNonPost(t *testing.T) {
+	client, store := changePasswordHTTPClient(t)
+	signInRec := changePasswordSignIn(t, client)
+	var csrf struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := json.Unmarshal(signInRec.Body.Bytes(), &csrf); err != nil {
+		t.Fatalf("decode sign-in: %v", err)
+	}
+	verifier := store.Accounts[0].PasswordHash
+	req := httptest.NewRequest(http.MethodGet, "/change-password", strings.NewReader(`{"current_password":"correct horse","new_password":"a much better password"}`))
+	for _, c := range signInRec.Result().Cookies() {
+		req.AddCookie(c)
+	}
+	req.Header.Set("X-CSRF-Token", csrf.CSRFToken)
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want 405 (body %s)", rec.Code, rec.Body.String())
+	}
+	if store.Accounts[0].PasswordHash != verifier {
+		t.Error("GET changed the verifier")
 	}
 }
