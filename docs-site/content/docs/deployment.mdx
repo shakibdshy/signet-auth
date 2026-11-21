@@ -57,7 +57,10 @@ base for that SDK; see [Frontend client](/docs/frontend-client).
 
 ## Publishing the documentation site
 
-The Fumadocs site builds statically. Set `NEXT_PUBLIC_SIGNET_API_URL` to the public API
-origin (including the mount prefix, e.g. `https://api.example.com/auth`), then run
-`npm run build` in `docs-site/` and deploy the output. The value gives the API playground
-a real base URL; it is injected at build time only and does not alter the published spec.
+The Fumadocs site is a Next.js app that needs a Node/server runtime: the documentation
+pages are pre-rendered, but the search and playground-proxy routes and middleware are
+dynamic. Set `NEXT_PUBLIC_SIGNET_API_URL` to the public API origin (including the mount
+prefix, e.g. `https://api.example.com/auth`), run `npm run build` in `docs-site/`, and
+deploy it to a host that can run the Next.js server. A static-only host would lose the
+playground proxy and search. The value gives the API playground a real base URL; it is
+injected at build time only and does not alter the published spec.

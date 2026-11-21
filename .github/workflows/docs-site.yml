@@ -10,6 +10,7 @@ on:
       - "errors.go"
       - "signet.go"
       - "internal/httpapi/contract.go"
+      - "internal/core/core.go"
       - "Makefile"
       - ".github/workflows/docs-site.yml"
   push:
@@ -22,6 +23,7 @@ on:
       - "errors.go"
       - "signet.go"
       - "internal/httpapi/contract.go"
+      - "internal/core/core.go"
       - "Makefile"
       - ".github/workflows/docs-site.yml"
 

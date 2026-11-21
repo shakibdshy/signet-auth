@@ -16,22 +16,22 @@ from the declarative contract into the [API reference](/docs/openapi).
 
 ## Endpoint map
 
-| Method + path | Auth | CSRF | Success | Use it when |
-| --- | --- | --- | --- | --- |
-| POST `/signup` | no | exempt | 201 `{"user":User}` | Creating a User and its credential Account. |
-| POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | Exchanging credentials for a Session; sets cookies and returns the CSRF token. |
-| POST `/signout` | no | required | 204 | Ending the current Session and clearing its cookie. |
-| GET `/sessions` | yes | n/a | 200 `{"sessions":[SessionInfo]}` | Listing the authenticated User's Sessions. |
-| DELETE `/sessions` | yes | required | 204 | Revoking all Sessions of the authenticated User. |
-| DELETE `/session` | yes | required | 204 | Revoking just the current Session. |
-| POST `/token` | no | exempt | 200 `TokenPair` | Exchanging credentials or a Refresh token when JWT is enabled. |
-| POST `/send-verification` | no | required | 200 | Issuing a fresh email-verification Token. |
-| POST `/verify-email` | no | required | 200 | Consuming the verification Token from the emailed link. |
-| POST `/send-password-reset` | no | required | 200 | Requesting a password-reset Token. |
-| POST `/reset-password` | no | required | 200 | Consuming the reset Token and setting a new password. |
-| POST `/oauth/start` | no | exempt | 200 `{"url":...}` | Starting an OAuth flow; returns the provider authorization URL. |
-| GET `/oauth/callback` | no | exempt | 302 | Provider redirect target; sets a Session cookie or appends a `link_token`. |
-| GET `/csrf-token` | no | exempt | 200 `{"token":...}` | Obtaining a CSRF token for browser requests; sets the CSRF cookie. |
+| Method + path | Auth | CSRF | Success | Key errors | Use it when | Reference |
+| --- | --- | --- | --- | --- | --- | --- |
+| POST `/signup` | no | exempt | 201 `{"user":User}` | `email_exists` 400, `invalid_input` 400, `rate_limited` 429 | Creating a User and its credential Account. | [signup](/docs/openapi/signup_post) |
+| POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | `invalid_credentials` 401, `email_not_verified` 403, `rate_limited` 429 | Exchanging credentials for a Session; sets cookies and returns the CSRF token. | [signin](/docs/openapi/signin_post) |
+| POST `/signout` | no | required | 204 | `csrf` 403, `invalid_input` 400 | Ending the current Session and clearing its cookie. | [signout](/docs/openapi/signout_post) |
+| GET `/sessions` | yes | n/a | 200 `{"sessions":[SessionInfo]}` | `unauthorized` 401, `csrf` 403 | Listing the authenticated User's Sessions. | [sessions](/docs/openapi/sessions_get) |
+| DELETE `/sessions` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking all Sessions of the authenticated User. | [sessions](/docs/openapi/sessions_delete) |
+| DELETE `/session` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking just the current Session. | [session](/docs/openapi/session_delete) |
+| POST `/token` | no | exempt | 200 `TokenPair` | `invalid_token` 401, `not_found` 404, `rate_limited` 429 | Exchanging credentials or a Refresh token when JWT is enabled. | [token](/docs/openapi/token_post) |
+| POST `/send-verification` | no | required | 200 | `csrf` 403, `invalid_input` 400, `rate_limited` 429 | Issuing a fresh email-verification Token. | [send-verification](/docs/openapi/send-verification_post) |
+| POST `/verify-email` | no | required | 200 | `csrf` 403, `invalid_token` 401, `rate_limited` 429 | Consuming the verification Token from the emailed link. | [verify-email](/docs/openapi/verify-email_post) |
+| POST `/send-password-reset` | no | required | 200 | `csrf` 403, `invalid_input` 400, `rate_limited` 429 | Requesting a password-reset Token. | [send-password-reset](/docs/openapi/send-password-reset_post) |
+| POST `/reset-password` | no | required | 200 | `csrf` 403, `invalid_token` 401, `invalid_input` 400, `rate_limited` 429 | Consuming the reset Token and setting a new password. | [reset-password](/docs/openapi/reset-password_post) |
+| POST `/oauth/start` | no | exempt | 200 `{"url":...}` | `not_found` 404, `invalid_request` 400, `rate_limited` 429 | Starting an OAuth flow; returns the provider authorization URL. | [oauth/start](/docs/openapi/oauth/start_post) |
+| GET `/oauth/callback` | no | exempt | 302 | `invalid_request` 400, `oauth_email_not_verified` 403, `oauth_account_conflict` 409 | Provider redirect target; sets a Session cookie or appends a `link_token`. | [oauth/callback](/docs/openapi/oauth/callback_get) |
+| GET `/csrf-token` | no | exempt | 200 `{"token":...}` | 405 on other methods | Obtaining a CSRF token for browser requests; sets the CSRF cookie. | [csrf-token](/docs/openapi/csrf-token_get) |
 
 Anonymous endpoints are exempt from the CSRF guard. State-changing requests that carry a
 session cookie must present `X-CSRF-Token`; see [Sessions and cookies](/docs/sessions).

@@ -42,7 +42,7 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 
 | Sentinel | HTTP / wire code | Meaning and action |
 | --- | --- | --- |
-| ErrNotFound | 404 not_found | Entity or Session not found. |
+| ErrNotFound | no dedicated mapping — surfaces as 500 internal_error | Entity or Session not found. `404 not_found` comes from JWT/OAuth-disabled sentinels and unknown routes. |
 | ErrTokenInvalid | 401 invalid_token | Malformed, unknown, consumed or replayed Token. |
 | ErrTokenExpired | 401 invalid_token | Token past its expiry; request a fresh one. |
 | ErrRefreshReuse | 401 invalid_token | Refresh replay. All Sessions and Tokens for that User were revoked; sign in again. |
