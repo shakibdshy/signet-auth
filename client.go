@@ -217,6 +217,34 @@ func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	return c.auth.SignOut(ctx, in)
 }
 
+// VerifyFreshSession reports whether a Session was authenticated within the configured freshness window.
+func (c *Client) VerifyFreshSession(ctx context.Context, token string) error {
+	fresh, err := c.sessions.IsFresh(ctx, token)
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return ErrSessionNotFresh
+	}
+	return nil
+}
+
+// RequireFreshSession protects a handler with a fresh-Session check.
+func (c *Client) RequireFreshSession(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(c.cookies.Name())
+		if err != nil || cookie.Value == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if err := c.VerifyFreshSession(r.Context(), cookie.Value); err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // RequestUserDeletion sends a single-use proof to the User's current email.
 func (c *Client) RequestUserDeletion(ctx context.Context, in RequestDeleteUserInput) error {
 	return c.verification.RequestUserDeletion(ctx, in)

@@ -83,6 +83,7 @@ a header.
 
 | Field | Type | Default | Purpose |
 | --- | --- | --- | --- |
+| FreshAge | time.Duration | 0 (disabled) | Window since authentication for freshness checks. |
 | IdleTimeout | time.Duration | 30m | Extended on each successful request. |
 | AbsoluteTimeout | time.Duration | 24h | Fixed at Session creation; never extended. |
 

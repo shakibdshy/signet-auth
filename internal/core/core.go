@@ -248,6 +248,9 @@ type CookieConfig struct {
 type SessionConfig struct {
 	IdleTimeout     time.Duration
 	AbsoluteTimeout time.Duration
+	// FreshAge is the window since authentication for freshness checks.
+	// Zero disables freshness enforcement.
+	FreshAge time.Duration
 }
 
 // PasswordConfig bounds accepted password lengths.
@@ -418,6 +421,8 @@ var (
 	ErrTokenExpired = errors.New("signet: token expired")
 	// ErrTokenInvalid reports an invalid Token.
 	ErrTokenInvalid = errors.New("signet: token invalid")
+	// ErrSessionNotFresh reports a Session outside the freshness window.
+	ErrSessionNotFresh = errors.New("signet: session not fresh")
 	// ErrMissingStore reports a missing Store.
 	ErrMissingStore = errors.New("signet: Config.Store is required")
 	// ErrMissingMailer reports a missing Mailer.

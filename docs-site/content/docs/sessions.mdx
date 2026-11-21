@@ -57,3 +57,11 @@ yourself and decide whether to protect it:
 ```go
 mux.Handle("/docs/", http.StripPrefix("/docs", signet.DocsHandler()))
 ```
+
+## Fresh Sessions
+
+Set `Session.FreshAge` to require recent authentication for sensitive operations. A zero
+window (the default) disables the check. Freshness is measured from `CreatedAt` — the moment
+of authentication — never from `LastSeenAt`, which is extended by ordinary requests.
+`Client.VerifyFreshSession` returns `ErrSessionNotFresh` for a stale Session, and
+`Client.RequireFreshSession` is middleware that rejects stale requests with 401.
