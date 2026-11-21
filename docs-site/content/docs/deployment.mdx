@@ -36,13 +36,10 @@ The session cookie is named `signet_session`, prefixed with `__Host-` when `Secu
 no Domain and a secure origin. If your setup needs a cross-subdomain cookie, set `Domain`
 explicitly — the prefix is then omitted.
 
-<Callout title="Not implemented yet">
-Proxy-aware `X-Forwarded-For` handling, trusted-proxy CIDR configuration and IPv6
-normalisation are **not shipped** — see issue #50 on the tracker. Signet derives
-rate-limit keys from the connection address only. Configure your proxy to preserve the
-client address at the transport layer, or implement a custom RateLimiter that reads
-trusted headers itself.
-</Callout>
+Trusted proxies are configured as CIDR ranges in `Config.TrustedProxies`. With none
+configured, `X-Forwarded-For` is ignored and the connection address is the rate-limit key.
+When the immediate peer is trusted, the chain is walked right-to-left to the first
+untrusted hop; IPv6 addresses are normalized. Never trust a proxy you do not control.
 
 ## JWT-only services
 

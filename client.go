@@ -435,7 +435,7 @@ func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required b
 
 // Handler returns a plain http.Handler serving Signet's authentication endpoints.
 func (c *Client) Handler() http.Handler {
-	return httpapi.New(httpAdapter{Client: c}, c.cfg.PathPrefix).Handler()
+	return httpapi.New(httpAdapter{Client: c}, c.cfg.PathPrefix, c.cfg.TrustedProxies).Handler()
 }
 
 // httpAdapter exposes the internal helpers the HTTP module needs without

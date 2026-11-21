@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 
@@ -45,12 +45,15 @@ type API interface {
 
 // Handler serves the authentication endpoints using an API adapter.
 type Handler struct {
-	api    API
-	prefix string
+	api     API
+	prefix  string
+	trusted []netip.Prefix
 }
 
 // New returns a Handler for api under prefix.
-func New(api API, prefix string) *Handler { return &Handler{api: api, prefix: prefix} }
+func New(api API, prefix string, trusted []netip.Prefix) *Handler {
+	return &Handler{api: api, prefix: prefix, trusted: trusted}
+}
 
 // Endpoint names an auth endpoint and whether it is anonymous.
 type Endpoint struct {
@@ -149,7 +152,7 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	result, err := h.api.SignUp(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -164,7 +167,7 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	result, err := h.api.SignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -252,7 +255,7 @@ func (h *Handler) handleToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	pair, err := h.api.ExchangeToken(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -267,7 +270,7 @@ func (h *Handler) handleSendVerification(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.SendVerification(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -281,7 +284,7 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.VerifyEmail(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -295,7 +298,7 @@ func (h *Handler) handleSendPasswordReset(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.SendPasswordReset(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -309,7 +312,7 @@ func (h *Handler) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.ResetPassword(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -332,7 +335,7 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.UserID = user.ID
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.ChangePassword(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -351,7 +354,7 @@ func (h *Handler) handleChangeEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.UserID = user.ID
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.RequestEmailChange(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -365,7 +368,7 @@ func (h *Handler) handleVerifyEmailChange(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.VerifyEmailChange(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -378,7 +381,7 @@ func (h *Handler) handleRequestAccountDeletion(w http.ResponseWriter, r *http.Re
 	if !ok {
 		return
 	}
-	in := core.RequestDeleteUserInput{UserID: user.ID, RateLimitKey: clientIP(r)}
+	in := core.RequestDeleteUserInput{UserID: user.ID, RateLimitKey: h.clientIP(r)}
 	if err := h.api.RequestUserDeletion(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -392,7 +395,7 @@ func (h *Handler) handleConfirmAccountDeletion(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	if err := h.api.DeleteUser(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return
@@ -410,7 +413,7 @@ func (h *Handler) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
-	in.RateLimitKey = clientIP(r)
+	in.RateLimitKey = h.clientIP(r)
 	result, err := h.api.OAuthStart(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -427,7 +430,7 @@ func (h *Handler) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	in := core.OAuthCallbackInput{
 		Code:         r.URL.Query().Get("code"),
 		State:        r.URL.Query().Get("state"),
-		RateLimitKey: clientIP(r),
+		RateLimitKey: h.clientIP(r),
 	}
 	result, err := h.api.OAuthCallback(r.Context(), in)
 	if err != nil {
@@ -475,10 +478,6 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
+func (h *Handler) clientIP(r *http.Request) string {
+	return resolveClientIP(r.RemoteAddr, r.Header.Get("X-Forwarded-For"), h.trusted)
 }

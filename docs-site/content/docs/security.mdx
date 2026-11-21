@@ -64,3 +64,9 @@ Structured events go to `Config.Logger`. Hooks (`OnSignUp`, `OnSignIn`) receive 
 User with email and name blanked. Logs carry User IDs and reason codes — never passwords,
 raw Tokens or session secrets. The `InsecureAllowHTTPCookies` and `InsecureDisableCSRF`
 options warn explicitly when enabled.
+
+## Rate-limit keys and proxies
+
+Rate-limit keys are `endpoint+"|"+clientIP`. By default clientIP is the connection address.
+`Config.TrustedProxies` lists CIDR ranges allowed to supply `X-Forwarded-For`; the chain is
+walked right-to-left to the first untrusted hop so a client cannot spoof its own key.

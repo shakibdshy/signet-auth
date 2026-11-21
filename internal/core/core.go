@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"time"
 )
 
@@ -220,6 +221,7 @@ type Config struct {
 	PasswordHasher           PasswordHasher
 	RateLimiter              RateLimiter
 	RateLimitRules           map[string]RateLimitRule
+	TrustedProxies           []netip.Prefix
 	Clock                    Clock
 	Logger                   *slog.Logger
 	OnSignUp                 func(context.Context, *User)
