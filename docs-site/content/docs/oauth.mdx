@@ -9,8 +9,8 @@ application origin and an exact redirect allowlist:
 ```go
 cfg.OAuth = &signet.OAuthConfig{
     Providers: []signet.OAuthProvider{
-        google.New(google.Config{ClientID: id, ClientSecret: secret}),
-        github.New(github.Config{ClientID: id, ClientSecret: secret}),
+        google.Provider{ClientID: id, ClientSecret: secret},
+        github.Provider{ClientID: id, ClientSecret: secret},
     },
     RedirectBaseURL:  "https://api.example.com",
     AllowedRedirects: []string{"https://app.example.com/dashboard"},
