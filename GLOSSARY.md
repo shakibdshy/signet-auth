@@ -25,7 +25,7 @@ The raw value a Session presents when authenticating. It is stored only as a dig
 _Avoid_: bearer token, session secret
 
 **Token**:
-A single-use proof for one sensitive flow: email verification, password reset, email change, account deletion, OAuth account linking, refresh or state.
+A single-use proof for one sensitive flow: email verification, email change, password reset, email change confirmation, account deletion, OAuth account linking, refresh or state.
 _Avoid_: one-time code
 
 **Access token**:

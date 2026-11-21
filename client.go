@@ -9,6 +9,7 @@ import (
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/oauth"
+	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
@@ -61,6 +62,16 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	limiter := ratelimit.New(cfg.RateLimiter, cfg.RateLimitRules)
+	known := make(map[string]bool, len(httpapi.Endpoints))
+	for _, endpoint := range httpapi.Endpoints {
+		known[endpoint.Name] = true
+	}
+	for name := range cfg.RateLimitRules {
+		if !known[name] {
+			return nil, ErrInvalidRateLimitRule
+		}
+	}
 	if cfg.InsecureAllowHTTPCookies {
 		// Security-relevant deviation: the explicit switch is required, and the
 		// warning is emitted through the application's own logger.
@@ -118,21 +129,21 @@ func New(cfg Config) (*Client, error) {
 	if jwtCfg != nil {
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
-			Limiter: cfg.RateLimiter, Logger: cfg.Logger, SignIn: c.SignIn,
+			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
 		})
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
 	if cfg.OAuth != nil {
-		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, cfg.RateLimiter, cfg.Logger, c.tokens, c.sessions)
+		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
 	}
 	c.verification = auth.NewVerification(auth.VerificationDependencies{
 		Store: cfg.Store, Tokens: c.tokens, Mailer: cfg.Mailer, Templates: cfg.Templates,
-		Clock: cfg.Clock, Limiter: cfg.RateLimiter, Logger: cfg.Logger,
+		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
 		AppURL: cfg.AppURL, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 	})
 	c.auth = auth.New(auth.Dependencies{
-		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: cfg.RateLimiter,
+		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
@@ -215,6 +226,54 @@ func (c *Client) SignIn(ctx context.Context, in SignInInput) (*SignInResult, err
 // handling for repeated logouts.
 func (c *Client) SignOut(ctx context.Context, in SignOutInput) error {
 	return c.auth.SignOut(ctx, in)
+}
+
+// VerifyFreshSession reports whether a Session was authenticated within the configured freshness window.
+func (c *Client) VerifyFreshSession(ctx context.Context, token string) error {
+	fresh, err := c.sessions.IsFresh(ctx, token)
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		return ErrSessionNotFresh
+	}
+	return nil
+}
+
+// RequireFreshSession protects a handler with a fresh-Session check.
+func (c *Client) RequireFreshSession(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(c.cookies.Name())
+		if err != nil || cookie.Value == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if err := c.VerifyFreshSession(r.Context(), cookie.Value); err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RequestUserDeletion sends a single-use proof to the User's current email.
+func (c *Client) RequestUserDeletion(ctx context.Context, in RequestDeleteUserInput) error {
+	return c.verification.RequestUserDeletion(ctx, in)
+}
+
+// DeleteUser consumes the proof and removes the User and all child records.
+func (c *Client) DeleteUser(ctx context.Context, in ConfirmDeleteUserInput) error {
+	return c.verification.DeleteUser(ctx, in)
+}
+
+// RequestEmailChange issues a single-use proof to a new email address.
+func (c *Client) RequestEmailChange(ctx context.Context, in ChangeEmailInput) error {
+	return c.verification.RequestEmailChange(ctx, in)
+}
+
+// VerifyEmailChange consumes an email-change proof and commits the new address.
+func (c *Client) VerifyEmailChange(ctx context.Context, in VerifyEmailChangeInput) error {
+	return c.verification.VerifyEmailChange(ctx, in)
 }
 
 // ChangePassword replaces an authenticated User's password and revokes their Sessions and Tokens.
@@ -376,7 +435,7 @@ func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required b
 
 // Handler returns a plain http.Handler serving Signet's authentication endpoints.
 func (c *Client) Handler() http.Handler {
-	return httpapi.New(httpAdapter{Client: c}, c.cfg.PathPrefix).Handler()
+	return httpapi.New(httpAdapter{Client: c}, c.cfg.PathPrefix, c.cfg.TrustedProxies).Handler()
 }
 
 // httpAdapter exposes the internal helpers the HTTP module needs without

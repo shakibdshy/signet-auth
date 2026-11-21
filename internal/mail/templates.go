@@ -11,6 +11,10 @@ import (
 )
 
 type defaultTemplates struct {
+	deleteHTML  *htmltemplate.Template
+	deleteText  *texttemplate.Template
+	changeHTML  *htmltemplate.Template
+	changeText  *texttemplate.Template
 	verifyHTML  *htmltemplate.Template
 	verifyText  *texttemplate.Template
 	resetHTML   *htmltemplate.Template
@@ -29,6 +33,10 @@ func newDefaultTemplates() *defaultTemplates {
 		verifyText:  texttemplate.Must(texttemplate.New("verify").Parse("Hello {{.Name}},\n\nVerify your email address:\n{{.URL}}\n\nThis link expires {{.ExpiresAt}}.\n")),
 		resetHTML:   htmltemplate.Must(htmltemplate.New("reset").Parse(`<p>Hello {{.Name}},</p><p><a href="{{.URL}}">Reset your password</a></p><p>This link expires {{.ExpiresAt}}. If you did not request this, ignore the message.</p>`)),
 		resetText:   texttemplate.Must(texttemplate.New("reset").Parse("Hello {{.Name}},\n\nReset your password:\n{{.URL}}\n\nThis link expires {{.ExpiresAt}}. If you did not request this, ignore this message.\n")),
+		deleteHTML:  htmltemplate.Must(htmltemplate.New("delete").Parse(`<p>Hello {{.Name}},</p><p>Confirm deletion of your account:</p><p><a href="{{.URL}}">{{.URL}}</a></p><p>This link expires {{.ExpiresAt}}.</p>`)),
+		deleteText:  texttemplate.Must(texttemplate.New("delete").Parse("Hello {{.Name}},\n\nConfirm deletion of your account:\n{{.URL}}\n\nThis link expires {{.ExpiresAt}}.\n")),
+		changeHTML:  htmltemplate.Must(htmltemplate.New("change").Parse(`<p>Hello {{.Name}},</p><p>Confirm your new email address:</p><p><a href="{{.URL}}">{{.URL}}</a></p><p>This link expires {{.ExpiresAt}}.</p>`)),
+		changeText:  texttemplate.Must(texttemplate.New("change").Parse("Hello {{.Name}},\n\nConfirm your new email address:\n{{.URL}}\n\nThis link expires {{.ExpiresAt}}.\n")),
 		changedHTML: htmltemplate.Must(htmltemplate.New("changed").Parse(`<p>Hello {{.Name}},</p><p>Your password was changed. If you did not do this, contact support.</p>`)),
 		changedText: texttemplate.Must(texttemplate.New("changed").Parse("Hello {{.Name}},\n\nYour password was changed. If you did not do this, contact support.\n")),
 	}
@@ -65,4 +73,18 @@ func render(t executableTemplate, data core.TemplateData) string {
 		return ""
 	}
 	return buf.String()
+}
+
+func (d *defaultTemplates) ChangeEmail(data core.TemplateData) core.Message {
+	return core.Message{
+		To: data.Email, Subject: "Verify your email change",
+		TextBody: render(d.changeText, data), HTMLBody: render(d.changeHTML, data),
+	}
+}
+
+func (d *defaultTemplates) DeleteUser(data core.TemplateData) core.Message {
+	return core.Message{
+		To: data.Email, Subject: "Confirm account deletion",
+		TextBody: render(d.deleteText, data), HTMLBody: render(d.deleteHTML, data),
+	}
 }

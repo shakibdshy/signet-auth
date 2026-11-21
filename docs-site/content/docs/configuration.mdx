@@ -28,6 +28,8 @@ auth, err := signet.New(cfg)
 | --- | --- | --- | --- |
 | Store | Store | required — `ErrMissingStore` | Persistence contract. See [Storage](/docs/storage). |
 | Mailer | Mailer | required — `ErrMissingMailer` | Delivers verification/reset messages. See [Mail](/docs/mail). |
+| TrustedProxies | []netip.Prefix | empty | Proxy CIDRs trusted for X-Forwarded-For rate-limit keys. |
+| RateLimitRules | map[string]RateLimitRule | empty | Per-endpoint limiter/key overrides; keys must match published endpoint names. |
 | RateLimiter | RateLimiter | required — `ErrMissingRateLimiter` | Boolean gate called with `endpoint+"|"+key`. |
 | PasswordHasher | PasswordHasher | default `Argon2idHasher{}` | Verifier algorithm and rehash policy. |
 | Clock | Clock | default `SystemClock{}` | Injected time source for tests and TTLs. |
@@ -83,6 +85,7 @@ a header.
 
 | Field | Type | Default | Purpose |
 | --- | --- | --- | --- |
+| FreshAge | time.Duration | 0 (disabled) | Window since authentication for freshness checks. |
 | IdleTimeout | time.Duration | 30m | Extended on each successful request. |
 | AbsoluteTimeout | time.Duration | 24h | Fixed at Session creation; never extended. |
 
@@ -129,3 +132,7 @@ Import `github.com/shakibdshy/signet/mailer/smtp`.
 | InsecureAllowPlaintext | bool | false | Required to permit plaintext; emits a warning. |
 
 TLS minimum is 1.2. See [Mail](/docs/mail) for the full setup.
+
+## Token kinds
+
+`TokenVerifyEmail`, `TokenChangeEmail`, `TokenDeleteUser`, `TokenResetPassword`, `TokenOAuthLink`, `TokenRefresh` and `TokenOAuthState` distinguish the single-use proofs Signet issues. New kinds must be added to the canonical revocation list.

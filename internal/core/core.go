@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"time"
 )
 
@@ -49,7 +50,7 @@ type Session struct {
 // checks that must revoke every kind iterate this list so a new kind cannot be
 // silently omitted.
 var AllTokenKinds = []TokenKind{
-	TokenVerifyEmail, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
+	TokenVerifyEmail, TokenChangeEmail, TokenDeleteUser, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -58,6 +59,10 @@ type TokenKind string
 const (
 	// TokenVerifyEmail proves a request to verify an email address.
 	TokenVerifyEmail TokenKind = "verify_email"
+	// TokenDeleteUser proves a request to delete an Account.
+	TokenDeleteUser TokenKind = "delete_user"
+	// TokenChangeEmail proves a request to change a User's email address.
+	TokenChangeEmail TokenKind = "change_email"
 	// TokenResetPassword proves a request to reset a password.
 	TokenResetPassword TokenKind = "reset_password"
 	// TokenOAuthLink proves a request to link an external provider Account.
@@ -151,6 +156,12 @@ type RateLimiter interface {
 	Allow(context.Context, string) (bool, error)
 }
 
+// RateLimitRule overrides the limiter and/or key prefix for one endpoint.
+type RateLimitRule struct {
+	Limiter   RateLimiter
+	KeyPrefix string
+}
+
 // Clock supplies the current time.
 type Clock interface {
 	Now() time.Time
@@ -209,6 +220,8 @@ type Config struct {
 	Mailer                   Mailer
 	PasswordHasher           PasswordHasher
 	RateLimiter              RateLimiter
+	RateLimitRules           map[string]RateLimitRule
+	TrustedProxies           []netip.Prefix
 	Clock                    Clock
 	Logger                   *slog.Logger
 	OnSignUp                 func(context.Context, *User)
@@ -244,6 +257,9 @@ type CookieConfig struct {
 type SessionConfig struct {
 	IdleTimeout     time.Duration
 	AbsoluteTimeout time.Duration
+	// FreshAge is the window since authentication for freshness checks.
+	// Zero disables freshness enforcement.
+	FreshAge time.Duration
 }
 
 // PasswordConfig bounds accepted password lengths.
@@ -314,6 +330,45 @@ type ChangePasswordInput struct {
 	RateLimitKey    string `json:"-"`
 }
 
+// RequestDeleteUserInput identifies the User requesting account deletion.
+type RequestDeleteUserInput struct {
+	UserID       string `json:"-"`
+	RateLimitKey string `json:"-"`
+}
+
+// ConfirmDeleteUserInput carries the single-use proof from the deletion email.
+type ConfirmDeleteUserInput struct {
+	Token        string `json:"token"`
+	RateLimitKey string `json:"-"`
+}
+
+// DeleteUserTemplates renders the message that confirms account deletion.
+type DeleteUserTemplates interface {
+	DeleteUser(TemplateData) Message
+}
+
+// ChangeEmailInput carries the new address and the current password for an
+// authenticated User.
+type ChangeEmailInput struct {
+	UserID          string `json:"-"`
+	NewEmail        string `json:"new_email"`
+	CurrentPassword string `json:"current_password"`
+	RateLimitKey    string `json:"-"`
+}
+
+// VerifyEmailChangeInput carries the single-use proof from the emailed link.
+type VerifyEmailChangeInput struct {
+	Token        string `json:"token"`
+	RateLimitKey string `json:"-"`
+}
+
+// EmailChangeTemplates renders the message that confirms an email change.
+// It is optional: applications may keep their existing EmailTemplates
+// implementation and Signet will use a built-in default.
+type EmailChangeTemplates interface {
+	ChangeEmail(TemplateData) Message
+}
+
 // TokenInput selects a token exchange.
 type TokenInput struct {
 	Email        string `json:"email"`
@@ -375,6 +430,10 @@ var (
 	ErrTokenExpired = errors.New("signet: token expired")
 	// ErrTokenInvalid reports an invalid Token.
 	ErrTokenInvalid = errors.New("signet: token invalid")
+	// ErrInvalidRateLimitRule reports a rule for an unknown endpoint name.
+	ErrInvalidRateLimitRule = errors.New("signet: invalid rate limit rule")
+	// ErrSessionNotFresh reports a Session outside the freshness window.
+	ErrSessionNotFresh = errors.New("signet: session not fresh")
 	// ErrMissingStore reports a missing Store.
 	ErrMissingStore = errors.New("signet: Config.Store is required")
 	// ErrMissingMailer reports a missing Mailer.

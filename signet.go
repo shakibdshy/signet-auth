@@ -8,6 +8,9 @@ import (
 	"github.com/shakibdshy/signet/internal/mail"
 )
 
+// RateLimitRule overrides the limiter and key prefix for one endpoint.
+type RateLimitRule = core.RateLimitRule
+
 // Version is the current Signet version. It remains a development placeholder
 // until the first release is tagged.
 const Version = "0.0.0-dev"
@@ -64,6 +67,10 @@ type TokenKind = core.TokenKind
 const (
 	// TokenVerifyEmail proves a request to verify an email address.
 	TokenVerifyEmail = core.TokenVerifyEmail
+	// TokenDeleteUser proves a request to delete an Account.
+	TokenDeleteUser = core.TokenDeleteUser
+	// TokenChangeEmail proves a request to change a User's email address.
+	TokenChangeEmail = core.TokenChangeEmail
 	// TokenResetPassword proves a request to reset a password.
 	TokenResetPassword = core.TokenResetPassword
 	// TokenOAuthLink proves a request to link an external provider Account.
@@ -139,6 +146,18 @@ type SignInResult = core.SignInResult
 
 // SignOutInput is the input to a sign-out.
 type SignOutInput = core.SignOutInput
+
+// RequestDeleteUserInput identifies the User requesting account deletion.
+type RequestDeleteUserInput = core.RequestDeleteUserInput
+
+// ConfirmDeleteUserInput carries the proof from a deletion email.
+type ConfirmDeleteUserInput = core.ConfirmDeleteUserInput
+
+// ChangeEmailInput carries the new address and current password for an authenticated User.
+type ChangeEmailInput = core.ChangeEmailInput
+
+// VerifyEmailChangeInput carries the proof from an email-change message.
+type VerifyEmailChangeInput = core.VerifyEmailChangeInput
 
 // ChangePasswordInput carries the current and new password for an authenticated User.
 type ChangePasswordInput = core.ChangePasswordInput

@@ -79,3 +79,22 @@ revokes every Session, writes the new verifier, and sends the password-changed n
 An email failure is logged but does not fail the call. The HTTP endpoint requires a session
 cookie and CSRF token; the User ID always comes from the authenticated Session, never from
 the request body.
+
+## Changing your email
+
+`POST /change-email` (authenticated, CSRF-protected) sends a single-use proof to the new
+address. The old address stays active until `POST /verify-change-email` consumes the token
+from the emailed link. On success the User's email changes and `EmailVerified` is cleared;
+the old address no longer works. The new address must still be unique at confirmation time.
+
+Applications with a custom `EmailTemplates` implementation keep compiling: the optional
+`EmailChangeTemplates` interface supplies the change-email message, with a built-in default
+when it is not implemented.
+
+## Deleting an account
+
+`POST /request-account-deletion` sends a single-use proof to the current email.
+`POST /confirm-account-deletion` consumes it and removes Sessions, all Tokens, Accounts and
+the User row in that order, as recorded in ADR 0006. A failure at any step is returned and
+leaves no live Session. The optional `DeleteUserTemplates` interface supplies the message,
+with a built-in default for existing `EmailTemplates` implementations.

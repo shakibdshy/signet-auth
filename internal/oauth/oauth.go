@@ -140,7 +140,7 @@ func (s *Service) open(raw string, out any) error {
 
 // Start begins the flow and returns the provider authorization URL.
 func (s *Service) Start(ctx context.Context, in core.OAuthStartInput) (*core.OAuthStartResult, error) {
-	if err := s.allow(ctx, "oauth_start", in.RateLimitKey); err != nil {
+	if err := s.allow(ctx, "oauth/start", in.RateLimitKey); err != nil {
 		return nil, err
 	}
 	if !s.redirectAllowed(in.Redirect) {
@@ -168,14 +168,14 @@ func (s *Service) Start(ctx context.Context, in core.OAuthStartInput) (*core.OAu
 	}
 	redirectURI := strings.TrimRight(s.cfg.RedirectBaseURL, "/") + "/oauth/callback"
 	authURL := provider.AuthURL("", redirectURI, state, challengeSum)
-	s.logInfo("oauth_start", "provider", in.Provider)
+	s.logInfo("oauth/start", "provider", in.Provider)
 	return &core.OAuthStartResult{URL: authURL}, nil
 }
 
 // Callback redeems the provider code and returns the signed-in User, or a
 // one-time link token when the provider email is unverified.
 func (s *Service) Callback(ctx context.Context, in core.OAuthCallbackInput) (*core.OAuthCallbackResult, error) {
-	if err := s.allow(ctx, "oauth_callback", in.RateLimitKey); err != nil {
+	if err := s.allow(ctx, "oauth/callback", in.RateLimitKey); err != nil {
 		return nil, err
 	}
 	if _, err := s.tokens.Consume(ctx, core.TokenOAuthState, in.State); err != nil {

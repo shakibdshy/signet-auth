@@ -13,6 +13,10 @@ var (
 	ErrRateLimited = core.ErrRateLimited
 	// ErrTokenExpired reports a Token past its expiry.
 	ErrTokenExpired = core.ErrTokenExpired
+	// ErrInvalidRateLimitRule reports a rule for an unknown endpoint name.
+	ErrInvalidRateLimitRule = core.ErrInvalidRateLimitRule
+	// ErrSessionNotFresh reports a Session outside the freshness window.
+	ErrSessionNotFresh = core.ErrSessionNotFresh
 	// ErrTokenInvalid reports a malformed, unknown or already-used Token.
 	ErrTokenInvalid = core.ErrTokenInvalid
 	// ErrMissingStore reports that Config.Store was not supplied.

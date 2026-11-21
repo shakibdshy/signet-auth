@@ -130,7 +130,7 @@ interface lets you add more without changing the core.
 ## Storage
 
 `store/postgres` and `store/sqlite` accept a pool or database you own.
-Migrations are explicit and idempotent; Signet never migrates automatically.
+Migrations are explicit and idempotent; Signet never migrates automatically. Email change, verified account deletion, fresh-Session checks, per-endpoint rate limits and trusted-proxy keys are available through the root Client and HTTP API.
 For an existing users table, implement the four narrow Store contracts
 yourself — see [`docs/custom-schema.md`](docs/custom-schema.md). Any Store can
 be validated with the shared suite in `store/conformance`.

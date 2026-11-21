@@ -4,7 +4,10 @@ package token
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
@@ -38,6 +41,35 @@ func (s *Service) Issue(ctx context.Context, userID string, kind core.TokenKind,
 		return "", nil, err
 	}
 	return raw, token, nil
+}
+
+// IssueWithData stores a single-use proof whose raw value also carries opaque
+// application data. The digest stored in the Token still covers the full raw
+// value, so modifying the embedded data invalidates the proof.
+func (s *Service) IssueWithData(ctx context.Context, userID string, kind core.TokenKind, ttl time.Duration, data string) (string, *core.Token, error) {
+	raw := secret.NewToken() + "." + base64.RawURLEncoding.EncodeToString([]byte(data))
+	now := s.clock.Now()
+	token := &core.Token{
+		ID: secret.NewID(), UserID: userID, Kind: kind, Hash: secret.Digest(raw),
+		ExpiresAt: now.Add(ttl), CreatedAt: now,
+	}
+	if err := s.store.CreateToken(ctx, token); err != nil {
+		return "", nil, err
+	}
+	return raw, token, nil
+}
+
+// ParseData extracts the opaque data embedded by IssueWithData.
+func ParseData(raw string) (string, error) {
+	parts := strings.Split(raw, ".")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("malformed proof")
+	}
+	data, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // Consume atomically claims an unused Token. A replay or expired proof fails.
