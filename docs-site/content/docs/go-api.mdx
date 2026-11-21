@@ -1,0 +1,68 @@
+---
+title: Go API
+description: The public package façade, every Client method, and the exported type groups.
+---
+
+The root `signet` package is a façade of five files: `signet.go` (exported aliases),
+`client.go` (Client and methods), `config.go`, `errors.go` and `doc.go`. Implementations
+live in private `internal/` packages; aliases may point to any of them. Your code imports
+only `github.com/shakibdshy/signet`.
+
+## Entry points
+
+| Symbol | Purpose |
+| --- | --- |
+| `New(cfg Config) (*Client, error)` | Validates config, applies defaults and builds a ready Client. |
+| `DefaultConfig() Config` | Secure baseline configuration. |
+| `DocsHandler() http.Handler` | Optional OpenAPI JSON + Scalar viewer; mount it yourself. |
+| `UserFromContext(ctx context.Context) (*User, bool)` | Reads the authenticated User set by `RequireAuth`/`OptionalAuth`. |
+
+## Client methods
+
+| Method | Purpose |
+| --- | --- |
+| `SignUp(ctx, SignUpInput) (*SignUpResult, error)` | Create a User and its credential Account. |
+| `SignIn(ctx, SignInInput) (*SignInResult, error)` | Verify a password, rehash if needed, create a Session. |
+| `SignOut(ctx, SignOutInput) error` | Revoke the Session named by the token; unknown tokens are a no-op. |
+| `SendVerification(ctx, SendVerificationInput) error` | Issue an email-verification Token. |
+| `VerifyEmail(ctx, VerifyEmailInput) error` | Consume a verification Token and mark the User verified. |
+| `SendPasswordReset(ctx, SendPasswordResetInput) error` | Issue a password-reset Token. |
+| `ResetPassword(ctx, ResetPasswordInput) error` | Consume a reset Token, revoke Sessions and set a new password. |
+| `OAuthStart(ctx, OAuthStartInput) (*OAuthStartResult, error)` | Begin an OAuth flow and return the authorization URL. |
+| `OAuthCallback(ctx, OAuthCallbackInput) (*OAuthCallbackResult, error)` | Redeem the provider code and return a User or link Token. |
+| `LinkOAuthAccount(ctx, LinkOAuthAccountInput) error` | Consume a link Token for an authenticated User. |
+| `ExchangeToken(ctx, TokenInput) (*TokenPair, error)` | Exchange credentials or a Refresh token for a TokenPair. |
+| `VerifyAccessToken(ctx, raw string) (*User, error)` | Validate an Access token and load its User. |
+| `ListSessions(ctx, ListSessionsInput) (*ListSessionsResult, error)` | List safe Session fields for a User. |
+| `RevokeSession(ctx, RevokeSessionInput) error` | Revoke one Session; unknown IDs are a no-op. |
+| `RevokeAllSessions(ctx, RevokeAllSessionsInput) error` | Revoke every Session of a User. |
+| `RequireAuth(next http.Handler) http.Handler` | Middleware that requires a valid Session. |
+| `OptionalAuth(next http.Handler) http.Handler` | Middleware that attaches a User when one is present. |
+| `Handler() http.Handler` | The HTTP endpoint router for mounting under a prefix. |
+
+## Exported types
+
+- **Models:** `User`, `Account`, `Session`, `SessionInfo`, `Token`, `OAuthIdentity`.
+- **Contracts:** `Store`, `UserStore`, `AccountStore`, `SessionStore`, `TokenStore`, `Mailer`,
+  `RateLimiter`, `Clock`, `PasswordHasher`, `EmailTemplates`, `OAuthProvider`.
+- **Configuration:** `Config`, `CookieConfig`, `SessionConfig`, `PasswordConfig`, `JWTConfig`,
+  `OAuthConfig`.
+- **Inputs and results:** `SignUpInput`, `SignUpResult`, `SignInInput`, `SignInResult`,
+  `SignOutInput`, `SendVerificationInput`, `VerifyEmailInput`, `SendPasswordResetInput`,
+  `ResetPasswordInput`, `TokenInput`, `TokenPair`, `OAuthStartInput`, `OAuthStartResult`,
+  `OAuthCallbackInput`, `OAuthCallbackResult`, `LinkOAuthAccountInput`, `ListSessionsInput`,
+  `ListSessionsResult`, `RevokeSessionInput`, `RevokeAllSessionsInput`, `TemplateData`, `Message`.
+- **Helpers:** `SystemClock`, `Argon2idHasher`, `TokenKind`, `Version`, `DefaultTemplates`.
+- **Errors:** exported sentinels such as `ErrNotFound`, `ErrInvalidCredentials`,
+  `ErrTokenInvalid` and `ErrRefreshReuse` — see [Errors](/docs/errors).
+
+Token kinds distinguish the single-use proofs: `TokenVerifyEmail`, `TokenResetPassword`,
+`TokenOAuthLink`, `TokenRefresh`, `TokenOAuthState`.
+
+## Programmatic vs HTTP
+
+Calling a Client method does not round-trip through HTTP — it runs the same internal service
+directly with the `context.Context` you supply. The HTTP endpoints are a separate adapter
+over those services. Use whichever fits your application; both enforce the same security
+rules and produce the same effects. See [HTTP API](/docs/http-api) and the
+[frontend client](/docs/frontend-client) for the other surfaces.

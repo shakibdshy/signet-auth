@@ -10,6 +10,8 @@
     "frontend-client",
     "---Reference---",
     "openapi",
+    "http-api",
+    "go-api",
     "configuration",
     "errors"
   ]
