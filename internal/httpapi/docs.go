@@ -17,7 +17,7 @@ func DocsHandler(spec []byte) http.Handler {
 </head>
 <body>
   <div id="app"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.38.1"></script>
   <script>
     Scalar.createApiReference('#app', { url: './openapi.json' })
   </script>
@@ -26,6 +26,7 @@ func DocsHandler(spec []byte) http.Handler {
 `)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}

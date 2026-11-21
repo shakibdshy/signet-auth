@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"strconv"
@@ -145,16 +146,16 @@ func (g *generator) schemaFor(t reflect.Type) any {
 	}
 }
 
-func (g *generator) responseSchema(spec ResponseSpec) any {
+func (g *generator) responseSchema(spec ResponseSpec) (any, error) {
 	if spec.Ref != "" {
 		t, ok := namedTypes[spec.Ref]
 		if !ok {
-			panic("unknown response ref: " + spec.Ref)
+			return nil, fmt.Errorf("unknown response ref: %s", spec.Ref)
 		}
-		return g.schemaFor(t)
+		return g.schemaFor(t), nil
 	}
 	if len(spec.Fields) == 0 {
-		return nil
+		return nil, nil
 	}
 	properties := make(map[string]any, len(spec.Fields))
 	required := make([]string, 0, len(spec.Fields))
@@ -162,11 +163,15 @@ func (g *generator) responseSchema(spec ResponseSpec) any {
 		if field.Schema.Type != nil {
 			properties[field.Name] = g.schemaFor(field.Schema.Type)
 		} else if field.Schema.Ref != "" {
-			properties[field.Name] = g.schemaFor(namedTypes[field.Schema.Ref])
+			t, ok := namedTypes[field.Schema.Ref]
+			if !ok {
+				return nil, fmt.Errorf("unknown field ref: %s", field.Schema.Ref)
+			}
+			properties[field.Name] = g.schemaFor(t)
 		}
 		required = append(required, field.Name)
 	}
-	return map[string]any{"type": "object", "properties": properties, "required": required}
+	return map[string]any{"type": "object", "properties": properties, "required": required}, nil
 }
 
 // Generate produces an OpenAPI 3.1 document describing the contract.
@@ -233,7 +238,11 @@ func Generate(contract Contract) ([]byte, error) {
 				})
 			}
 			success := oasResponse{Description: "Success"}
-			if schema := g.responseSchema(method.Response); schema != nil {
+			schema, err := g.responseSchema(method.Response)
+			if err != nil {
+				return nil, err
+			}
+			if schema != nil {
 				success.Content = map[string]oasMedia{"application/json": {Schema: schema}}
 			}
 			op.Responses[strconv.Itoa(method.Status)] = success

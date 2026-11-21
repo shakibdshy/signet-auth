@@ -8,7 +8,7 @@
     "start": "next start",
     "sync:spec": "node -e \"require('node:fs').copyFileSync('../api/signet.openapi.json','openapi/signet.openapi.json')\"",
     "types:check": "next typegen && tsc --noEmit",
-    "docs:check": "node scripts/check-docs-coverage.mjs"
+    "docs:check": "node scripts/check-docs-coverage.mjs --self-test && node scripts/check-docs-coverage.mjs"
   },
   "dependencies": {
     "cn": "^0.5.2",

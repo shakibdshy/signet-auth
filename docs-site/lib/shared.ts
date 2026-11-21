@@ -4,7 +4,7 @@ export const appName = 'Signet';
 export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
 
-// fill this with your actual GitHub info, for example:
+// GitHub coordinates for "view on GitHub" links in the docs.
 export const gitConfig = {
   user: 'shakibdshy',
   repo: 'signet',

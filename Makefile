@@ -65,20 +65,22 @@ docs-site:
 # Regenerate into the working tree, compare with the committed artifacts, and
 # restore the originals so a failure leaves the tree unchanged.
 generate-check:
-	@tmp=$$(mktemp -d); \
-	cp api/signet.openapi.json $$tmp/spec.json; \
-	cp openapi/signet.openapi.json $$tmp/embedded.json; \
-	cp client/ts/src/schema.d.ts $$tmp/schema.d.ts; \
+	@tmp=$$(mktemp -d) || exit 1; \
+	cp api/signet.openapi.json $$tmp/spec.json || exit 1; \
+	cp openapi/signet.openapi.json $$tmp/embedded.json || exit 1; \
+	cp client/ts/src/schema.d.ts $$tmp/schema.d.ts || exit 1; \
+	restore() { cp $$tmp/spec.json api/signet.openapi.json; \
+		cp $$tmp/embedded.json openapi/signet.openapi.json; \
+		cp $$tmp/schema.d.ts client/ts/src/schema.d.ts; \
+		rm -rf $$tmp; }; \
+	trap restore EXIT; \
 	$(MAKE) generate >/dev/null || exit 1; \
 	if ! diff -u $$tmp/spec.json api/signet.openapi.json || \
 	   ! diff -u $$tmp/embedded.json openapi/signet.openapi.json || \
 	   ! diff -u $$tmp/schema.d.ts client/ts/src/schema.d.ts; then \
-		cp $$tmp/spec.json api/signet.openapi.json; \
-		cp $$tmp/embedded.json openapi/signet.openapi.json; \
-		cp $$tmp/schema.d.ts client/ts/src/schema.d.ts; \
-		rm -rf $$tmp; \
 		echo "generated artifacts are stale; run make generate"; \
 		exit 1; \
 	fi; \
+	trap - EXIT; \
 	rm -rf $$tmp; \
 	echo "generated artifacts up to date"

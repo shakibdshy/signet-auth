@@ -2,6 +2,7 @@ import { createOpenAPI } from 'fumadocs-openapi/server';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Document } from 'fumadocs-openapi';
+import { backendUrl } from './backend';
 
 // The published spec deliberately has no `servers` entry — its base URL depends
 // on where the application mounts Signet. For the docs playground only, inject a
@@ -9,13 +10,11 @@ import type { Document } from 'fumadocs-openapi';
 // The docs dev/build commands always run from the docs-site directory.
 const specPath = resolve(process.cwd(), 'openapi/signet.openapi.json');
 
-const backend = process.env.NEXT_PUBLIC_SIGNET_API_URL ?? 'http://localhost:8080/auth';
-
 const loadSpec = (): Document => {
   const doc = JSON.parse(readFileSync(specPath, 'utf8')) as Document;
   return {
     ...doc,
-    servers: [{ url: backend, description: 'Signet example backend' }],
+    servers: [{ url: backendUrl.toString(), description: 'Signet example backend' }],
   };
 };
 

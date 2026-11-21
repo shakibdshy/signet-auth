@@ -14,5 +14,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	_, _ = os.Stdout.Write(data)
+	if _, err := os.Stdout.Write(data); err != nil {
+		fmt.Fprintln(os.Stderr, "write spec:", err)
+		os.Exit(1)
+	}
 }

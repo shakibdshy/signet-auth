@@ -121,3 +121,16 @@ func TestGenerateDocumentsAuthenticationRequirements(t *testing.T) {
 		t.Error("change-password does not document the CSRF header")
 	}
 }
+
+func TestGenerateReturnsErrorForUnknownResponseRef(t *testing.T) {
+	contract := ContractFor()
+	contract.Endpoints[0].Methods[0].Response = ResponseSpec{Ref: "NoSuchType"}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("Generate panicked: %v", r)
+		}
+	}()
+	if _, err := Generate(contract); err == nil {
+		t.Fatal("Generate returned nil error for unknown response ref")
+	}
+}

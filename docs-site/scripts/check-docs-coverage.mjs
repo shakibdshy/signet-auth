@@ -2,8 +2,9 @@
 // Run with `npm run docs:check`; verify the guard logic with `--self-test`.
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../..", import.meta.url));
 const docsDir = join(root, "docs-site", "content", "docs");
 const requiredPages = [
   "configuration.mdx",
@@ -21,6 +22,7 @@ function read(relative) {
 }
 
 function mdxFiles(dir) {
+  if (!existsSync(dir)) return "";
   return readdirSync(dir, { recursive: true })
     .filter((name) => typeof name === "string" && name.endsWith(".mdx"))
     .map((name) => readFileSync(join(dir, name), "utf8"))

@@ -171,8 +171,11 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 
 // ChangePasswordInput validation is pure so its edge cases can be unit tested.
 func validateChangePassword(in core.ChangePasswordInput, minLength, maxLength int) error {
-	if in.UserID == "" || in.CurrentPassword == "" || in.NewPassword == "" {
+	if in.UserID == "" || in.CurrentPassword == "" {
 		return core.ErrInvalidCredentials
+	}
+	if in.NewPassword == "" {
+		return core.ErrPasswordTooShort
 	}
 	if len(in.NewPassword) < minLength {
 		return core.ErrPasswordTooShort
@@ -210,10 +213,7 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 	if !ok {
 		return core.ErrInvalidCredentials
 	}
-	for _, kind := range []core.TokenKind{
-		core.TokenVerifyEmail, core.TokenResetPassword, core.TokenOAuthLink,
-		core.TokenRefresh, core.TokenOAuthState,
-	} {
+	for _, kind := range core.AllTokenKinds {
 		if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, kind); err != nil {
 			return err
 		}

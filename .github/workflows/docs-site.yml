@@ -34,6 +34,10 @@ jobs:
   build:
     name: Typecheck and build docs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: docs-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,9 +50,6 @@ jobs:
         working-directory: docs-site
       - name: Check documentation coverage
         run: npm run docs:check
-        working-directory: docs-site
-      - name: Sync generated OpenAPI spec
-        run: npm run sync:spec
         working-directory: docs-site
       - name: Typecheck
         run: npm run types:check

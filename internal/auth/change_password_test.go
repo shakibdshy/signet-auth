@@ -18,7 +18,7 @@ func TestValidateChangePassword(t *testing.T) {
 	}{
 		{"empty user id", core.ChangePasswordInput{CurrentPassword: "old", NewPassword: "new-password"}, core.ErrInvalidCredentials},
 		{"empty current", core.ChangePasswordInput{UserID: "user-1", NewPassword: "new-password"}, core.ErrInvalidCredentials},
-		{"empty new", core.ChangePasswordInput{UserID: "user-1", CurrentPassword: "old"}, core.ErrInvalidCredentials},
+		{"empty new", core.ChangePasswordInput{UserID: "user-1", CurrentPassword: "old"}, core.ErrPasswordTooShort},
 		{"below minimum", core.ChangePasswordInput{UserID: "user-1", CurrentPassword: "old", NewPassword: "x"}, core.ErrPasswordTooShort},
 		{"above maximum", core.ChangePasswordInput{UserID: "user-1", CurrentPassword: "old", NewPassword: string(make([]byte, 129))}, core.ErrPasswordTooLong},
 		{"valid", valid, nil},
