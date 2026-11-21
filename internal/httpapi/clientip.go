@@ -21,6 +21,9 @@ func resolveClientIP(remoteAddr, xff string, trusted []netip.Prefix) string {
 	hops := strings.Split(xff, ",")
 	for i := len(hops) - 1; i >= 0; i-- {
 		candidate := strings.TrimSpace(hops[i])
+		if candidate == "" {
+			continue
+		}
 		addr, err := netip.ParseAddr(candidate)
 		if err != nil || !isTrusted(addr, trusted) {
 			return normalizeIP(candidate)
@@ -31,7 +34,7 @@ func resolveClientIP(remoteAddr, xff string, trusted []netip.Prefix) string {
 
 func isTrusted(addr netip.Addr, trusted []netip.Prefix) bool {
 	for _, prefix := range trusted {
-		if prefix.Contains(addr) {
+		if prefix.Contains(addr.Unmap()) {
 			return true
 		}
 	}

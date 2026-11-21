@@ -18,6 +18,8 @@ func TestResolveClientIP(t *testing.T) {
 		{"trusted uses untrusted hop", "127.0.0.1:1234", "198.51.100.7, 203.0.113.8", trusted, "203.0.113.8"},
 		{"spoofed leftmost ignored", "127.0.0.1:1234", "1.1.1.1, 198.51.100.7, 203.0.113.8", trusted, "203.0.113.8"},
 		{"ipv6 normalized", "127.0.0.1:1234", "2001:0db8:0000:0000:0000:0000:0000:0001", trusted, "2001:db8::1"},
+		{"mapped ipv4 proxy", "[::ffff:127.0.0.1]:1234", "198.51.100.7", trusted, "198.51.100.7"},
+		{"empty xff falls back", "127.0.0.1:1234", "", trusted, "127.0.0.1"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

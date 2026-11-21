@@ -110,3 +110,17 @@ func TestFreshSessionMiddleware(t *testing.T) {
 		t.Fatalf("stale request: called=%v status=%d", called, rec.Code)
 	}
 }
+
+func TestFreshSessionMiddlewareRejectsForgedCookieWithDefaultConfig(t *testing.T) {
+	client, _, _ := changePasswordClient(t)
+	var called bool
+	handler := client.RequireFreshSession(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { called = true }))
+	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	//nolint:gosec // deliberately forged test cookie
+	req.AddCookie(&http.Cookie{Name: "__Host-signet_session", Value: "forged", Secure: true, HttpOnly: true})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if called || rec.Code != http.StatusUnauthorized {
+		t.Fatalf("forged cookie: called=%v status=%d", called, rec.Code)
+	}
+}

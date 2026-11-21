@@ -59,7 +59,7 @@ func (s *VerificationService) SendVerification(ctx context.Context, in core.Send
 	if email == "" {
 		return core.ErrInvalidEmail
 	}
-	if err := allow(ctx, s.deps.Limiter, "verification_send", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "send-verification", in.RateLimitKey); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByEmail(ctx, email)
@@ -106,7 +106,7 @@ func (s *VerificationService) VerifyEmail(ctx context.Context, in core.VerifyEma
 	if in.Token == "" {
 		return core.ErrTokenInvalid
 	}
-	if err := allow(ctx, s.deps.Limiter, "verification", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "verify-email", in.RateLimitKey); err != nil {
 		return err
 	}
 	proof, err := s.deps.Tokens.Consume(ctx, core.TokenVerifyEmail, in.Token)
@@ -132,7 +132,7 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 	if email == "" {
 		return core.ErrInvalidEmail
 	}
-	if err := allow(ctx, s.deps.Limiter, "password_reset_send", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "send-password-reset", in.RateLimitKey); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByEmail(ctx, email)
@@ -174,7 +174,7 @@ func (s *VerificationService) RequestUserDeletion(ctx context.Context, in core.R
 	if in.UserID == "" {
 		return core.ErrInvalidCredentials
 	}
-	if err := allow(ctx, s.deps.Limiter, "delete_user", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "request-account-deletion", in.RateLimitKey); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
@@ -206,7 +206,7 @@ func (s *VerificationService) DeleteUser(ctx context.Context, in core.ConfirmDel
 	if in.Token == "" {
 		return core.ErrTokenInvalid
 	}
-	if err := allow(ctx, s.deps.Limiter, "confirm_delete_user", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "confirm-account-deletion", in.RateLimitKey); err != nil {
 		return err
 	}
 	proof, err := s.deps.Tokens.Consume(ctx, core.TokenDeleteUser, in.Token)
@@ -258,7 +258,7 @@ func (s *VerificationService) RequestEmailChange(ctx context.Context, in core.Ch
 	if !strings.Contains(email, "@") || strings.HasPrefix(email, "@") || strings.HasSuffix(email, "@") {
 		return core.ErrInvalidEmail
 	}
-	if err := allow(ctx, s.deps.Limiter, "change_email", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "change-email", in.RateLimitKey); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
@@ -278,7 +278,7 @@ func (s *VerificationService) RequestEmailChange(ctx context.Context, in core.Ch
 	}
 	if existing, err := s.deps.Store.UserByEmail(ctx, email); err == nil {
 		if existing.ID != user.ID {
-			return core.ErrEmailAlreadyExists
+			return core.ErrInvalidEmail
 		}
 		return core.ErrInvalidEmail
 	}
@@ -307,7 +307,7 @@ func (s *VerificationService) VerifyEmailChange(ctx context.Context, in core.Ver
 	if in.Token == "" {
 		return core.ErrTokenInvalid
 	}
-	if err := allow(ctx, s.deps.Limiter, "verify_email_change", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "verify-change-email", in.RateLimitKey); err != nil {
 		return err
 	}
 	proof, err := s.deps.Tokens.Consume(ctx, core.TokenChangeEmail, in.Token)
@@ -368,7 +368,7 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 	if err := validateChangePassword(in, s.deps.Password.MinLength, s.deps.Password.MaxLength); err != nil {
 		return err
 	}
-	if err := allow(ctx, s.deps.Limiter, "change_password", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "change-password", in.RateLimitKey); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
@@ -425,7 +425,7 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 	if len(in.NewPassword) > s.deps.Password.MaxLength {
 		return core.ErrPasswordTooLong
 	}
-	if err := allow(ctx, s.deps.Limiter, "password_reset", in.RateLimitKey); err != nil {
+	if err := allow(ctx, s.deps.Limiter, "reset-password", in.RateLimitKey); err != nil {
 		return err
 	}
 	proof, err := s.deps.Tokens.Consume(ctx, core.TokenResetPassword, in.Token)
@@ -461,7 +461,7 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 	if err := s.deps.Store.UpdateAccount(ctx, &updated); err != nil {
 		return err
 	}
-	s.logInfo("password_reset", "user_id", user.ID)
+	s.logInfo("reset-password", "user_id", user.ID)
 
 	message := s.deps.Templates.PasswordChanged(core.TemplateData{Email: user.Email, Name: user.Name})
 	if err := s.deps.Mailer.Send(ctx, message); err != nil {

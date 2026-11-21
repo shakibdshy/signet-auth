@@ -213,3 +213,17 @@ func TestEmailChangeHTTPRequiresAuthAndCSRF(t *testing.T) {
 		t.Fatalf("no CSRF = %d, want 403", rec.Code)
 	}
 }
+
+func TestEmailChangeTakenAddressUsesGenericError(t *testing.T) {
+	client, _, _, userID := emailChangeSetup(t)
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "taken@example.com", Password: "correct horse", Name: "Bob"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	err := client.RequestEmailChange(ctx, signet.ChangeEmailInput{
+		UserID: userID, NewEmail: "taken@example.com", CurrentPassword: "correct horse",
+	})
+	if !errors.Is(err, signet.ErrInvalidEmail) {
+		t.Fatalf("error = %v, want generic ErrInvalidEmail", err)
+	}
+}

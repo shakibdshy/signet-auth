@@ -96,12 +96,12 @@ func (s *Service) List(ctx context.Context, userID string) ([]*core.SessionInfo,
 // IsFresh reports whether the Session was created within the configured window.
 // A zero window disables freshness checks.
 func (s *Service) IsFresh(ctx context.Context, raw string) (bool, error) {
-	if s.cfg.FreshAge <= 0 {
-		return true, nil
-	}
 	session, err := s.store.SessionByHash(ctx, secret.Digest(raw))
 	if err != nil {
 		return false, err
+	}
+	if s.cfg.FreshAge <= 0 {
+		return true, nil
 	}
 	return s.clock.Now().Before(session.CreatedAt.Add(s.cfg.FreshAge)), nil
 }
