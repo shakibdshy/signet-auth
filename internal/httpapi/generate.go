@@ -31,13 +31,15 @@ type oasInfo struct {
 }
 
 type oasComponents struct {
-	Schemas map[string]any `json:"schemas"`
+	Schemas         map[string]any `json:"schemas"`
+	SecuritySchemes map[string]any `json:"securitySchemes,omitempty"`
 }
 
 type oasOp struct {
 	OperationID string                 `json:"operationId"`
 	Summary     string                 `json:"summary"`
 	Parameters  []oasParameter         `json:"parameters,omitempty"`
+	Security    []map[string][]string  `json:"security,omitempty"`
 	RequestBody *oasRequestBody        `json:"requestBody,omitempty"`
 	Responses   map[string]oasResponse `json:"responses"`
 }
@@ -221,6 +223,15 @@ func Generate(contract Contract) ([]byte, error) {
 					{Name: "state", In: "query", Required: true, Schema: map[string]any{"type": "string"}},
 				}
 			}
+			if endpoint.Auth {
+				op.Security = []map[string][]string{{"sessionCookie": {}}}
+			}
+			if !endpoint.Anonymous && (method.Verb == "POST" || method.Verb == "PUT" || method.Verb == "PATCH" || method.Verb == "DELETE") {
+				op.Parameters = append(op.Parameters, oasParameter{
+					Name: "X-CSRF-Token", In: "header", Required: false,
+					Schema: map[string]any{"type": "string"},
+				})
+			}
 			success := oasResponse{Description: "Success"}
 			if schema := g.responseSchema(method.Response); schema != nil {
 				success.Content = map[string]oasMedia{"application/json": {Schema: schema}}
@@ -243,6 +254,14 @@ func Generate(contract Contract) ([]byte, error) {
 		doc.Paths["/"+endpoint.Name] = operations
 	}
 	doc.Components.Schemas = g.components
+	doc.Components.SecuritySchemes = map[string]any{
+		"sessionCookie": map[string]any{
+			"type": "apiKey", "in": "cookie", "name": "signet_session",
+		},
+		"csrfToken": map[string]any{
+			"type": "apiKey", "in": "header", "name": "X-CSRF-Token",
+		},
+	}
 
 	return json.MarshalIndent(doc, "", "  ")
 }

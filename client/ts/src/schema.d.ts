@@ -249,7 +249,7 @@ export interface components {
     schemas: {
         ApiError: {
             /** @enum {string} */
-            error: "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited";
+            error: "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "unauthorized";
             message: string;
         };
         ChangePasswordInput: {
@@ -334,7 +334,9 @@ export interface operations {
     "change-password_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -675,7 +677,9 @@ export interface operations {
     "reset-password_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -760,7 +764,9 @@ export interface operations {
     "send-password-reset_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -845,7 +851,9 @@ export interface operations {
     "send-verification_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -930,7 +938,9 @@ export interface operations {
     session_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1096,7 +1106,9 @@ export interface operations {
     sessions_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1268,7 +1280,9 @@ export interface operations {
     signout_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1529,7 +1543,9 @@ export interface operations {
     "verify-email_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
             path?: never;
             cookie?: never;
         };

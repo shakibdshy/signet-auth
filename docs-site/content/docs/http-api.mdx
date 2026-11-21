@@ -34,7 +34,9 @@ from the declarative contract into the [API reference](/docs/openapi).
 | GET `/oauth/callback` | no | exempt | 302 | `invalid_request` 400, `oauth_email_not_verified` 403, `oauth_account_conflict` 409 | Provider redirect target; sets a Session cookie or appends a `link_token`. | [oauth/callback](/docs/openapi/oauth/callback_get) |
 | GET `/csrf-token` | no | exempt | 200 `{"token":...}` | 405 on other methods | Obtaining a CSRF token for browser requests; sets the CSRF cookie. | [csrf-token](/docs/openapi/csrf-token_get) |
 
-Anonymous endpoints are exempt from the CSRF guard. State-changing requests that carry a
+Authenticated operations publish a `sessionCookie` security requirement and protected
+state-changing operations publish the `X-CSRF-Token` header in the generated spec, so the
+API playground can show what is required. Anonymous endpoints are exempt from the CSRF guard. State-changing requests that carry a
 session cookie must present `X-CSRF-Token`; see [Sessions and cookies](/docs/sessions).
 
 ## Errors

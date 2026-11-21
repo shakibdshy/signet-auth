@@ -9,6 +9,21 @@
       "post": {
         "operationId": "change-password_post",
         "summary": "POST /change-password",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -393,6 +408,16 @@
       "post": {
         "operationId": "reset-password_post",
         "summary": "POST /reset-password",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -484,6 +509,16 @@
       "post": {
         "operationId": "send-password-reset_post",
         "summary": "POST /send-password-reset",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -575,6 +610,16 @@
       "post": {
         "operationId": "send-verification_post",
         "summary": "POST /send-verification",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -666,6 +711,21 @@
       "delete": {
         "operationId": "session_delete",
         "summary": "DELETE /session",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "responses": {
           "204": {
             "description": "Success"
@@ -747,6 +807,21 @@
       "delete": {
         "operationId": "sessions_delete",
         "summary": "DELETE /sessions",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "responses": {
           "204": {
             "description": "Success"
@@ -826,6 +901,11 @@
       "get": {
         "operationId": "sessions_get",
         "summary": "GET /sessions",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -1039,6 +1119,16 @@
       "post": {
         "operationId": "signout_post",
         "summary": "POST /signout",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1334,6 +1424,16 @@
       "post": {
         "operationId": "verify-email_post",
         "summary": "POST /verify-email",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1439,7 +1539,8 @@
               "not_found",
               "oauth_account_conflict",
               "oauth_email_not_verified",
-              "rate_limited"
+              "rate_limited",
+              "unauthorized"
             ],
             "type": "string"
           },
@@ -1692,6 +1793,18 @@
           "token"
         ],
         "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "csrfToken": {
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "type": "apiKey"
+      },
+      "sessionCookie": {
+        "in": "cookie",
+        "name": "signet_session",
+        "type": "apiKey"
       }
     }
   }

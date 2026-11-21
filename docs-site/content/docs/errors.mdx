@@ -42,6 +42,9 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 
 | Sentinel | HTTP / wire code | Meaning and action |
 | --- | --- | --- |
+A missing or invalid session returns `401 unauthorized` with "authentication required" —
+sign in first and send the session cookie and CSRF token.
+
 | ErrNotFound | no dedicated mapping — surfaces as 500 internal_error | Entity or Session not found. `404 not_found` comes from JWT/OAuth-disabled sentinels and unknown routes. |
 | ErrTokenInvalid | 401 invalid_token | Malformed, unknown, consumed or replayed Token. |
 | ErrTokenExpired | 401 invalid_token | Token past its expiry; request a fresh one. |

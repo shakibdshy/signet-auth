@@ -37,9 +37,10 @@ type Method struct {
 
 // ContractEndpoint describes one route and its methods.
 type ContractEndpoint struct {
-	Name    string
-	Methods []Method
-	Auth    bool
+	Name      string
+	Methods   []Method
+	Auth      bool
+	Anonymous bool
 }
 
 // ErrorSpec maps a sentinel to the wire error code and status. A nil Sentinel
@@ -76,11 +77,11 @@ func ContractFor() Contract {
 	user := typeField("user", core.User{})
 	return Contract{
 		Endpoints: []ContractEndpoint{
-			{Name: "signup", Methods: []Method{{
+			{Name: "signup", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignUpInput{}),
 				Response: ResponseSpec{Fields: []Field{user}}, Status: http.StatusCreated,
 			}}},
-			{Name: "signin", Methods: []Method{{
+			{Name: "signin", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignInInput{}),
 				Response: ResponseSpec{Fields: []Field{
 					user, strField("session_token"), strField("csrf_token"),
@@ -101,7 +102,7 @@ func ContractFor() Contract {
 			{Name: "session", Auth: true, Methods: []Method{{
 				Verb: "DELETE", Status: http.StatusNoContent,
 			}}},
-			{Name: "token", Methods: []Method{{
+			{Name: "token", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.TokenInput{}),
 				Response: ResponseSpec{Ref: "TokenPair"}, Status: http.StatusOK,
 			}}},
@@ -120,14 +121,14 @@ func ContractFor() Contract {
 			{Name: "change-password", Auth: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.ChangePasswordInput{}), Status: http.StatusOK,
 			}}},
-			{Name: "oauth/start", Methods: []Method{{
+			{Name: "oauth/start", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.OAuthStartInput{}),
 				Response: ResponseSpec{Ref: "OAuthStartResult"}, Status: http.StatusOK,
 			}}},
-			{Name: "oauth/callback", Methods: []Method{{
+			{Name: "oauth/callback", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Status: http.StatusFound,
 			}}},
-			{Name: "csrf-token", Methods: []Method{{
+			{Name: "csrf-token", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("token")}}, Status: http.StatusOK,
 			}}},
 		},
@@ -153,6 +154,7 @@ func ContractFor() Contract {
 			{core.ErrPasswordTooShort, http.StatusBadRequest, "invalid_input", "invalid input"},
 			{core.ErrPasswordTooLong, http.StatusBadRequest, "invalid_input", "invalid input"},
 			{nil, http.StatusForbidden, "csrf", "cross-origin request rejected"},
+			{nil, http.StatusUnauthorized, "unauthorized", "authentication required"},
 			{nil, http.StatusBadRequest, "invalid_input", "invalid request"},
 			{nil, http.StatusInternalServerError, "internal_error", "internal error"},
 		},

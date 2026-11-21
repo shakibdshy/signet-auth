@@ -66,3 +66,58 @@ func TestGenerateTokenInputVariants(t *testing.T) {
 		t.Errorf("TokenInput required = %v, want none (email/password or refresh_token)", token.Required)
 	}
 }
+
+func TestGenerateDocumentsAuthenticationRequirements(t *testing.T) {
+	data, err := Generate(ContractFor())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	var doc struct {
+		Paths map[string]struct {
+			Post struct {
+				Security   []map[string][]string `json:"security"`
+				Parameters []struct {
+					Name string `json:"name"`
+					In   string `json:"in"`
+				} `json:"parameters"`
+			} `json:"post"`
+		} `json:"paths"`
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]struct {
+					Enum []string `json:"enum"`
+				} `json:"properties"`
+			} `json:"schemas"`
+			SecuritySchemes map[string]json.RawMessage `json:"securitySchemes"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	codes := doc.Components.Schemas["ApiError"].Properties["error"].Enum
+	found := false
+	for _, code := range codes {
+		if code == "unauthorized" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("ApiError enum missing unauthorized code")
+	}
+	if len(doc.Components.SecuritySchemes) == 0 {
+		t.Error("no security schemes published")
+	}
+	op := doc.Paths["/change-password"].Post
+	if len(op.Security) == 0 {
+		t.Error("change-password has no security requirement")
+	}
+	csrf := false
+	for _, p := range op.Parameters {
+		if p.Name == "X-CSRF-Token" && p.In == "header" {
+			csrf = true
+		}
+	}
+	if !csrf {
+		t.Error("change-password does not document the CSRF header")
+	}
+}
