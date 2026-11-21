@@ -21,3 +21,8 @@ void client.signIn({ email: 42, password: "correct horse" });
 
 // @ts-expect-error unknown method must not exist
 void client.deleteEverything();
+
+void client.changePassword({ current_password: "old", new_password: "new" });
+
+// @ts-expect-error new_password is required by the published contract
+void client.changePassword({ current_password: "old" });

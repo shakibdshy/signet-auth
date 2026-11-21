@@ -128,6 +128,12 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.POST("/reset-password", { body, headers: await csrfHeaders() }));
 		},
 
+		async changePassword(
+			body: RequestBody<"/change-password", "post">,
+		): Promise<SuccessBody<"/change-password", "post", 200>> {
+			return unwrap(await api.POST("/change-password", { body, headers: await csrfHeaders() }));
+		},
+
 		async oauthStart(body: RequestBody<"/oauth/start", "post">): Promise<SuccessBody<"/oauth/start", "post", 200>> {
 			return unwrap(await api.POST("/oauth/start", { body, headers: await csrfHeaders() }));
 		},
