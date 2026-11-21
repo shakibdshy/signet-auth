@@ -1,0 +1,71 @@
+---
+title: Storage
+description: Store contracts, bundled adapters, migrations and the four-table schema.
+---
+
+Applications own their database and schema. Signet defines four narrow contracts composed
+into `Store`:
+
+| Contract | Responsibility |
+| --- | --- |
+| UserStore | Create, read, update and delete Users. |
+| AccountStore | Manage credential and provider Accounts. |
+| SessionStore | Manage Sessions and their digests. |
+| TokenStore | Create, look up and atomically consume single-use Tokens. |
+
+Lookup misses return `ErrNotFound`. Implementing the four contracts is enough to plug in a
+custom schema; see `docs/custom-schema.md` in the repository.
+
+## SQLite
+
+```go
+db, err := sql.Open("sqlite", "file:signet.db?_pragma=foreign_keys(1)")
+store := sqlite.New(db)
+if err := store.Migrate(ctx); err != nil { /* handle */ }
+cfg.Store = store
+```
+
+`Migrate` applies embedded, idempotent SQL and enables `PRAGMA foreign_keys = ON`. With a
+connection pool, include `foreign_keys=1` in the DSN for every connection. The caller owns
+the `*sql.DB` and its lifecycle.
+
+## PostgreSQL
+
+```go
+pool, err := pgxpool.New(ctx, dsn)
+store := postgres.New(pool)
+if err := store.Migrate(ctx); err != nil { /* handle */ }
+cfg.Store = store
+```
+
+The example apps default to
+`postgres://signet:signet@localhost:5432/signet?sslmode=disable`, overridable with
+`SIGNET_DATABASE_URL`. Migrations are explicit: Signet never runs them automatically in
+your application unless you call `Migrate`.
+
+## The bundled schema
+
+Four tables are created:
+
+| Table | Contents |
+| --- | --- |
+| `signet_users` | User identity, verified flag, disabled flag, timestamps. |
+| `signet_accounts` | provider + provider user ID, password verifier, verified email; FK to Users with cascade. |
+| `signet_sessions` | token digest, idle/absolute deadlines, revoked timestamp; FK to Users with cascade. |
+| `signet_tokens` | kind, digest, expiry, used timestamp. No FK to Users. |
+
+Indexes cover email lookup, Accounts by User, Sessions by User and Tokens by (User, kind).
+Sessions and Accounts cascade when a User is deleted; Tokens do not, because applications
+may own that table.
+
+## Single-use guarantee
+
+`ConsumeToken` performs an atomic conditional update: it marks a Token used only if it was
+still unused, then returns the consumed row. Only one caller can win a race. This is what
+makes verification, reset, OAuth state and refresh Tokens single-use under concurrency.
+
+## Conformance suite
+
+`store/conformance.Run(t, factory)` tests any Store implementation: Users, Accounts,
+Sessions, Tokens and token concurrency (16 racers, exactly one winner). Run it against your
+adapter before relying on it. See [Tooling](/docs/tooling) for the shared checks.

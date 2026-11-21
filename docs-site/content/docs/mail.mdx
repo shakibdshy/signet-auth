@@ -1,0 +1,62 @@
+---
+title: Mail
+description: Console and SMTP mailers, templates, and local verification links.
+---
+
+A `Mailer` is required by `New`. No message is delivered until you configure one — the
+console adapter prints messages instead of sending them.
+
+## Console mailer (development only)
+
+```go
+import "github.com/shakibdshy/signet/mailer/console"
+
+cfg.Mailer = console.New(os.Stdout)
+```
+
+It writes the full message to the supplied writer. Local verification and reset Tokens
+appear in the backend terminal, which is how the bundled examples let you complete those
+flows without an email server.
+
+## SMTP mailer
+
+```go
+import "github.com/shakibdshy/signet/mailer/smtp"
+
+m, err := smtp.New(smtp.Config{
+    Host:     "smtp.example.com",
+    Port:     "587",
+    Username: os.Getenv("SMTP_USER"),
+    Password: os.Getenv("SMTP_PASS"),
+    From:     "no-reply@example.com",
+    TLS:      smtp.StartTLS,
+})
+if err != nil { /* handle */ }
+cfg.Mailer = m
+```
+
+| TLS mode | Default port | Behaviour |
+| --- | --- | --- |
+| `StartTLS` | 587 | Upgrade a plain connection with STARTTLS (default). |
+| `ImplicitTLS` | 465 | TLS from the start. |
+| `InsecurePlaintext` | 25 | Requires `InsecureAllowPlaintext: true`; emits a warning. |
+
+TLS minimum is 1.2. Keep credentials in environment variables or a secret store, never in
+source control.
+
+## Templates
+
+`EmailTemplates` has three methods: `VerifyEmail`, `ResetPassword` and `PasswordChanged`.
+Each takes `TemplateData` (email, name, URL, expiry) and returns a `Message` with `To`,
+`Subject`, `TextBody` and `HTMLBody`.
+
+`signet.DefaultTemplates` renders HTML with `html/template` and plain text with
+`text/template`. Replace it entirely if you need your own wording:
+
+```go
+cfg.Templates = myTemplates // implements signet.EmailTemplates
+```
+
+The URLs in the default templates are built from `Config.AppURL` as `/verify?token=...` and
+`/reset?token=...`; your app must serve those pages and call the matching endpoints. See
+[Verification and reset](/docs/verification-and-reset).
