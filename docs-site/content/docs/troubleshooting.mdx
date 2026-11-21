@@ -1,0 +1,82 @@
+---
+title: Troubleshooting
+description: Symptom → cause → fix for the most common Signet integration problems.
+---
+
+## `ErrInsecureConfig` from `New`
+
+A zero `Config{}` leaves cookies insecure. Start from `signet.DefaultConfig()`, which sets
+`Secure` and `HttpOnly`. Only use `InsecureAllowHTTPCookies` for local HTTP development.
+
+## `ErrInvalidCSRFConfig`
+
+`CSRFKey` must be exactly 32 bytes unless `JWTOnly` is true. Fill it from a secure random
+source at startup:
+
+```go
+key := make([]byte, 32)
+if _, err := rand.Read(key); err != nil { /* handle */ }
+cfg.CSRFKey = key
+```
+
+## 403 with wire code `csrf`
+
+The request was state-changing, carried a session cookie and failed the guard. Check:
+- the `X-CSRF-Token` header matches the token returned by `GET /csrf-token` or the sign-in
+  response;
+- the CSRF cookie is present and readable by JavaScript (it is deliberately not HttpOnly);
+- `Origin` and `Sec-Fetch-Site` are correct and the browser is same-origin;
+- a proxy is not stripping the header or rewriting the origin.
+
+Headerless clients should use JWT mode. See [Security](/docs/security).
+
+## `ErrEmailNotVerified` on sign-in
+
+The User signed up with verification enabled. Find the raw Token in the verification email
+(the console mailer prints it locally) and call `POST /verify-email`, or disable verification
+with both config pointers as shown in [Verification and reset](/docs/verification-and-reset).
+
+## `ErrTokenInvalid` or `ErrTokenExpired`
+
+The Token was malformed, already consumed, replayed or past its expiry. Verify/reset Tokens
+are single-use; request a new one through the matching send endpoint. Expired OAuth state or
+link Tokens require restarting the flow.
+
+## `ErrRefreshReuse`
+
+A consumed Refresh token was presented again. Signet treats this as theft: all Sessions and
+all Token kinds for that User were revoked. The client must sign in again. See [JWT](/docs/jwt).
+
+## 429 `rate_limited`
+
+The RateLimiter denied the key `endpoint+"|"+clientIP`. Inspect your limiter's window and
+counter store. Remember that every application behind one NAT shares an address; implement
+a custom limiter if you need finer keys. Proxy header handling is not shipped yet — see
+[Deployment](/docs/deployment).
+
+## 404 `not_found` from token or OAuth endpoints
+
+`ErrJWTDisabled` and `ErrOAuthDisabled` are both mapped to `not_found`, so a 404 may simply
+mean `Config.JWT` or `Config.OAuth` was left nil. Check [Configuration](/docs/configuration).
+
+## Session cookie not set
+
+Cookies are `Secure`; the browser will not store them over plain HTTP unless
+`InsecureAllowHTTPCookies` is set for local development. With a non-empty `Cookie.Domain`,
+the `__Host-` prefix is omitted — verify the resulting name in the browser's cookie store.
+
+## Verification email does not arrive
+
+With the console mailer, nothing is sent: look at the backend terminal output. With SMTP,
+check host/port/TLS mode and credentials. `Config.AppURL` must point to a frontend route
+that consumes the token; the email itself is built from it.
+
+## Stale generated artifacts
+
+`make generate-check` fails when the OpenAPI spec or TypeScript schema is out of date.
+Run `make generate`, commit the regenerated files, and re-run the check. See [Tooling](/docs/tooling).
+
+## Where to look next
+
+All wire codes and sentinels are listed in [Errors](/docs/errors); feature status is on the
+[Status and roadmap](/docs/status) page.

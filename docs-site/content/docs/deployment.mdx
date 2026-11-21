@@ -1,0 +1,63 @@
+---
+title: Deployment
+description: Production checklist for a Go service that embeds Signet.
+---
+
+Signet is a library inside your service — there is no separate auth process to deploy.
+This page covers the settings that matter in production.
+
+## Checklist
+
+1. **Serve HTTPS.** Cookies are `Secure` by default. Behind a TLS-terminating proxy,
+   make sure the application still sees the original scheme so redirects and links are
+   correct.
+2. **Start from `DefaultConfig()`.** It sets `Secure` and `HttpOnly` cookies. A zero
+   `Config{}` fails with `ErrInsecureConfig`; never enable `InsecureAllowHTTPCookies` or
+   `InsecureDisableCSRF` in production.
+3. **Set a random 32-byte `CSRFKey`** and a 32-byte `OAuth.StateKey` when OAuth is enabled.
+   Generate them once and store them in your secret manager; rotating them invalidates
+   outstanding CSRF tokens or OAuth state.
+4. **Set `AppURL`** to the public origin so verification and reset links point to your
+   frontend. Serve `/verify` and `/reset` pages that extract the token and call the API.
+5. **Configure a real Mailer.** Use `mailer/smtp` with STARTTLS or implicit TLS; the
+   console mailer is development only.
+6. **Connect and migrate your Store.** Call `Migrate(ctx)` from a deployment step or at
+   startup, and own the schema as described in [Storage](/docs/storage).
+7. **Mount `Client.Handler()` under `PathPrefix`** with `http.StripPrefix` and protect
+   private routes with `RequireAuth`.
+8. **Use a durable RateLimiter.** The interface is a boolean gate; your implementation
+   decides the window, counter store and key policy. The key format is
+   `endpoint+"|"+clientIP`.
+
+## Cookies behind a prefix
+
+The session cookie is named `signet_session`, prefixed with `__Host-` when `Secure` is true,
+`Path` is `/` and `Domain` is empty. Browsers only accept `__Host-` cookies over HTTPS with
+no Domain and a secure origin. If your setup needs a cross-subdomain cookie, set `Domain`
+explicitly — the prefix is then omitted.
+
+<Callout title="Not implemented yet">
+Proxy-aware `X-Forwarded-For` handling, trusted-proxy CIDR configuration and IPv6
+normalisation are **not shipped** — see issue #50 on the tracker. Signet derives
+rate-limit keys from the connection address only. Configure your proxy to preserve the
+client address at the transport layer, or implement a custom RateLimiter that reads
+trusted headers itself.
+</Callout>
+
+## JWT-only services
+
+For API-only deployments set `JWTOnly`: no session cookies or CSRF key are needed, and
+clients use `POST /token` plus the `Authorization` header. See [JWT](/docs/jwt).
+
+## Frontend separation
+
+If the React frontend lives in another repository, publish a versioned SDK from your
+application's OpenAPI spec and let the frontend install it. Signet's generated client is a
+base for that SDK; see [Frontend client](/docs/frontend-client).
+
+## Publishing the documentation site
+
+The Fumadocs site builds statically. Set `NEXT_PUBLIC_SIGNET_API_URL` to the public API
+origin (including the mount prefix, e.g. `https://api.example.com/auth`), then run
+`npm run build` in `docs-site/` and deploy the output. The value gives the API playground
+a real base URL; it is injected at build time only and does not alter the published spec.
