@@ -25,7 +25,7 @@ The raw value a Session presents when authenticating. It is stored only as a dig
 _Avoid_: bearer token, session secret
 
 **Token**:
-A single-use proof for one sensitive flow: email verification, password reset, or OAuth account linking.
+A single-use proof for one sensitive flow: email verification, password reset, email change, account deletion, OAuth account linking, refresh or state.
 _Avoid_: one-time code
 
 **Access token**:
@@ -43,3 +43,11 @@ _Avoid_: profile, user info
 **CSRF token**:
 A signed value that proves a browser request is same-origin. It is not single-use and is distinct from a Token.
 _Avoid_: anti-CSRF value
+
+**Fresh session**:
+A Session created within the configured freshness window, measured from the moment the User authenticated — not from their most recent request.
+_Avoid_: recent session, active session
+
+**Trusted proxy**:
+A proxy whose address is explicitly allowlisted for interpreting `X-Forwarded-For` when deriving rate-limit keys.
+_Avoid_: forwarding proxy, reverse proxy
