@@ -169,6 +169,75 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 	return nil
 }
 
+// ChangePasswordInput validation is pure so its edge cases can be unit tested.
+func validateChangePassword(in core.ChangePasswordInput, minLength, maxLength int) error {
+	if in.UserID == "" || in.CurrentPassword == "" {
+		return core.ErrInvalidCredentials
+	}
+	if in.NewPassword == "" {
+		return core.ErrPasswordTooShort
+	}
+	if len(in.NewPassword) < minLength {
+		return core.ErrPasswordTooShort
+	}
+	if len(in.NewPassword) > maxLength {
+		return core.ErrPasswordTooLong
+	}
+	return nil
+}
+
+// ChangePassword replaces an authenticated User's credential verifier after
+// revoking every Session and Token of that User.
+func (s *VerificationService) ChangePassword(ctx context.Context, in core.ChangePasswordInput) error {
+	if err := validateChangePassword(in, s.deps.Password.MinLength, s.deps.Password.MaxLength); err != nil {
+		return err
+	}
+	if err := allow(ctx, s.deps.Limiter, "change_password", in.RateLimitKey); err != nil {
+		return err
+	}
+	user, err := s.deps.Store.UserByID(ctx, in.UserID)
+	if err != nil {
+		return err
+	}
+	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
+	if errors.Is(err, core.ErrNotFound) {
+		return core.ErrInvalidCredentials
+	}
+	if err != nil {
+		return err
+	}
+	ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.CurrentPassword)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return core.ErrInvalidCredentials
+	}
+	for _, kind := range core.AllTokenKinds {
+		if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, kind); err != nil {
+			return err
+		}
+	}
+	if err := s.deps.Store.DeleteSessionsForUser(ctx, user.ID); err != nil {
+		return err
+	}
+	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)
+	if err != nil {
+		return err
+	}
+	updated := *account
+	updated.PasswordHash = encoded
+	if err := s.deps.Store.UpdateAccount(ctx, &updated); err != nil {
+		return err
+	}
+	s.logInfo("password_changed", "user_id", user.ID)
+	message := s.deps.Templates.PasswordChanged(core.TemplateData{Email: user.Email, Name: user.Name})
+	if err := s.deps.Mailer.Send(ctx, message); err != nil {
+		s.logWarn("password_changed_notification_failed", "user_id", user.ID, "error", err)
+	}
+	return nil
+}
+
 // ResetPassword consumes a reset Token and replaces the credential verifier.
 func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPasswordInput) error {
 	if in.Token == "" {

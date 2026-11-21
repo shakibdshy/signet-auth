@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
 )
 
 func completeConfig() signet.Config {
@@ -133,5 +134,61 @@ func TestNewSucceedsWithCompleteConfig(t *testing.T) {
 	cfg.OnSignIn = func(context.Context, *signet.User) {}
 	if _, err := signet.New(cfg); err != nil {
 		t.Fatalf("New() error = %v, want nil", err)
+	}
+}
+
+func TestEmailVerificationCanBeDisabled(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = fakeMailer{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	yes := true
+	cfg.RequireVerifiedEmail = &yes
+	cfg.SendVerificationOnSignUp = &yes
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := client.SignUp(context.Background(), signet.SignUpInput{
+		Email: "unverified@example.com", Password: "correct horse",
+	}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	_, err = client.SignIn(context.Background(), signet.SignInInput{
+		Email: "unverified@example.com", Password: "correct horse",
+	})
+	if err == nil {
+		t.Fatal("expected email_not_verified with default config, got nil")
+	}
+	if !errors.Is(err, signet.ErrEmailNotVerified) {
+		t.Fatalf("error = %v, want ErrEmailNotVerified", err)
+	}
+}
+
+func TestEmailVerificationCanBeDisabledExplicitly(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = fakeMailer{}
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	off := false
+	cfg.RequireVerifiedEmail = &off
+	cfg.SendVerificationOnSignUp = &off
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := client.SignUp(context.Background(), signet.SignUpInput{
+		Email: "unverified@example.com", Password: "correct horse",
+	}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	result, err := client.SignIn(context.Background(), signet.SignInInput{
+		Email: "unverified@example.com", Password: "correct horse",
+	})
+	if err != nil {
+		t.Fatalf("SignIn with verification disabled: %v", err)
+	}
+	if result.User.EmailVerified {
+		t.Error("User should not be verified when verification is disabled")
 	}
 }

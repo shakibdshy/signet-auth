@@ -3,7 +3,7 @@ GO ?= go
 # Developer tools installed with `go install` land in GOPATH/bin.
 export PATH := $(shell $(GO) env GOPATH)/bin:$(PATH)
 
-.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check
+.PHONY: test integration examples fuzz cover lint vet vuln fmt fmt-check tidy check generate generate-spec generate-types generate-check docs-site
 
 test:
 	$(GO) test -race ./...
@@ -48,3 +48,39 @@ tidy:
 	$(GO) mod tidy
 
 check: fmt-check vet lint test vuln
+
+generate-spec:
+	@mkdir -p api openapi
+	$(GO) run ./cmd/signet-openapi > api/signet.openapi.json
+	cp api/signet.openapi.json openapi/signet.openapi.json
+
+generate-types:
+	cd client/ts && npm run generate
+
+generate: generate-spec generate-types
+
+docs-site:
+	cd docs-site && npm run docs:check && npm run sync:spec && npm run types:check && npm run build
+
+# Regenerate into the working tree, compare with the committed artifacts, and
+# restore the originals so a failure leaves the tree unchanged.
+generate-check:
+	@tmp=$$(mktemp -d) || exit 1; \
+	cp api/signet.openapi.json $$tmp/spec.json || exit 1; \
+	cp openapi/signet.openapi.json $$tmp/embedded.json || exit 1; \
+	cp client/ts/src/schema.d.ts $$tmp/schema.d.ts || exit 1; \
+	restore() { cp $$tmp/spec.json api/signet.openapi.json; \
+		cp $$tmp/embedded.json openapi/signet.openapi.json; \
+		cp $$tmp/schema.d.ts client/ts/src/schema.d.ts; \
+		rm -rf $$tmp; }; \
+	trap restore EXIT; \
+	$(MAKE) generate >/dev/null || exit 1; \
+	if ! diff -u $$tmp/spec.json api/signet.openapi.json || \
+	   ! diff -u $$tmp/embedded.json openapi/signet.openapi.json || \
+	   ! diff -u $$tmp/schema.d.ts client/ts/src/schema.d.ts; then \
+		echo "generated artifacts are stale; run make generate"; \
+		exit 1; \
+	fi; \
+	trap - EXIT; \
+	rm -rf $$tmp; \
+	echo "generated artifacts up to date"

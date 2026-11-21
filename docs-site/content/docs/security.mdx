@@ -1,0 +1,66 @@
+---
+title: Security
+description: The security model — password hashing, CSRF, sessions, Tokens and logging.
+---
+
+Signet is secure by default. Insecure behaviour requires an explicit `Insecure*` option,
+which emits a warning through your logger. See [Configuration](/docs/configuration).
+
+## Password verifiers
+
+The default `Argon2idHasher` uses OWASP-recommended parameters: 19 MiB memory (`m=19456`),
+2 iterations (`t=2`), parallelism 1 (`p=1`), 32-byte key and 16-byte salt. Verifiers are PHC
+strings (`$argon2id$v=19$m=...$...$...`). Parsed parameters are bounded (max 256 MiB memory,
+10 iterations, 16 threads, 128-byte key, 64-byte salt) so a tampered verifier cannot trigger
+unbounded work.
+
+On successful sign-in, `NeedsRehash` upgrades verifiers with stale parameters and stores the
+new hash without failing the sign-in. The `hash/bcrypt` adapter provides `Hasher{Cost: int}`
+with `DefaultCost = 12` for interoperability.
+
+## Anti-enumeration
+
+Sign-in failures are generic (`ErrInvalidCredentials`) for an unknown email, a disabled
+User or a password mismatch. A dummy verifier is hashed once at `New` and verified on the
+unknown-user path so the work is comparable. Emails are lowercased and trimmed. Email send
+flows return success for unknown addresses while doing equalized work.
+
+## Sessions and cookies
+
+Session Tokens are 32-byte opaque values; only their SHA-256 digest is stored. Session IDs
+are 16-byte hex. Idle deadlines extend on success, absolute deadlines never change, and
+revoked or expired Sessions — and Sessions of disabled Users — are rejected. Cookies are
+`HttpOnly`, `Secure`, `SameSite=Lax`, with `__Host-` where `Secure`, `Path=/` and no Domain.
+`SessionInfo` never includes a token digest.
+
+## CSRF
+
+A CSRF token is HMAC-SHA256 over `<nonce>.<expiry>` with a 24-byte nonce and 12-hour TTL.
+It is returned by `GET /csrf-token` and in the sign-in response, stored in a readable
+cookie, and sent in `X-CSRF-Token`. State-changing requests (`POST/PUT/PATCH/DELETE`) that
+carry a session cookie are also checked against `Origin` (host and scheme) and
+`Sec-Fetch-Site` (`same-origin` or `none`). Rejections log `csrf_rejected`. Headerless API
+clients can use JWT mode instead.
+
+## Tokens
+
+Verification, reset, OAuth state/link and refresh proofs are random, single-use and stored
+only as digests. `ConsumeToken` is an atomic conditional update, and digests are compared in
+constant time. Expired Tokens are rejected. Refresh replay is containment, not just an
+error: all Sessions and all Token kinds for that User are revoked and `ErrRefreshReuse` is
+returned.
+
+## OAuth
+
+Authorization Code with PKCE S256; the state is AES-GCM sealed with a 32-byte `StateKey`,
+expires after 10 minutes and is consumed once. Redirects must match the exact allowlist at
+both start and callback. Only verified provider emails are auto-linked; an unverified
+identity yields an encrypted link Token for explicit linking. Provider Accounts owned by
+another User return `ErrOAuthAccountConflict`.
+
+## Logging and hooks
+
+Structured events go to `Config.Logger`. Hooks (`OnSignUp`, `OnSignIn`) receive a redacted
+User with email and name blanked. Logs carry User IDs and reason codes — never passwords,
+raw Tokens or session secrets. The `InsecureAllowHTTPCookies` and `InsecureDisableCSRF`
+options warn explicitly when enabled.

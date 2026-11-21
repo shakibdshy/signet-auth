@@ -45,6 +45,13 @@ type Session struct {
 	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
 }
 
+// AllTokenKinds is the canonical list of single-use proof kinds. Security
+// checks that must revoke every kind iterate this list so a new kind cannot be
+// silently omitted.
+var AllTokenKinds = []TokenKind{
+	TokenVerifyEmail, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
+}
+
 // TokenKind identifies the sensitive flow a Token proves.
 type TokenKind string
 
@@ -297,6 +304,14 @@ type ResetPasswordInput struct {
 	Token        string `json:"token"`
 	NewPassword  string `json:"new_password"`
 	RateLimitKey string `json:"-"`
+}
+
+// ChangePasswordInput carries the authenticated User ID and the old and new passwords.
+type ChangePasswordInput struct {
+	UserID          string `json:"-"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	RateLimitKey    string `json:"-"`
 }
 
 // TokenInput selects a token exchange.

@@ -195,7 +195,7 @@ func (s *JWTService) handleRefreshReuse(ctx context.Context, userID string) (*co
 	// Security: a replayed Refresh token is treated as theft. Contain it by
 	// revoking every Session and Refresh token of that User.
 	_ = s.deps.Store.DeleteSessionsForUser(ctx, userID)
-	for _, kind := range []core.TokenKind{core.TokenRefresh, core.TokenVerifyEmail, core.TokenResetPassword, core.TokenOAuthLink} {
+	for _, kind := range core.AllTokenKinds {
 		_ = s.deps.Store.DeleteTokensForUser(ctx, userID, kind)
 	}
 	s.logWarn("refresh_token_reuse", "user_id", userID)

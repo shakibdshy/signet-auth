@@ -60,6 +60,11 @@ func main() {
 		log.Fatal(err)
 	}
 	cfg := signet.DefaultConfig()
+	// Development convenience: skip email verification entirely.
+	// Leave these unset (or true) in production.
+	no := false
+	cfg.RequireVerifiedEmail = &no
+	cfg.SendVerificationOnSignUp = &no
 	cfg.Store = store
 	cfg.Mailer = console.New(os.Stdout) // development only: prints links
 	cfg.RateLimiter = &memoryLimiter{hits: make(map[string]int)}

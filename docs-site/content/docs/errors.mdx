@@ -1,0 +1,76 @@
+---
+title: Errors
+description: Every sentinel error, its HTTP wire code, and what a caller should do.
+---
+
+Programmatic calls return sentinel errors from the root package. Check them with `errors.Is`.
+HTTP calls return `{"error": code, "message": msg}`; the `code` values are published in the
+`ApiError` enum of the OpenAPI contract and the TypeScript client's `SignetApiError`.
+
+```go
+if errors.Is(err, signet.ErrInvalidCredentials) {
+    // show a generic sign-in failure
+}
+```
+
+## Configuration errors
+
+| Sentinel | HTTP / wire code | Meaning and action |
+| --- | --- | --- |
+| ErrMissingStore | 500 internal_error | No Store supplied. Set `cfg.Store`. |
+| ErrMissingMailer | 500 internal_error | No Mailer supplied. Set `cfg.Mailer`. |
+| ErrMissingHasher | — (not emitted by `New`) | Exported for compatibility; `New` defaults the hasher and never returns this. |
+| ErrMissingRateLimiter | 500 internal_error | No RateLimiter supplied. Set `cfg.RateLimiter`. |
+| ErrInsecureConfig | 500 internal_error | Cookies are not secure. Use `DefaultConfig()` or the explicit `Insecure*` opt-in. |
+| ErrInvalidCSRFConfig | 500 internal_error | `CSRFKey` is not 32 bytes and `JWTOnly` is false. |
+| ErrInvalidOAuthConfig | 500 internal_error | OAuth providers, redirects or `StateKey` are invalid. |
+| ErrInvalidJWTAlgorithm | 500 internal_error | Algorithm is outside the allowlist, or a token used a different one. |
+| ErrInvalidJWTKey | 500 internal_error | Key type does not match the algorithm. |
+
+## Credentials and email
+
+| Sentinel | HTTP / wire code | Meaning and action |
+| --- | --- | --- |
+| ErrInvalidCredentials | 401 invalid_credentials | Wrong password, disabled User or missing credential Account. Fail generically. |
+| ErrEmailNotVerified | 403 email_not_verified | Sign-in blocked. Verify the email or disable verification. |
+| ErrInvalidEmail | 400 invalid_input | Empty or malformed email. |
+| ErrEmailAlreadyExists | 400 email_exists | Sign-up with a registered email. |
+| ErrPasswordTooShort | 400 invalid_input | Below `Password.MinLength`. |
+| ErrPasswordTooLong | 400 invalid_input | Above `Password.MaxLength`. |
+
+## Tokens and sessions
+
+| Sentinel | HTTP / wire code | Meaning and action |
+| --- | --- | --- |
+A missing or invalid session returns `401 unauthorized` with "authentication required" —
+sign in first and send the session cookie and CSRF token.
+
+| ErrNotFound | no dedicated mapping — surfaces as 500 internal_error | Entity or Session not found. `404 not_found` comes from JWT/OAuth-disabled sentinels and unknown routes. |
+| ErrTokenInvalid | 401 invalid_token | Malformed, unknown, consumed or replayed Token. |
+| ErrTokenExpired | 401 invalid_token | Token past its expiry; request a fresh one. |
+| ErrRefreshReuse | 401 invalid_token | Refresh replay. All Sessions and Tokens for that User were revoked; sign in again. |
+
+## JWT and OAuth
+
+| Sentinel | HTTP / wire code | Meaning and action |
+| --- | --- | --- |
+| ErrJWTDisabled | 404 not_found | JWT method called without `Config.JWT`. |
+| ErrOAuthDisabled | 404 not_found | OAuth method called without `Config.OAuth`. |
+| ErrOAuthProviderNotFound | 404 not_found | Provider name is not registered. |
+| ErrOAuthRedirectNotAllowed | 400 invalid_request | Redirect is not in the exact allowlist. |
+| ErrOAuthInvalidState | 400 invalid_request | Tampered, expired or mismatched OAuth state. |
+| ErrOAuthEmailNotVerified | 403 oauth_email_not_verified | Provider did not return a verified email. |
+| ErrOAuthAccountConflict | 409 oauth_account_conflict | Provider Account already belongs to another User. |
+
+## Protection and abuse
+
+| Sentinel | HTTP / wire code | Meaning and action |
+| --- | --- | --- |
+| ErrRateLimited | 429 rate_limited | Too many attempts; retry later. |
+| ErrInvalidCSRFConfig | 500 internal_error | See configuration errors above. |
+
+## CSRF wire errors
+
+The CSRF guard has no exported sentinel: a rejected browser request returns HTTP 403 with
+wire code `csrf`. Headerless clients can avoid it by not presenting a session cookie; use
+[JWT mode](/docs/jwt) for non-browser clients. See [Security](/docs/security).

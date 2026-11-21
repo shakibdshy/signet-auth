@@ -1,0 +1,59 @@
+---
+title: Status and roadmap
+description: What is shipped today and what is explicitly not implemented yet.
+---
+
+<Callout title="Read this first">
+If a capability is not listed under **Shipped today**, it is not available in this
+version. Missing documentation is never the reason — every shipped feature has a guide.
+</Callout>
+
+## Shipped today
+
+- **Email/password auth** — sign-up, sign-in, sign-out, rehash, anti-enumeration. See [Quickstart](/docs/quickstart) and [Security](/docs/security).
+- **Sessions** — hashed tokens, idle/absolute deadlines, list/revoke, secure cookies and CSRF. See [Sessions and cookies](/docs/sessions).
+- **Email verification, password reset and password change** — single-use Tokens, templates and revocation on reset or change. See [Verification and reset](/docs/verification-and-reset).
+- **OAuth sign-in** — Google and GitHub, PKCE, encrypted state, verified-only linking and custom providers. See [OAuth sign-in](/docs/oauth).
+- **JWT mode** — Access/Refresh Tokens, rotation and replay containment. See [JWT mode](/docs/jwt).
+- **Storage adapters** — PostgreSQL and SQLite with explicit migrations and a conformance suite. See [Storage](/docs/storage).
+- **Mailers and templates** — console and SMTP adapters, overridable templates. See [Mail](/docs/mail).
+- **Developer surface** — typed Go API, HTTP endpoints, generated OpenAPI contract, typed TypeScript client, docs handler and Fumadocs site. See [Go API](/docs/go-api), [HTTP API](/docs/http-api), [Tooling](/docs/tooling).
+- **Security controls** — Argon2id with bounded parsing, rate-limiting interface, redacted hooks, structured events. See [Security](/docs/security).
+
+## Not implemented yet
+
+These are **open work items**, not available features:
+
+| Item | Tracker |
+| --- | --- |
+| Two-phase email change | [#46](https://github.com/shakibdshy/signet/issues/46) |
+| Verified account deletion | [#47](https://github.com/shakibdshy/signet/issues/47) |
+| Fresh Session enforcement | [#48](https://github.com/shakibdshy/signet/issues/48) |
+| Per-endpoint rate-limit rules | [#49](https://github.com/shakibdshy/signet/issues/49) |
+| Trusted-proxy / `X-Forwarded-For` keys | [#50](https://github.com/shakibdshy/signet/issues/50) |
+| Contract and verification follow-up | [#51](https://github.com/shakibdshy/signet/issues/51) |
+
+Parent spec: [#44 — User lifecycle and session controls](https://github.com/shakibdshy/signet/issues/44).
+
+### Known limitations
+
+- Sign-up writes the User and its credential Account in two Store calls; there is no
+  transaction across them. A best-effort delete removes the User if the second call fails.
+- Rate limits use a boolean `RateLimiter` interface; there is no per-path rule engine and
+  no proxy-header handling yet.
+- Only Google and GitHub ship as OAuth providers. There is no account unlink/list API,
+  no JWKS endpoint, no key rotation and no wildcard trusted-origin mode.
+- There is no framework-specific reactive client, no CLI and no queryable audit log.
+
+### Researched but not planned
+
+A capability survey of Better Auth lives in `docs/research/better-auth-authentication-features.md`.
+It records features Signet does not have: TOTP two-factor, passkeys, magic links, email/phone
+OTP, username sign-in, anonymous sessions, organizations, roles/API keys, OAuth/OIDC provider,
+SSO/SCIM, device flow, captcha, compromised-password checks and anomaly detection. It is a
+reference for future decisions, not a promise of delivery.
+
+Some glossary terms — email change, account deletion, fresh Session and trusted proxy —
+describe concepts from the roadmap above. They are defined ahead of implementation so
+issues and code share one vocabulary; the corresponding methods and endpoints do not exist
+yet.

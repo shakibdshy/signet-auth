@@ -1,0 +1,59 @@
+name: Docs site
+
+on:
+  pull_request:
+    paths:
+      - "docs-site/**"
+      - "api/signet.openapi.json"
+      - "client.go"
+      - "config.go"
+      - "errors.go"
+      - "signet.go"
+      - "internal/httpapi/contract.go"
+      - "internal/core/core.go"
+      - "Makefile"
+      - ".github/workflows/docs-site.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs-site/**"
+      - "api/signet.openapi.json"
+      - "client.go"
+      - "config.go"
+      - "errors.go"
+      - "signet.go"
+      - "internal/httpapi/contract.go"
+      - "internal/core/core.go"
+      - "Makefile"
+      - ".github/workflows/docs-site.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Typecheck and build docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: docs-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: docs-site
+      - name: Check documentation coverage
+        run: npm run docs:check
+        working-directory: docs-site
+      - name: Typecheck
+        run: npm run types:check
+        working-directory: docs-site
+      - name: Build
+        run: npm run build
+        working-directory: docs-site

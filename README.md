@@ -170,7 +170,38 @@ any exported name. Adapter packages such as `store/`, `mailer/`, `hash/` and
 `oauth/` remain independently importable. See
 [ADR-0002](docs/adr/0002-public-api-in-root-package.md).
 
+## Typed client for frontend apps
+
+Signet publishes `api/signet.openapi.json`, generated from the declarative
+contract in `internal/httpapi/contract.go`. A generated TypeScript client lives
+in [`client/ts/`](client/ts/) and is published as
+`@shakibdshy/signet-client`.
+
+To browse the API locally, mount `signet.DocsHandler()` in your application. It
+serves the generated spec at `/openapi.json` and a Scalar reference page at `/`:
+
+```go
+mux.Handle("/docs/", http.StripPrefix("/docs", signet.DocsHandler()))
+```
+
+It is deliberately separate from `auth.Handler()` — nothing is exposed unless
+you mount it, and you decide whether to protect the route. The viewer loads
+Scalar from a CDN; the spec itself is embedded in the module.
+
+For a frontend in a separate repo (TanStack Start, Next.js or another React
+app), the backend team merges this base spec into their application's OpenAPI
+spec and publishes a versioned SDK from it. The frontend installs that SDK;
+a breaking response or request change is a major version and fails the
+frontend build at the affected call sites. That is the cross-repo equivalent
+of Hono RPC's `typeof app` — the compiler enforces the contract. `make
+generate-check` in CI prevents the published spec from drifting away from the
+Go handlers. See [`client/ts/README.md`](client/ts/README.md) for usage.
+
 ## Documentation
+
+The developer documentation site lives in [`docs-site/`](docs-site/) — a
+self-contained Fumadocs app whose API reference is generated from the committed
+OpenAPI contract. Run `npm install && npm run dev` there to browse it locally.
 
 The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md) and architectural
 decisions in [`docs/adr/`](docs/adr/). Runnable examples are in [`examples/`](examples/).

@@ -1,0 +1,26 @@
+{
+  "title": "Signet docs",
+  "pages": [
+    "index",
+    "---Guides---",
+    "quickstart",
+    "sessions",
+    "oauth",
+    "jwt",
+    "frontend-client",
+    "verification-and-reset",
+    "storage",
+    "mail",
+    "security",
+    "deployment",
+    "troubleshooting",
+    "tooling",
+    "---Reference---",
+    "openapi",
+    "http-api",
+    "go-api",
+    "configuration",
+    "errors",
+    "status"
+  ]
+}
