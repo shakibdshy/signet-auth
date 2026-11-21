@@ -24,6 +24,7 @@ only `github.com/shakibdshy/signet`.
 | `SignUp(ctx, SignUpInput) (*SignUpResult, error)` | Create a User and its credential Account. |
 | `SignIn(ctx, SignInInput) (*SignInResult, error)` | Verify a password, rehash if needed, create a Session. |
 | `SignOut(ctx, SignOutInput) error` | Revoke the Session named by the token; unknown tokens are a no-op. |
+| `ChangePassword(ctx, ChangePasswordInput) error` | Verify the current password, revoke all Sessions and Tokens, then replace the verifier. |
 | `SendVerification(ctx, SendVerificationInput) error` | Issue an email-verification Token. |
 | `VerifyEmail(ctx, VerifyEmailInput) error` | Consume a verification Token and mark the User verified. |
 | `SendPasswordReset(ctx, SendPasswordResetInput) error` | Issue a password-reset Token. |
@@ -48,7 +49,7 @@ only `github.com/shakibdshy/signet`.
 - **Configuration:** `Config`, `CookieConfig`, `SessionConfig`, `PasswordConfig`, `JWTConfig`,
   `OAuthConfig`.
 - **Inputs and results:** `SignUpInput`, `SignUpResult`, `SignInInput`, `SignInResult`,
-  `SignOutInput`, `SendVerificationInput`, `VerifyEmailInput`, `SendPasswordResetInput`,
+  `SignOutInput`, `ChangePasswordInput`, `SendVerificationInput`, `VerifyEmailInput`, `SendPasswordResetInput`,
   `ResetPasswordInput`, `TokenInput`, `TokenPair`, `OAuthStartInput`, `OAuthStartResult`,
   `OAuthCallbackInput`, `OAuthCallbackResult`, `LinkOAuthAccountInput`, `ListSessionsInput`,
   `ListSessionsResult`, `RevokeSessionInput`, `RevokeAllSessionsInput`, `TemplateData`, `Message`.

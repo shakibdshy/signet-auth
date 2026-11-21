@@ -65,3 +65,17 @@ replace it via `Config.Templates` to use your own wording.
 
 In local development the example apps use the console mailer, which prints the whole
 message to the backend terminal — that is where you find the raw Token. See [Mail](/docs/mail).
+
+## Changing your password
+
+An authenticated User can change their own password with
+`auth.ChangePassword(ctx, signet.ChangePasswordInput{UserID: user.ID, CurrentPassword: old, NewPassword: next})`
+or `POST /change-password`. The current password must match the credential Account; a
+mismatch returns `ErrInvalidCredentials` with no side effects. The new password is checked
+against `Password.MinLength`/`MaxLength` before anything is revoked.
+
+On success Signet deletes **all** Tokens of the User (verification, reset, OAuth, refresh),
+revokes every Session, writes the new verifier, and sends the password-changed notification.
+An email failure is logged but does not fail the call. The HTTP endpoint requires a session
+cookie and CSRF token; the User ID always comes from the authenticated Session, never from
+the request body.
