@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -36,6 +37,9 @@ type Dependencies struct {
 	SendVerification         func(context.Context, *core.User) error
 	CreateSession            func(context.Context, string) (string, error)
 	RevokeSession            func(context.Context, string) error
+	FlushSessions            func(context.Context)
+	IsSessionFresh           func(context.Context, string, time.Duration) (bool, error)
+	FreshWindow              time.Duration
 	DummyVerifier            string
 }
 

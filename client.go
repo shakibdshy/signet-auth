@@ -173,6 +173,8 @@ func New(cfg Config) (*Client, error) {
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
 		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
+		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
+		FreshWindow: cfg.Accounts.FreshWindow,
 	})
 	return c, nil
 }
@@ -436,6 +438,16 @@ func (c *Client) JWKSHandler() http.Handler {
 	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
+// ListAccounts returns the safe fields of a User's Accounts.
+func (c *Client) ListAccounts(ctx context.Context, in ListAccountsInput) (*ListAccountsResult, error) {
+	return c.auth.ListAccounts(ctx, in)
+}
+
+// UnlinkAccount removes one Account after a recent Session check.
+func (c *Client) UnlinkAccount(ctx context.Context, in UnlinkAccountInput) error {
+	return c.auth.UnlinkAccount(ctx, in)
+}
+
 // ListSessions returns the Sessions belonging to a User.
 func (c *Client) ListSessions(ctx context.Context, in ListSessionsInput) (*ListSessionsResult, error) {
 	sessions, err := c.sessions.List(ctx, in.UserID)
@@ -542,6 +554,13 @@ func (a httpAdapter) Authenticate(w http.ResponseWriter, r *http.Request, requir
 }
 func (a httpAdapter) CurrentSession(r *http.Request) (*Session, error) {
 	return a.currentSession(r)
+}
+func (a httpAdapter) SessionTokenFromRequest(r *http.Request) string {
+	cookie, err := r.Cookie(a.cookies.Name())
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
 }
 
 // UserFromContext returns the authenticated User carried by a request context.

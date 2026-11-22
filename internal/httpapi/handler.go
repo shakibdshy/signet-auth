@@ -27,6 +27,9 @@ type API interface {
 	VerifyEmailChange(context.Context, core.VerifyEmailChangeInput) error
 	RequestUserDeletion(context.Context, core.RequestDeleteUserInput) error
 	DeleteUser(context.Context, core.ConfirmDeleteUserInput) error
+	ListAccounts(context.Context, core.ListAccountsInput) (*core.ListAccountsResult, error)
+	UnlinkAccount(context.Context, core.UnlinkAccountInput) error
+	SessionTokenFromRequest(*http.Request) string
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
 	RevokeSession(context.Context, core.RevokeSessionInput) error
 	RevokeAllSessions(context.Context, core.RevokeAllSessionsInput) error
@@ -74,6 +77,8 @@ var Endpoints = []Endpoint{
 	{Name: "send-otp", Anonymous: true},
 	{Name: "verify-otp", Anonymous: true},
 	{Name: "signout"},
+	{Name: "accounts"},
+	{Name: "unlink-account"},
 	{Name: "sessions"},
 	{Name: "session"},
 	{Name: "token", Anonymous: true},
@@ -120,6 +125,10 @@ func (h *Handler) Handler() http.Handler {
 			h.handleVerifyOTP(w, r)
 		case "signout":
 			h.handleSignOut(w, r)
+		case "accounts":
+			h.handleAccounts(w, r)
+		case "unlink-account":
+			h.handleUnlinkAccount(w, r)
 		case "sessions":
 			h.handleSessions(w, r)
 		case "session":
@@ -308,6 +317,47 @@ func (h *Handler) handleSignOut(w http.ResponseWriter, r *http.Request) {
 	}
 	h.api.ClearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	result, err := h.api.ListAccounts(r.Context(), core.ListAccountsInput{UserID: user.ID})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accounts": result.Accounts})
+}
+
+func (h *Handler) handleUnlinkAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.UnlinkAccountInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	in.RateLimitKey = h.clientIP(r)
+	if err := h.api.UnlinkAccount(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) handleSessions(w http.ResponseWriter, r *http.Request) {

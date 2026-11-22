@@ -96,6 +96,14 @@ func ContractFor() Contract {
 					user, strField("session_token"), strField("csrf_token"),
 				}}, Status: http.StatusOK,
 			}}},
+			{Name: "accounts", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{
+					typeField("accounts", []core.AccountInfo{}),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "unlink-account", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.UnlinkAccountInput{}), Status: http.StatusOK,
+			}}},
 			{Name: "send-magic-link", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SendMagicLinkInput{}), Status: http.StatusOK,
 			}}},

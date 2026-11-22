@@ -467,6 +467,31 @@ type SignInResult struct {
 	CallbackURL string `json:"-"`
 }
 
+// AccountInfo is the safe representation of an Account.
+type AccountInfo struct {
+	ID             string    `json:"id"`
+	Provider       string    `json:"provider"`
+	ProviderUserID string    `json:"provider_user_id"`
+	Email          string    `json:"email"`
+	EmailVerified  bool      `json:"email_verified"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// ListAccountsInput selects the User whose Accounts should be listed.
+type ListAccountsInput struct{ UserID string }
+
+// ListAccountsResult contains the safe fields of a User's Accounts.
+type ListAccountsResult struct{ Accounts []*AccountInfo }
+
+// UnlinkAccountInput identifies one Account to unlink and the Session proving
+// the request is recent.
+type UnlinkAccountInput struct {
+	UserID       string `json:"-"`
+	AccountID    string `json:"account_id"`
+	SessionToken string `json:"-"`
+	RateLimitKey string `json:"-"`
+}
+
 // SendMagicLinkInput requests a magic-link sign-in email.
 type SendMagicLinkInput struct {
 	Email        string `json:"email"`

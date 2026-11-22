@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -167,6 +168,19 @@ func (s *Service) IsFresh(ctx context.Context, raw string) (bool, error) {
 		return true, nil
 	}
 	return s.clock.Now().Before(session.CreatedAt.Add(s.cfg.FreshAge)), nil
+}
+
+// IsFreshWithin reports whether the Session was created within an explicit
+// window, independent of SessionConfig.FreshAge.
+func (s *Service) IsFreshWithin(ctx context.Context, raw string, window time.Duration) (bool, error) {
+	if window <= 0 {
+		return true, nil
+	}
+	session, err := s.store.SessionByHash(ctx, secret.Digest(raw))
+	if err != nil {
+		return false, err
+	}
+	return s.clock.Now().Before(session.CreatedAt.Add(window)), nil
 }
 
 // ByHash returns the Session for a raw token digest.

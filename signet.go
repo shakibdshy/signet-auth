@@ -132,6 +132,18 @@ type Argon2idHasher = auth.Argon2idHasher
 // Session is one authenticated visit by a User.
 type Session = core.Session
 
+// AccountInfo is the safe representation of an Account.
+type AccountInfo = core.AccountInfo
+
+// ListAccountsInput selects the User whose Accounts should be listed.
+type ListAccountsInput = core.ListAccountsInput
+
+// ListAccountsResult contains the safe fields of a User's Accounts.
+type ListAccountsResult = core.ListAccountsResult
+
+// UnlinkAccountInput identifies one Account to unlink.
+type UnlinkAccountInput = core.UnlinkAccountInput
+
 // SessionInfo is the safe representation of a Session.
 type SessionInfo = core.SessionInfo
 
