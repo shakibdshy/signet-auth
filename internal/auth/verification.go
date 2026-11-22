@@ -38,6 +38,8 @@ type VerificationDependencies struct {
 	RevokeSessions   func(context.Context, string) error
 	FlushSessions    func(context.Context)
 	BreachChecker    core.BreachChecker
+	CaptchaVerifier  core.CaptchaVerifier
+	CaptchaEndpoints []string
 }
 
 // VerificationService implements email verification, password reset and
@@ -142,6 +144,9 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 		return core.ErrInvalidEmail
 	}
 	if err := allow(ctx, s.deps.Limiter, "send-password-reset", in.RateLimitKey); err != nil {
+		return err
+	}
+	if err := checkCaptcha(ctx, s.deps.CaptchaVerifier, s.deps.CaptchaEndpoints, "send-password-reset", in.CaptchaToken, in.CaptchaRemoteIP); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByEmail(ctx, email)

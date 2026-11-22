@@ -189,6 +189,8 @@ func (h *Handler) Handler() http.Handler {
 
 func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 	var in core.SignUpInput
+	in.CaptchaToken = r.Header.Get("X-Captcha-Response")
+	in.CaptchaRemoteIP = h.clientIP(r)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
@@ -204,6 +206,8 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	var in core.SignInInput
+	in.CaptchaToken = r.Header.Get("X-Captcha-Response")
+	in.CaptchaRemoteIP = h.clientIP(r)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
@@ -579,6 +583,8 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleSendPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var in core.SendPasswordResetInput
+	in.CaptchaToken = r.Header.Get("X-Captcha-Response")
+	in.CaptchaRemoteIP = h.clientIP(r)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return

@@ -32,6 +32,8 @@ type Dependencies struct {
 	Password                 core.PasswordConfig
 	Username                 *core.UsernameConfig
 	BreachChecker            core.BreachChecker
+	CaptchaVerifier          core.CaptchaVerifier
+	CaptchaEndpoints         []string
 	RequireVerifiedEmail     bool
 	SendVerificationOnSignUp bool
 	OnSignUp                 func(context.Context, *core.User)
@@ -131,6 +133,9 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 	if err := s.allow(ctx, "signup", in.RateLimitKey); err != nil {
 		return nil, err
 	}
+	if err := checkCaptcha(ctx, s.deps.CaptchaVerifier, s.deps.CaptchaEndpoints, "signup", in.CaptchaToken, in.CaptchaRemoteIP); err != nil {
+		return nil, err
+	}
 	if _, err := s.deps.Store.UserByEmail(ctx, email); err == nil {
 		return nil, core.ErrEmailAlreadyExists
 	} else if !errors.Is(err, core.ErrNotFound) {
@@ -201,6 +206,9 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 		return nil, core.ErrPasswordTooLong
 	}
 	if err := s.allow(ctx, "signin", in.RateLimitKey); err != nil {
+		return nil, err
+	}
+	if err := checkCaptcha(ctx, s.deps.CaptchaVerifier, s.deps.CaptchaEndpoints, "signin", in.CaptchaToken, in.CaptchaRemoteIP); err != nil {
 		return nil, err
 	}
 	var user *core.User

@@ -168,7 +168,8 @@ func New(cfg Config) (*Client, error) {
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		RedirectPatterns: cfg.AllowedRedirectPatterns,
 		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
-		FlushSessions: c.sessions.Flush, BreachChecker: cfg.BreachChecker,
+		FlushSessions: c.sessions.Flush, BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier,
+		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
@@ -180,7 +181,8 @@ func New(cfg Config) (*Client, error) {
 		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
 		FreshWindow: cfg.Accounts.FreshWindow, Tokens: c.tokens,
 		TOTPStore: cfg.TOTPStore, TOTPKey: cfg.TOTPKey, TOTP: cfg.TOTP, AppURL: cfg.AppURL,
-		BreachChecker: cfg.BreachChecker,
+		BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier,
+		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	if c.jwtService != nil {
 		c.jwtService.SetVerifyTwoFactor(c.auth.VerifyTwoFactor)
