@@ -232,6 +232,7 @@ func ContractFor() Contract {
 			{core.ErrPasswordCompromised, http.StatusBadRequest, "password_compromised", "password has been compromised"},
 			{core.ErrCaptchaRequired, http.StatusBadRequest, "invalid_input", "captcha token required"},
 			{core.ErrCaptchaInvalid, http.StatusBadRequest, "invalid_input", "captcha verification failed"},
+			{core.ErrCaptchaUnavailable, http.StatusServiceUnavailable, "captcha_unavailable", "captcha provider unavailable"},
 			{core.ErrInvalidUsername, http.StatusBadRequest, "invalid_input", "invalid username"},
 			{core.ErrUsernameTaken, http.StatusBadRequest, "username_taken", "username already taken"},
 			{core.ErrLastAccount, http.StatusBadRequest, "last_account", "cannot unlink the last account"},

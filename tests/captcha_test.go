@@ -24,7 +24,7 @@ func (v *fakeCaptchaVerifier) Verify(_ context.Context, token, remoteIP string) 
 		return v.fail
 	}
 	if v.reject || token != "good-token" {
-		return errors.New("captcha rejected")
+		return signet.ErrCaptchaInvalid
 	}
 	return nil
 }
@@ -84,8 +84,8 @@ func TestCaptchaProviderFailureRejected(t *testing.T) {
 	_, err := client.SignUp(context.Background(), signet.SignUpInput{
 		Email: "user@example.com", Password: "correct horse", CaptchaToken: "good-token",
 	})
-	if !errors.Is(err, signet.ErrCaptchaInvalid) {
-		t.Fatalf("error = %v, want ErrCaptchaInvalid", err)
+	if !errors.Is(err, signet.ErrCaptchaUnavailable) {
+		t.Fatalf("error = %v, want ErrCaptchaUnavailable", err)
 	}
 }
 
@@ -110,6 +110,18 @@ func TestCaptchaEndpointSelection(t *testing.T) {
 	}
 	if len(verifier.calls) != 1 {
 		t.Fatalf("calls = %+v", verifier.calls)
+	}
+}
+
+func TestCaptchaRejectsUnsupportedEndpoint(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.CaptchaVerifier = &fakeCaptchaVerifier{}
+	cfg.CaptchaEndpoints = []string{"not-an-endpoint"}
+	if _, err := signet.New(cfg); !errors.Is(err, signet.ErrInvalidCaptchaEndpoint) {
+		t.Fatalf("error = %v, want ErrInvalidCaptchaEndpoint", err)
 	}
 }
 

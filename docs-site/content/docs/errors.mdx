@@ -38,7 +38,9 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrTOTPNotConfigured | 404 not_found | A TOTP operation was called without both a TOTPStore and a 32-byte TOTPKey. |
 | ErrPasswordCompromised | 400 password_compromised | The password was found in a known breach. |
 | ErrCaptchaRequired | 400 invalid_input | A configured endpoint was called without `X-Captcha-Response`. |
-| ErrCaptchaInvalid | 400 invalid_input | Captcha verification was rejected or failed. |
+| ErrCaptchaInvalid | 400 invalid_input | Captcha verification was rejected. |
+| ErrCaptchaUnavailable | 503 captcha_unavailable | The captcha provider could not be reached. |
+| ErrInvalidCaptchaEndpoint | 500 internal_error | A configured captcha endpoint name is not supported. |
 
 ## Credentials and email
 

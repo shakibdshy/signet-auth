@@ -228,12 +228,14 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	if err != nil || user.Disabled {
 		s.dummyVerify(ctx, in.Password)
 		s.logInfo("sign_in_failure", "reason", "unavailable")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "unavailable"}})
 		return nil, core.ErrInvalidCredentials
 	}
 	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
 	if err != nil {
 		s.dummyVerify(ctx, in.Password)
 		s.logInfo("sign_in_failure", "reason", "unavailable")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "unavailable"}})
 		return nil, core.ErrInvalidCredentials
 	}
 	ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.Password)
@@ -242,10 +244,12 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	}
 	if !ok {
 		s.logInfo("sign_in_failure", "reason", "mismatch")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "mismatch"}})
 		return nil, core.ErrInvalidCredentials
 	}
 	if s.deps.RequireVerifiedEmail && !user.EmailVerified {
 		s.logInfo("sign_in_failure", "reason", "unverified")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "unverified"}})
 		return nil, core.ErrEmailNotVerified
 	}
 	s.rehashIfNeeded(ctx, account, in.Password, user.ID)
@@ -289,6 +293,6 @@ func (s *Service) SignOut(ctx context.Context, in core.SignOutInput) error {
 		return err
 	}
 	s.logInfo("sign_out", "user_id", session.UserID)
-	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignOut, UserID: session.UserID, Outcome: "success"})
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignOut, UserID: session.UserID, SessionID: session.ID, Outcome: "success"})
 	return nil
 }

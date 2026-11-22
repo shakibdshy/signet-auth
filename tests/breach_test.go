@@ -88,6 +88,38 @@ func TestBreachCheckBlocksPasswordReset(t *testing.T) {
 	}
 }
 
+func TestBreachRejectionDoesNotMutateState(t *testing.T) {
+	checker := &fakeBreachChecker{compromised: map[string]bool{"breached-password": true}}
+	client, mailer := breachClient(t, checker)
+	ctx := context.Background()
+	signUp, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	if err := client.ChangePassword(ctx, signet.ChangePasswordInput{
+		UserID: signUp.User.ID, CurrentPassword: "correct horse", NewPassword: "breached-password",
+	}); !errors.Is(err, signet.ErrPasswordCompromised) {
+		t.Fatalf("ChangePassword error = %v", err)
+	}
+	if _, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("old password should still work after rejected change: %v", err)
+	}
+	if err := client.SendPasswordReset(ctx, signet.SendPasswordResetInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendPasswordReset: %v", err)
+	}
+	raw := tokenFromMail(t, mailer)
+	if err := client.ResetPassword(ctx, signet.ResetPasswordInput{
+		Token: raw, NewPassword: "breached-password",
+	}); !errors.Is(err, signet.ErrPasswordCompromised) {
+		t.Fatalf("ResetPassword error = %v", err)
+	}
+	if err := client.ResetPassword(ctx, signet.ResetPasswordInput{
+		Token: raw, NewPassword: "safe-new-password",
+	}); err != nil {
+		t.Fatalf("reset proof should still be usable after rejected breach: %v", err)
+	}
+}
+
 func TestBreachProviderFailureFailsClosed(t *testing.T) {
 	checker := &fakeBreachChecker{fail: errors.New("provider down")}
 	client, _ := breachClient(t, checker)

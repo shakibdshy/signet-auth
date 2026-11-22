@@ -100,6 +100,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -199,6 +209,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -312,6 +332,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -406,6 +436,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -509,6 +549,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -603,6 +653,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -737,6 +797,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -826,6 +896,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -932,6 +1012,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1023,6 +1113,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1149,6 +1249,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1238,6 +1348,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1346,6 +1466,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1437,6 +1567,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1521,6 +1661,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1629,6 +1779,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1723,6 +1883,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1826,6 +1996,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1915,6 +2095,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2017,6 +2207,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2142,6 +2342,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2236,6 +2446,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2349,6 +2569,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2440,6 +2670,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2548,6 +2788,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2649,6 +2899,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2743,6 +3003,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2868,6 +3138,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -2971,6 +3251,16 @@
           },
           "500": {
             "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "captcha_unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3088,6 +3378,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "captcha_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -3131,6 +3431,7 @@
         "properties": {
           "error": {
             "enum": [
+              "captcha_unavailable",
               "code_already_used",
               "csrf",
               "email_exists",

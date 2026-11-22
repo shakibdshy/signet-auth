@@ -41,3 +41,13 @@ Source: issue #N.
 ```
 
 A row is done when it names a concrete test function or states a limitation a reviewer can accept. An empty cell means the phase is not ready for review.
+
+## Phase checklists
+
+Each shipped phase has a filled copy of this template, named for the phase rather than the generic `phase-N.md`:
+
+- `foundation.md`
+- `passwordless.md`
+- `session-hardening.md`
+- `phase3-sign-in-2fa.md`
+- `phase6-defensive-controls.md`

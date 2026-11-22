@@ -812,6 +812,10 @@ var (
 	ErrCaptchaRequired = errors.New("signet: captcha token required")
 	// ErrCaptchaInvalid reports a rejected captcha token.
 	ErrCaptchaInvalid = errors.New("signet: captcha verification failed")
+	// ErrCaptchaUnavailable reports a captcha provider outage.
+	ErrCaptchaUnavailable = errors.New("signet: captcha provider unavailable")
+	// ErrInvalidCaptchaEndpoint reports an unsupported captcha endpoint name.
+	ErrInvalidCaptchaEndpoint = errors.New("signet: invalid captcha endpoint")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

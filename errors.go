@@ -78,6 +78,10 @@ var (
 	ErrCaptchaRequired = core.ErrCaptchaRequired
 	// ErrCaptchaInvalid reports a rejected captcha token.
 	ErrCaptchaInvalid = core.ErrCaptchaInvalid
+	// ErrCaptchaUnavailable reports a captcha provider outage.
+	ErrCaptchaUnavailable = core.ErrCaptchaUnavailable
+	// ErrInvalidCaptchaEndpoint reports an unsupported captcha endpoint name.
+	ErrInvalidCaptchaEndpoint = core.ErrInvalidCaptchaEndpoint
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

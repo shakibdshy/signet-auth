@@ -42,8 +42,10 @@ HTTP requests supply the token in `X-Captcha-Response`. Signet passes it and the
 client IP to `CaptchaVerifier.Verify`. Go callers set `CaptchaToken` and `CaptchaRemoteIP` on the
 input struct. Verification runs *after* rate limiting and before password hashing or mail work.
 
-A missing token returns `ErrCaptchaRequired`; a rejected or failed verification returns
-`ErrCaptchaInvalid` (both `invalid_input`, 400).
+A missing token returns `ErrCaptchaRequired`; a rejected token returns `ErrCaptchaInvalid`
+(both `invalid_input`, 400). A provider outage is distinct: `ErrCaptchaUnavailable`
+(`captcha_unavailable`, 503). Only the three password endpoints can be configured; an unknown
+name is rejected at `New` with `ErrInvalidCaptchaEndpoint`.
 
 ## Audit sink
 

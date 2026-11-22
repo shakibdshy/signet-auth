@@ -19,6 +19,7 @@ Tests live in `tests/breach_test.go`, `tests/captcha_test.go`, `tests/audit_test
 | "no secrets in audit metadata" | `TestAuditEventsContainNoSecrets` |
 | "sink failure never fails the request" | `TestAuditSinkFailureDoesNotBreakAuthentication` |
 | "signed HttpOnly cookie on successful sign-in" | `TestLastMethodSetByHTTPSignIn` |
+| "each sign-in flow records the method" | `TestLastMethodForUsername`, `TestLastMethodForMagicLinkAndOTP`, `TestLastMethodForOAuthProvider`, `TestLastMethodPreservedBySecondFactor`, `TestLastMethodInJWTTokenPair` |
 | "consent can skip storing without failing sign-in" | `TestLastMethodGoResultAndConsent` |
 | "tampered cookie treated as absent" | `TestLastMethodRejectsTamperedCookie` |
 | "clear and expire" | `TestLastMethodClear`, `TestLastMethodExpires` |
@@ -35,7 +36,7 @@ Tests live in `tests/breach_test.go`, `tests/captcha_test.go`, `tests/audit_test
 | Audit events contain no credentials or tokens | `TestAuditEventsContainNoSecrets` |
 | Optional controls never break authentication | `TestAuditSinkFailureDoesNotBreakAuthentication`, `TestLastMethodGoResultAndConsent` |
 | Last method cannot be forged by the client | `TestLastMethodRejectsTamperedCookie` |
-| No new schema or required Config field | limitation verified by design: all new fields are pointers/interfaces and optional |
+| No new schema or required Config field | limitation verified by design: all new fields are nil-safe pointers, slices or interfaces |
 
 ## Security mechanisms → effect tests
 

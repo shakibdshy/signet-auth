@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 
 	"github.com/shakibdshy/signet/internal/core"
 )
@@ -31,7 +32,13 @@ func checkCaptcha(ctx context.Context, verifier core.CaptchaVerifier, endpoints 
 		return core.ErrCaptchaRequired
 	}
 	if err := verifier.Verify(ctx, token, remoteIP); err != nil {
-		return core.ErrCaptchaInvalid
+		if errors.Is(err, core.ErrCaptchaInvalid) {
+			return err
+		}
+		if err == nil {
+			return nil
+		}
+		return core.ErrCaptchaUnavailable
 	}
 	return nil
 }

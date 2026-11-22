@@ -159,9 +159,14 @@ func (s *JWTService) Exchange(ctx context.Context, in core.TokenInput) (*core.To
 		return nil, err
 	}
 	if result.TwoFactorChallenge != "" {
-		return &core.TokenPair{TwoFactorChallenge: result.TwoFactorChallenge}, nil
+		return &core.TokenPair{TwoFactorChallenge: result.TwoFactorChallenge, LastSignInMethod: result.LastSignInMethod}, nil
 	}
-	return s.Issue(ctx, result.User.ID)
+	pair, err := s.Issue(ctx, result.User.ID)
+	if err != nil {
+		return nil, err
+	}
+	pair.LastSignInMethod = result.LastSignInMethod
+	return pair, nil
 }
 
 // VerifyAccessToken validates a bearer token and returns its User.

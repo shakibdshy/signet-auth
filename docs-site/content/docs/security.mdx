@@ -70,6 +70,17 @@ attempts are throttled through the rate limiter. Challenges expire after five mi
 is inactive until a first code succeeds, and the JWT token exchange returns a challenge rather
 than tokens for enrolled Users.
 
+## Opt-in defensive controls
+
+Signet offers four opt-in controls; none changes the default authentication path.
+
+- A **Breach check** rejects passwords found in a known breach on sign-up, password change and reset. The application supplies the adapter and owns the k-anonymity call; only the first five SHA-1 hex characters leave the application.
+- A **Captcha check** runs after rate limiting on configured endpoints. The HTTP adapter reads `X-Captcha-Response` and passes the trusted-proxy-aware client IP to the verifier. An outage returns `captcha_unavailable` (503), distinct from a rejected token (`invalid_input`, 400).
+- An **Audit sink** receives a deliberate security subset of events with optional actor, Session ID and safe metadata. No password, verifier, token or code is ever included, and sink failures never fail a request.
+- **Last sign-in method** is a signed, HttpOnly cookie with a consent callback. It adds no database column, cannot be forged by the client, and can be skipped without failing sign-in.
+
+See [Defensive controls](/docs/defensive-controls) for configuration and examples.
+
 ## Key rotation and redirect patterns
 
 Signing keys can be supplied as an ordered ring for both CSRF and JWT: the first key signs and

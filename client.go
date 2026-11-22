@@ -71,6 +71,11 @@ func New(cfg Config) (*Client, error) {
 	if err := core.ValidateRedirectPatterns(cfg.AllowedRedirectPatterns); err != nil {
 		return nil, err
 	}
+	for _, name := range cfg.CaptchaEndpoints {
+		if name != "signup" && name != "signin" && name != "send-password-reset" {
+			return nil, ErrInvalidCaptchaEndpoint
+		}
+	}
 	if cfg.TOTPStore != nil && len(cfg.TOTPKey) != 32 {
 		return nil, ErrTOTPNotConfigured
 	}
@@ -601,7 +606,7 @@ func (c *Client) SetLastMethodCookie(w http.ResponseWriter, method string) {
 }
 
 // LastSignInMethod reads the signed Last sign-in method from a request.
-func (c *Client) LastSignInMethod(r *http.Request) string {
+func (c *Client) LastSignInMethod(_ context.Context, r *http.Request) string {
 	if c.lastMethod == nil {
 		return ""
 	}
@@ -632,8 +637,10 @@ func (a httpAdapter) ServeCSRFToken(w http.ResponseWriter, r *http.Request) { a.
 func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (string, error) {
 	return a.cookies.SetSessionAndCSRF(w, token)
 }
-func (a httpAdapter) CookieName() string                      { return a.cookies.Name() }
-func (a httpAdapter) LastSignInMethod(r *http.Request) string { return a.Client.LastSignInMethod(r) }
+func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+func (a httpAdapter) LastSignInMethod(r *http.Request) string {
+	return a.Client.LastSignInMethod(r.Context(), r)
+}
 func (a httpAdapter) SetLastMethodCookie(w http.ResponseWriter, method string) {
 	a.Client.SetLastMethodCookie(w, method)
 }
