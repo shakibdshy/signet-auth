@@ -1,0 +1,90 @@
+---
+title: Second factor with TOTP
+description: TOTP enrollment, Backup codes, Two-factor challenges and the JWT exchange.
+---
+
+Second factor is opt-in. It needs an application-supplied `TOTPStore` and a dedicated 32-byte
+`TOTPKey`; without either, `New` rejects the configuration with `ErrTOTPNotConfigured` and the
+Go API returns `ErrTOTPNotConfigured` for 2FA operations. `TOTPConfig` sets the code parameters.
+
+```go
+cfg.TOTPStore = myStore // implements Get, Put and Delete keyed by User ID
+cfg.TOTPKey = key       // exactly 32 bytes, distinct from CSRFKey
+cfg.TOTP = &signet.TOTPConfig{Digits: 6, Period: 30, Window: 1}
+```
+
+The secret is encrypted at rest with the dedicated key. Backup codes are stored only as digests.
+`TokenTwoFactor` is the single-use Token kind used for challenges.
+
+## Enrollment
+
+`EnableTwoFactor(ctx, EnableTwoFactorInput) (*EnableTwoFactorResult, error)` requires the current
+password. It returns a `totp_uri` for authenticator apps and ten `backup_codes` formatted
+`XXXXX-XXXXX`. Enrollment stays pending until the first successful TOTP code.
+
+```go
+enabled, err := auth.EnableTwoFactor(ctx, signet.EnableTwoFactorInput{
+    UserID: userID, Password: "correct horse",
+})
+```
+
+## Signing in with a Second factor
+
+Once enrollment exists, a password-only sign-in returns a `TwoFactorChallenge` instead of a
+Session. Exchange it with `VerifyTwoFactor(ctx, VerifyTwoFactorInput) (*SignInResult, error)`:
+
+```go
+first, err := auth.SignIn(ctx, signet.SignInInput{Email: "ada@example.com", Password: "correct horse"})
+if first.TwoFactorChallenge != "" {
+    result, err := auth.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{
+        Challenge: first.TwoFactorChallenge, Code: "123456",
+    })
+}
+```
+
+Challenges expire after five minutes and are single-use; replay returns `ErrTokenInvalid`. Wrong
+codes return `ErrTOTPInvalid` (`invalid_code`, 401). Five failed attempts per challenge are
+throttled through the existing rate limiter.
+
+A pending enrollment is confirmed by verifying its first TOTP code. Backup codes work only after
+confirmation, are single-use, and a used code is removed. Wrong TOTP and Backup codes both return
+`ErrTOTPInvalid`.
+
+## Backup codes and disabling
+
+```go
+fresh, err := auth.RegenerateBackupCodes(ctx, signet.RegenerateBackupCodesInput{
+    UserID: userID, Password: "correct horse",
+})
+err = auth.DisableTwoFactor(ctx, signet.DisableTwoFactorInput{
+    UserID: userID, Password: "correct horse",
+})
+```
+
+Regeneration requires the current password and an active enrollment; a pending enrollment
+returns `ErrTOTPNotEnabled`. Regeneration replaces all ten codes. Disabling removes the TOTP state
+immediately. Both require a Session within `Accounts.FreshWindow` when called over HTTP.
+
+## JWT exchange
+
+The `/token` endpoint cannot bypass Second factor. A password-only exchange for an enrolled User
+returns a `TokenPair` with only `two_factor_challenge` and no tokens. Post that challenge and a
+`code` back through `TokenInput` to receive the real pair:
+
+```go
+pair, _ := auth.ExchangeToken(ctx, signet.TokenInput{Email: email, Password: password})
+final, err := auth.ExchangeToken(ctx, signet.TokenInput{
+    Challenge: pair.TwoFactorChallenge, Code: code,
+})
+```
+
+## HTTP endpoints
+
+| Endpoint | Method | Auth | Purpose |
+| --- | --- | --- | --- |
+| `enable-two-factor` | POST | yes | Start enrollment; returns URI and Backup codes. |
+| `verify-two-factor` | POST | anonymous | Exchange challenge and code for a Session. |
+| `disable-two-factor` | POST | yes | Remove enrollment. |
+| `regenerate-backup-codes` | POST | yes | Replace all Backup codes. |
+
+See [ADR-0009](https://github.com/shakibdshy/signet/blob/main/docs/adr/0009-totp-state-requires-an-optional-store.md) and [Errors](/docs/errors).

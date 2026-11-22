@@ -29,6 +29,13 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrInvalidJWTKey | 500 internal_error | Key type does not match the algorithm. |
 | ErrInvalidKeyRing | 500 internal_error | A key ring is empty, mixed or contains duplicate keys. |
 | ErrInvalidRedirectPattern | 500 internal_error | A redirect pattern is not https, lacks two host labels, or misplaces the wildcard. |
+| ErrInvalidUsername | 400 invalid_input | A Username is malformed, too short, too long or reserved. |
+| ErrUsernameTaken | 400 username_taken | Another User already owns the Username. |
+| ErrLastAccount | 400 last_account | Unlinking would leave the User without any Account. |
+| ErrTOTPNotEnabled | 400 two_factor_not_enabled | The User has no active Second factor enrollment. |
+| ErrTOTPInvalid | 401 invalid_code | A TOTP code or Backup code was invalid or already used. |
+| ErrTwoFactorRequired | 401 two_factor_required | Sign-in needs a Second factor challenge. |
+| ErrTOTPNotConfigured | 404 not_found | A TOTP operation was called without both a TOTPStore and a 32-byte TOTPKey. |
 
 ## Credentials and email
 

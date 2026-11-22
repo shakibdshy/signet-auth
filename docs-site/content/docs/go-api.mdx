@@ -45,6 +45,12 @@ only `github.com/shakibdshy/signet`.
 | `LinkOAuthAccount(ctx, LinkOAuthAccountInput) error` | Consume a link Token for an authenticated User. |
 | `ExchangeToken(ctx, TokenInput) (*TokenPair, error)` | Exchange credentials or a Refresh token for a TokenPair. |
 | `VerifyAccessToken(ctx, raw string) (*User, error)` | Validate an Access token and load its User. |
+| `ListAccounts(ctx, ListAccountsInput) (*ListAccountsResult, error)` | List safe Account fields for a User. |
+| `UnlinkAccount(ctx, UnlinkAccountInput) error` | Unlink one guarded Account. |
+| `EnableTwoFactor(ctx, EnableTwoFactorInput) (*EnableTwoFactorResult, error)` | Start TOTP enrollment. |
+| `VerifyTwoFactor(ctx, VerifyTwoFactorInput) (*SignInResult, error)` | Exchange a challenge and code for a Session. |
+| `DisableTwoFactor(ctx, DisableTwoFactorInput) error` | Remove Second factor enrollment. |
+| `RegenerateBackupCodes(ctx, RegenerateBackupCodesInput) (*RegenerateBackupCodesResult, error)` | Replace all Backup codes. |
 | `ListSessions(ctx, ListSessionsInput) (*ListSessionsResult, error)` | List safe Session fields for a User. |
 | `RevokeSession(ctx, RevokeSessionInput) error` | Revoke one Session; unknown IDs are a no-op. |
 | `RevokeAllSessions(ctx, RevokeAllSessionsInput) error` | Revoke every Session of a User. |

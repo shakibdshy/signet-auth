@@ -5,6 +5,105 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/accounts": {
+      "get": {
+        "operationId": "accounts_get",
+        "summary": "GET /accounts",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "accounts": {
+                      "items": {
+                        "$ref": "#/components/schemas/AccountInfo"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "accounts"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/change-email": {
       "post": {
         "operationId": "change-email_post",
@@ -39,7 +138,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -145,7 +244,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -246,7 +345,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -342,7 +441,231 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/disable-two-factor": {
+      "post": {
+        "operationId": "disable-two-factor_post",
+        "summary": "POST /disable-two-factor",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableTwoFactorInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "invalid_input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enable-two-factor": {
+      "post": {
+        "operationId": "enable-two-factor_post",
+        "summary": "POST /enable-two-factor",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnableTwoFactorInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "backup_codes": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "totp_uri": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "totp_uri",
+                    "backup_codes"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -441,7 +764,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -539,7 +862,126 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/regenerate-backup-codes": {
+      "post": {
+        "operationId": "regenerate-backup-codes_post",
+        "summary": "POST /regenerate-backup-codes",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateBackupCodesInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "backup_codes": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "backup_codes"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -635,7 +1077,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -736,7 +1178,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -827,7 +1269,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -918,7 +1360,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1019,7 +1461,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1120,7 +1562,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1216,7 +1658,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1312,7 +1754,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1414,7 +1856,7 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1528,7 +1970,7 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1629,7 +2071,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1735,7 +2177,7 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1833,7 +2275,108 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/unlink-account": {
+      "post": {
+        "operationId": "unlink-account_post",
+        "summary": "POST /unlink-account",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlinkAccountInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -1934,7 +2477,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -2035,7 +2578,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -2153,7 +2696,7 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -2263,7 +2806,117 @@
             }
           },
           "400": {
-            "description": "invalid_request",
+            "description": "invalid_input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify-two-factor": {
+      "post": {
+        "operationId": "verify-two-factor_post",
+        "summary": "POST /verify-two-factor",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyTwoFactorInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "session_token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "session_token"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input",
             "content": {
               "application/json": {
                 "schema": {
@@ -2338,6 +2991,38 @@
   },
   "components": {
     "schemas": {
+      "AccountInfo": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "provider_user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "provider_user_id",
+          "email",
+          "email_verified",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "ApiError": {
         "properties": {
           "error": {
@@ -2353,12 +3038,16 @@
               "invalid_link",
               "invalid_request",
               "invalid_token",
+              "last_account",
               "link_already_used",
               "not_found",
               "oauth_account_conflict",
               "oauth_email_not_verified",
               "rate_limited",
-              "unauthorized"
+              "two_factor_not_enabled",
+              "two_factor_required",
+              "unauthorized",
+              "username_taken"
             ],
             "type": "string"
           },
@@ -2413,6 +3102,28 @@
         ],
         "type": "object"
       },
+      "DisableTwoFactorInput": {
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
+      "EnableTwoFactorInput": {
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
       "OAuthStartInput": {
         "properties": {
           "provider": {
@@ -2436,6 +3147,17 @@
         },
         "required": [
           "url"
+        ],
+        "type": "object"
+      },
+      "RegenerateBackupCodesInput": {
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
         ],
         "type": "object"
       },
@@ -2550,10 +3272,14 @@
           },
           "password": {
             "type": "string"
+          },
+          "username": {
+            "type": "string"
           }
         },
         "required": [
           "email",
+          "username",
           "password"
         ],
         "type": "object"
@@ -2579,17 +3305,27 @@
           },
           "password": {
             "type": "string"
+          },
+          "username": {
+            "type": "string"
           }
         },
         "required": [
           "email",
           "password",
-          "name"
+          "name",
+          "username"
         ],
         "type": "object"
       },
       "TokenInput": {
         "properties": {
+          "challenge": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
           "email": {
             "type": "string"
           },
@@ -2612,12 +3348,26 @@
           },
           "refresh_token": {
             "type": "string"
+          },
+          "two_factor_challenge": {
+            "type": "string"
           }
         },
         "required": [
           "access_token",
           "refresh_token",
           "expires_in"
+        ],
+        "type": "object"
+      },
+      "UnlinkAccountInput": {
+        "properties": {
+          "account_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
         ],
         "type": "object"
       },
@@ -2691,6 +3441,21 @@
         },
         "required": [
           "email",
+          "code"
+        ],
+        "type": "object"
+      },
+      "VerifyTwoFactorInput": {
+        "properties": {
+          "challenge": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge",
           "code"
         ],
         "type": "object"

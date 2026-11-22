@@ -3,7 +3,7 @@ package tests
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // G505: TOTP requires HMAC-SHA1.
 	"encoding/base32"
 	"encoding/binary"
 	"errors"
@@ -34,17 +34,17 @@ func (s *fakeTOTPStore) Get(_ context.Context, userID string) (*signet.TOTPState
 	if !ok {
 		return nil, signet.ErrNotFound
 	}
-	copy := *state
-	copy.BackupCodes = append([]string(nil), state.BackupCodes...)
-	return &copy, nil
+	clone := *state
+	clone.BackupCodes = append([]string(nil), state.BackupCodes...)
+	return &clone, nil
 }
 
 func (s *fakeTOTPStore) Put(_ context.Context, userID string, state *signet.TOTPState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	copy := *state
-	copy.BackupCodes = append([]string(nil), state.BackupCodes...)
-	s.states[userID] = &copy
+	clone := *state
+	clone.BackupCodes = append([]string(nil), state.BackupCodes...)
+	s.states[userID] = &clone
 	return nil
 }
 
@@ -55,7 +55,7 @@ func (s *fakeTOTPStore) Delete(_ context.Context, userID string) error {
 	return nil
 }
 
-func twoFactorClient(t *testing.T, configure func(*signet.Config)) (*signet.Client, *testutil.Store, *fakeTOTPStore, string) {
+func twoFactorClient(t *testing.T, configure func(*signet.Config)) (*signet.Client, *fakeTOTPStore, string) {
 	t.Helper()
 	store := testutil.NewStore()
 	totpStore := newFakeTOTPStore()
@@ -79,7 +79,7 @@ func twoFactorClient(t *testing.T, configure func(*signet.Config)) (*signet.Clie
 	if err != nil {
 		t.Fatalf("SignUp: %v", err)
 	}
-	return client, store, totpStore, signUp.User.ID
+	return client, totpStore, signUp.User.ID
 }
 
 func totpCode(t *testing.T, uri string, at time.Time) string {
@@ -93,7 +93,7 @@ func totpCode(t *testing.T, uri string, at time.Time) string {
 	if err != nil {
 		t.Fatalf("decode secret: %v", err)
 	}
-	counter := uint64(at.Unix() / 30)
+	counter := uint64(at.Unix() / 30) //nolint:gosec // TOTP counters are non-negative in practice.
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, counter)
 	mac := hmac.New(sha1.New, key)
@@ -117,7 +117,7 @@ func enableFactor(t *testing.T, client *signet.Client, userID string) *signet.En
 }
 
 func TestTwoFactorEnableRequiresConfirmation(t *testing.T) {
-	client, _, totpStore, userID := twoFactorClient(t, nil)
+	client, totpStore, userID := twoFactorClient(t, nil)
 	ctx := context.Background()
 	enableFactor(t, client, userID)
 	state, err := totpStore.Get(ctx, userID)
@@ -134,7 +134,7 @@ func TestTwoFactorEnableRequiresConfirmation(t *testing.T) {
 
 func TestTwoFactorChallengeAndVerification(t *testing.T) {
 	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
-	client, _, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
 	enabled := enableFactor(t, client, userID)
 	code := totpCode(t, enabled.TOTPURI, clock.At)
@@ -168,7 +168,7 @@ func TestTwoFactorChallengeAndVerification(t *testing.T) {
 
 func TestTwoFactorBackupCodesAreSingleUse(t *testing.T) {
 	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
-	client, _, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
 	enabled := enableFactor(t, client, userID)
 	first, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
@@ -195,7 +195,7 @@ func TestTwoFactorBackupCodesAreSingleUse(t *testing.T) {
 
 func TestTwoFactorWrongCodeAndDisable(t *testing.T) {
 	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
-	client, _, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
 	enabled := enableFactor(t, client, userID)
 	first, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
@@ -220,7 +220,7 @@ func TestTwoFactorWrongCodeAndDisable(t *testing.T) {
 
 func TestJWTTokenExchangeRequiresSecondFactor(t *testing.T) {
 	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
-	client, _, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
 	enabled := enableFactor(t, client, userID)
 	first, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})

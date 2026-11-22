@@ -6,7 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // G505: TOTP requires HMAC-SHA1.
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/base64"
@@ -87,7 +87,7 @@ func totpAt(secret string, at time.Time, digits, period int) string {
 	if err != nil {
 		return ""
 	}
-	counter := uint64(at.Unix() / int64(period))
+	counter := uint64(at.Unix() / int64(period)) //nolint:gosec // TOTP counters are non-negative in practice.
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, counter)
 	mac := hmac.New(sha1.New, key)

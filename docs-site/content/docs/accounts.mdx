@@ -1,0 +1,70 @@
+---
+title: Username and account management
+description: Username sign-in, safe account listing and guarded unlinking.
+---
+
+A Username is a human-chosen identifier represented as an Account, so it requires no database
+migration. Account listing and unlinking use the existing Account Store methods.
+
+## Username sign-in
+
+Set `Config.Username` (`UsernameConfig`) to control normalization and validation. The default
+normalizer lowercases the name; the default validator accepts `[a-z0-9_.]` with 3–30 characters.
+Reserved names are optional and checked after normalization.
+
+```go
+cfg.Username = &signet.UsernameConfig{
+    MinLength: 3,
+    MaxLength: 30,
+    Reserved:  []string{"admin", "root"},
+}
+```
+
+Pass `Username` at sign-up and use it instead of email at sign-in:
+
+```go
+_, err := auth.SignUp(ctx, signet.SignUpInput{
+    Email: "ada@example.com", Password: "correct horse", Username: "Ada.Lovelace",
+})
+result, err := auth.SignIn(ctx, signet.SignInInput{
+    Username: "ADA.LOVELACE", Password: "correct horse",
+})
+```
+
+An invalid name returns `ErrInvalidUsername` (`invalid_input`), and a name already owned by
+another User returns `ErrUsernameTaken` (`username_taken`, 400). Failed sign-in is generic — a
+wrong password and an unknown Username both return `ErrInvalidCredentials`.
+
+## Listing and unlinking
+
+`ListAccounts(ctx, ListAccountsInput) (*ListAccountsResult, error)` returns safe `AccountInfo`
+fields only: ID, provider, provider user ID, email, verification flag and creation time. No
+password verifier or token material is ever returned.
+
+```go
+result, err := auth.ListAccounts(ctx, signet.ListAccountsInput{UserID: userID})
+```
+
+`UnlinkAccount(ctx, UnlinkAccountInput) error` requires a Session created within
+`Accounts.FreshWindow` (default five minutes). It rejects foreign Account IDs with `ErrNotFound`
+and refuses to remove the last Account with `ErrLastAccount` (`last_account`, 400), because a
+Second factor alone cannot sign in.
+
+```go
+err := auth.UnlinkAccount(ctx, signet.UnlinkAccountInput{
+    UserID: userID, AccountID: accountID, SessionToken: sessionToken,
+})
+```
+
+Programmatic callers supply the raw Session token; the HTTP adapter derives it from the session
+cookie. A successful unlink flushes any configured Session cache. Changing a Username is
+unlink-plus-add guarded by the same freshness window.
+
+## HTTP endpoints
+
+| Endpoint | Method | Auth | Purpose |
+| --- | --- | --- | --- |
+| `accounts` | GET | yes | List safe Account fields. |
+| `unlink-account` | POST | yes | Unlink one Account; requires CSRF and a fresh Session. |
+
+See [HTTP API](/docs/http-api) and [ADR-0010](https://github.com/shakibdshy/signet/blob/main/docs/adr/0010-username-is-an-account.md).

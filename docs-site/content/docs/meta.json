@@ -9,6 +9,8 @@
     "jwt",
     "frontend-client",
     "complete-example",
+    "accounts",
+    "two-factor",
     "passwordless",
     "magic-link",
     "email-otp",
