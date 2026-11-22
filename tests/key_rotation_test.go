@@ -2,7 +2,13 @@ package tests
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/shakibdshy/signet"
@@ -63,6 +69,66 @@ func TestJWTRingSignsWithFirstAndVerifiesOlderKey(t *testing.T) {
 	user, err := verifier.VerifyAccessToken(ctx, pair.AccessToken)
 	if err != nil || user.Email != "user@example.com" {
 		t.Fatalf("older key did not verify token: %+v, %v", user, err)
+	}
+}
+
+func TestJWKSHandlerPublishesAsymmetricKeysOnly(t *testing.T) {
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey: %v", err)
+	}
+	secondRSA, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("second rsa.GenerateKey: %v", err)
+	}
+	store := testutil.NewStore()
+	client := ringJWTClient(t, store, func(cfg *signet.JWTConfig) {
+		cfg.Algorithm = "RS256"
+		cfg.Key = nil
+		cfg.Keys = []any{rsaKey, secondRSA}
+	})
+	rr := httptest.NewRecorder()
+	client.JWKSHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/jwks.json", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+	var document struct {
+		Keys []map[string]any `json:"keys"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &document); err != nil {
+		t.Fatalf("decode JWKS: %v", err)
+	}
+	if len(document.Keys) != 2 {
+		t.Fatalf("keys = %+v, want 2", document.Keys)
+	}
+	for _, key := range document.Keys {
+		if key["kid"] == "" || key["alg"] == nil || key["use"] != "sig" {
+			t.Fatalf("incomplete JWK: %+v", key)
+		}
+		for _, privateField := range []string{"d", "p", "q", "dp", "dq", "qi"} {
+			if _, present := key[privateField]; present {
+				t.Fatalf("private field %q in JWK: %+v", privateField, key)
+			}
+		}
+	}
+}
+
+func TestJWKSHandlerEmptyForSymmetricKeys(t *testing.T) {
+	client := ringJWTClient(t, testutil.NewStore(), func(*signet.JWTConfig) {})
+	rr := httptest.NewRecorder()
+	client.JWKSHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/jwks.json", nil))
+	if rr.Code != http.StatusOK || strings.TrimSpace(rr.Body.String()) != `{"keys":[]}` {
+		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestJWKSPathIsNotMountedImplicitly(t *testing.T) {
+	client := ringJWTClient(t, testutil.NewStore(), func(*signet.JWTConfig) {})
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/jwks.json", nil)
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rr.Code)
 	}
 }
 

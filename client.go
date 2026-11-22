@@ -37,6 +37,7 @@ type Client struct {
 	cfg           Config
 	dummyVerifier string
 	jwtService    *token.JWTService
+	jwtKeys       []any
 	csrf          *csrf.Guard
 	cookies       *httpapi.Cookies
 	tokens        *token.Service
@@ -147,6 +148,7 @@ func New(cfg Config) (*Client, error) {
 		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache),
 	}
 	if jwtCfg != nil {
+		c.jwtKeys = jwtCfg.VerifyKeys
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
 			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
@@ -408,6 +410,12 @@ func (c *Client) VerifyAccessToken(ctx context.Context, raw string) (*User, erro
 		return nil, ErrJWTDisabled
 	}
 	return c.jwtService.VerifyAccessToken(ctx, raw)
+}
+
+// JWKSHandler returns an opt-in handler publishing the public half of the
+// configured asymmetric JWT keys. It is not mounted by Handler().
+func (c *Client) JWKSHandler() http.Handler {
+	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
 // ListSessions returns the Sessions belonging to a User.
