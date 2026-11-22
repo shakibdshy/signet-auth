@@ -83,13 +83,14 @@ func VerificationKeys(cfg *core.JWTConfig) []any {
 // JWTDependencies holds the resolved configuration and collaborators the JWT
 // service needs.
 type JWTDependencies struct {
-	Config         *core.JWTConfig
-	Store          core.Store
-	Clock          core.Clock
-	Limiter        core.RateLimiter
-	Logger         *slog.Logger
-	SignIn         func(context.Context, core.SignInInput) (*core.SignInResult, error)
-	RevokeSessions func(context.Context, string) error
+	Config          *core.JWTConfig
+	Store           core.Store
+	Clock           core.Clock
+	Limiter         core.RateLimiter
+	Logger          *slog.Logger
+	SignIn          func(context.Context, core.SignInInput) (*core.SignInResult, error)
+	RevokeSessions  func(context.Context, string) error
+	VerifyTwoFactor func(context.Context, core.VerifyTwoFactorInput) (*core.SignInResult, error)
 }
 
 // JWTService implements Signet's optional bearer-token mode.
@@ -101,6 +102,11 @@ type JWTService struct {
 // NewJWT returns a JWTService.
 func NewJWT(deps JWTDependencies) *JWTService {
 	return &JWTService{deps: deps, verifyKeys: VerificationKeys(deps.Config)}
+}
+
+// SetVerifyTwoFactor wires the Second factor callback after the auth service exists.
+func (s *JWTService) SetVerifyTwoFactor(fn func(context.Context, core.VerifyTwoFactorInput) (*core.SignInResult, error)) {
+	s.deps.VerifyTwoFactor = fn
 }
 
 func (s *JWTService) allow(ctx context.Context, endpoint, key string) error {
@@ -132,11 +138,26 @@ func (s *JWTService) Exchange(ctx context.Context, in core.TokenInput) (*core.To
 		}
 		return s.refreshTokens(ctx, in.RefreshToken)
 	}
+	if in.Challenge != "" || in.Code != "" {
+		if s.deps.VerifyTwoFactor == nil || in.Challenge == "" || in.Code == "" {
+			return nil, core.ErrTokenInvalid
+		}
+		result, err := s.deps.VerifyTwoFactor(ctx, core.VerifyTwoFactorInput{
+			Challenge: in.Challenge, Code: in.Code, RateLimitKey: in.RateLimitKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return s.Issue(ctx, result.User.ID)
+	}
 	result, err := s.deps.SignIn(ctx, core.SignInInput{
 		Email: in.Email, Password: in.Password, RateLimitKey: in.RateLimitKey,
 	})
 	if err != nil {
 		return nil, err
+	}
+	if result.TwoFactorChallenge != "" {
+		return &core.TokenPair{TwoFactorChallenge: result.TwoFactorChallenge}, nil
 	}
 	return s.Issue(ctx, result.User.ID)
 }

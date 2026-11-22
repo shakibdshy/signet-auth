@@ -171,6 +171,24 @@ type SignInInput = core.SignInInput
 // SignInResult is the outcome of a successful sign-in.
 type SignInResult = core.SignInResult
 
+// EnableTwoFactorInput enables Second factor enrollment.
+type EnableTwoFactorInput = core.EnableTwoFactorInput
+
+// EnableTwoFactorResult carries a provisioning URI and Backup codes.
+type EnableTwoFactorResult = core.EnableTwoFactorResult
+
+// VerifyTwoFactorInput exchanges a Two-factor challenge for a Session.
+type VerifyTwoFactorInput = core.VerifyTwoFactorInput
+
+// DisableTwoFactorInput removes a Second factor enrollment.
+type DisableTwoFactorInput = core.DisableTwoFactorInput
+
+// RegenerateBackupCodesInput replaces all Backup codes.
+type RegenerateBackupCodesInput = core.RegenerateBackupCodesInput
+
+// RegenerateBackupCodesResult carries fresh Backup codes.
+type RegenerateBackupCodesResult = core.RegenerateBackupCodesResult
+
 // SendMagicLinkInput requests a magic-link sign-in email.
 type SendMagicLinkInput = core.SendMagicLinkInput
 

@@ -67,6 +67,9 @@ func New(cfg Config) (*Client, error) {
 	if err := core.ValidateRedirectPatterns(cfg.AllowedRedirectPatterns); err != nil {
 		return nil, err
 	}
+	if cfg.TOTPStore != nil && len(cfg.TOTPKey) != 32 {
+		return nil, ErrTOTPNotConfigured
+	}
 	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
 		return nil, ErrInvalidPasswordlessConfig
 	}
@@ -174,8 +177,12 @@ func New(cfg Config) (*Client, error) {
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
 		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
 		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
-		FreshWindow: cfg.Accounts.FreshWindow,
+		FreshWindow: cfg.Accounts.FreshWindow, Tokens: c.tokens,
+		TOTPStore: cfg.TOTPStore, TOTPKey: cfg.TOTPKey, TOTP: cfg.TOTP, AppURL: cfg.AppURL,
 	})
+	if c.jwtService != nil {
+		c.jwtService.SetVerifyTwoFactor(c.auth.VerifyTwoFactor)
+	}
 	return c, nil
 }
 
@@ -288,6 +295,26 @@ func (c *Client) SendMagicLink(ctx context.Context, in SendMagicLinkInput) error
 // VerifyMagicLink consumes a magic-link proof and creates a Session.
 func (c *Client) VerifyMagicLink(ctx context.Context, in VerifyMagicLinkInput) (*SignInResult, error) {
 	return c.verification.VerifyMagicLink(ctx, in)
+}
+
+// EnableTwoFactor starts Second factor enrollment.
+func (c *Client) EnableTwoFactor(ctx context.Context, in EnableTwoFactorInput) (*EnableTwoFactorResult, error) {
+	return c.auth.EnableTwoFactor(ctx, in)
+}
+
+// VerifyTwoFactor exchanges a Two-factor challenge for a Session.
+func (c *Client) VerifyTwoFactor(ctx context.Context, in VerifyTwoFactorInput) (*SignInResult, error) {
+	return c.auth.VerifyTwoFactor(ctx, in)
+}
+
+// DisableTwoFactor removes a User's Second factor enrollment.
+func (c *Client) DisableTwoFactor(ctx context.Context, in DisableTwoFactorInput) error {
+	return c.auth.DisableTwoFactor(ctx, in)
+}
+
+// RegenerateBackupCodes replaces all Backup codes.
+func (c *Client) RegenerateBackupCodes(ctx context.Context, in RegenerateBackupCodesInput) (*RegenerateBackupCodesResult, error) {
+	return c.auth.RegenerateBackupCodes(ctx, in)
 }
 
 // SendEmailOTP emails a single-use six-digit sign-in code.

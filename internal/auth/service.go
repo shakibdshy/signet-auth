@@ -10,6 +10,7 @@ import (
 
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
+	"github.com/shakibdshy/signet/internal/token"
 )
 
 const credentialProvider = "credential"
@@ -40,6 +41,11 @@ type Dependencies struct {
 	FlushSessions            func(context.Context)
 	IsSessionFresh           func(context.Context, string, time.Duration) (bool, error)
 	FreshWindow              time.Duration
+	Tokens                   *token.Service
+	TOTPStore                core.TOTPStore
+	TOTPKey                  []byte
+	TOTP                     *core.TOTPConfig
+	AppURL                   string
 	DummyVerifier            string
 }
 
@@ -224,6 +230,20 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 		return nil, core.ErrEmailNotVerified
 	}
 	s.rehashIfNeeded(ctx, account, in.Password, user.ID)
+	if s.deps.TOTPStore != nil {
+		_, stateErr := s.deps.TOTPStore.Get(ctx, user.ID)
+		if stateErr == nil {
+			challenge, _, issueErr := s.deps.Tokens.Issue(ctx, user.ID, core.TokenTwoFactor, challengeTTL)
+			if issueErr != nil {
+				return nil, issueErr
+			}
+			s.logInfo("two_factor_challenge_issued", "user_id", user.ID)
+			return &core.SignInResult{User: user, TwoFactorChallenge: challenge}, nil
+		}
+		if stateErr != nil && !errors.Is(stateErr, core.ErrNotFound) {
+			return nil, stateErr
+		}
+	}
 	sessionToken, err := s.deps.CreateSession(ctx, user.ID)
 	if err != nil {
 		return nil, err

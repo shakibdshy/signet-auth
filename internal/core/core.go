@@ -492,6 +492,45 @@ type UnlinkAccountInput struct {
 	RateLimitKey string `json:"-"`
 }
 
+// EnableTwoFactorInput enables Second factor enrollment.
+type EnableTwoFactorInput struct {
+	UserID       string `json:"-"`
+	Password     string `json:"password"`
+	RateLimitKey string `json:"-"`
+}
+
+// EnableTwoFactorResult carries a provisioning URI and the initial Backup codes.
+type EnableTwoFactorResult struct {
+	TOTPURI     string   `json:"totp_uri"`
+	BackupCodes []string `json:"backup_codes"`
+}
+
+// VerifyTwoFactorInput exchanges a Two-factor challenge for a Session.
+type VerifyTwoFactorInput struct {
+	Challenge    string `json:"challenge"`
+	Code         string `json:"code"`
+	RateLimitKey string `json:"-"`
+}
+
+// DisableTwoFactorInput removes a User's Second factor enrollment.
+type DisableTwoFactorInput struct {
+	UserID       string `json:"-"`
+	Password     string `json:"password"`
+	RateLimitKey string `json:"-"`
+}
+
+// RegenerateBackupCodesInput replaces all Backup codes.
+type RegenerateBackupCodesInput struct {
+	UserID       string `json:"-"`
+	Password     string `json:"password"`
+	RateLimitKey string `json:"-"`
+}
+
+// RegenerateBackupCodesResult carries a fresh set of Backup codes.
+type RegenerateBackupCodesResult struct {
+	BackupCodes []string `json:"backup_codes"`
+}
+
 // SendMagicLinkInput requests a magic-link sign-in email.
 type SendMagicLinkInput struct {
 	Email        string `json:"email"`
@@ -604,14 +643,17 @@ type TokenInput struct {
 	Email        string `json:"email"`
 	Password     string `json:"password"`
 	RefreshToken string `json:"refresh_token"`
+	Challenge    string `json:"challenge"`
+	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
 }
 
 // TokenPair is the result of a token exchange.
 type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
+	AccessToken        string `json:"access_token"`
+	RefreshToken       string `json:"refresh_token"`
+	ExpiresIn          int64  `json:"expires_in"`
+	TwoFactorChallenge string `json:"two_factor_challenge,omitempty"`
 }
 
 // OAuthStartInput selects a provider and redirect target.

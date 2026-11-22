@@ -104,6 +104,27 @@ func ContractFor() Contract {
 			{Name: "unlink-account", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.UnlinkAccountInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "enable-two-factor", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.EnableTwoFactorInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					strField("totp_uri"), typeField("backup_codes", []string{}),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "verify-two-factor", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.VerifyTwoFactorInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					user, strField("session_token"),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "disable-two-factor", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.DisableTwoFactorInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "regenerate-backup-codes", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.RegenerateBackupCodesInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					typeField("backup_codes", []string{}),
+				}}, Status: http.StatusOK,
+			}}},
 			{Name: "send-magic-link", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SendMagicLinkInput{}), Status: http.StatusOK,
 			}}},
@@ -187,7 +208,7 @@ func ContractFor() Contract {
 			}}},
 		},
 		OptionalFields: map[string][]string{
-			"TokenInput":         {"email", "password", "refresh_token"},
+			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
 			"SendMagicLinkInput": {"name", "callback_url"},
 			"SendEmailOTPInput":  {"name"},
 		},
