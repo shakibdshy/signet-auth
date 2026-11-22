@@ -72,6 +72,12 @@ var (
 	ErrTwoFactorRequired = core.ErrTwoFactorRequired
 	// ErrTOTPNotConfigured reports a Second factor operation without configuration.
 	ErrTOTPNotConfigured = core.ErrTOTPNotConfigured
+	// ErrPasswordCompromised reports a password found in a known breach.
+	ErrPasswordCompromised = core.ErrPasswordCompromised
+	// ErrCaptchaRequired reports a missing captcha token.
+	ErrCaptchaRequired = core.ErrCaptchaRequired
+	// ErrCaptchaInvalid reports a rejected captcha token.
+	ErrCaptchaInvalid = core.ErrCaptchaInvalid
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

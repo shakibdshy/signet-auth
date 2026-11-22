@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/csrf"
@@ -167,7 +168,7 @@ func New(cfg Config) (*Client, error) {
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		RedirectPatterns: cfg.AllowedRedirectPatterns,
 		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
-		FlushSessions: c.sessions.Flush,
+		FlushSessions: c.sessions.Flush, BreachChecker: cfg.BreachChecker,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
@@ -179,6 +180,7 @@ func New(cfg Config) (*Client, error) {
 		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
 		FreshWindow: cfg.Accounts.FreshWindow, Tokens: c.tokens,
 		TOTPStore: cfg.TOTPStore, TOTPKey: cfg.TOTPKey, TOTP: cfg.TOTP, AppURL: cfg.AppURL,
+		BreachChecker: cfg.BreachChecker,
 	})
 	if c.jwtService != nil {
 		c.jwtService.SetVerifyTwoFactor(c.auth.VerifyTwoFactor)
@@ -232,6 +234,14 @@ func withDefaults(cfg Config) Config {
 		cfg.Accounts = defaults.Accounts
 	} else if cfg.Accounts.FreshWindow <= 0 {
 		cfg.Accounts.FreshWindow = defaults.Accounts.FreshWindow
+	}
+	if cfg.LastSignInMethod != nil {
+		if cfg.LastSignInMethod.TTL <= 0 {
+			cfg.LastSignInMethod.TTL = 30 * 24 * time.Hour
+		}
+		if cfg.LastSignInMethod.CookieName == "" {
+			cfg.LastSignInMethod.CookieName = "signet_last_method"
+		}
 	}
 	if cfg.TOTP == nil {
 		cfg.TOTP = defaults.TOTP

@@ -31,6 +31,7 @@ type Dependencies struct {
 	Logger                   *slog.Logger
 	Password                 core.PasswordConfig
 	Username                 *core.UsernameConfig
+	BreachChecker            core.BreachChecker
 	RequireVerifiedEmail     bool
 	SendVerificationOnSignUp bool
 	OnSignUp                 func(context.Context, *core.User)
@@ -144,6 +145,9 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 		}
 	}
 
+	if err := checkBreach(ctx, s.deps.BreachChecker, in.Password); err != nil {
+		return nil, err
+	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.Password)
 	if err != nil {
 		return nil, err

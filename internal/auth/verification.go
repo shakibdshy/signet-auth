@@ -37,6 +37,7 @@ type VerificationDependencies struct {
 	CreateSession    func(context.Context, string) (string, error)
 	RevokeSessions   func(context.Context, string) error
 	FlushSessions    func(context.Context)
+	BreachChecker    core.BreachChecker
 }
 
 // VerificationService implements email verification, password reset and
@@ -408,6 +409,9 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 	if err := s.deps.RevokeSessions(ctx, user.ID); err != nil {
 		return err
 	}
+	if err := checkBreach(ctx, s.deps.BreachChecker, in.NewPassword); err != nil {
+		return err
+	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)
 	if err != nil {
 		return err
@@ -461,6 +465,9 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 		return err
 	}
 	if err := s.deps.RevokeSessions(ctx, user.ID); err != nil {
+		return err
+	}
+	if err := checkBreach(ctx, s.deps.BreachChecker, in.NewPassword); err != nil {
 		return err
 	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)
