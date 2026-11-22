@@ -28,6 +28,7 @@ type Dependencies struct {
 	Clock                    core.Clock
 	Logger                   *slog.Logger
 	Password                 core.PasswordConfig
+	Username                 *core.UsernameConfig
 	RequireVerifiedEmail     bool
 	SendVerificationOnSignUp bool
 	OnSignUp                 func(context.Context, *core.User)
@@ -124,6 +125,14 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 	} else if !errors.Is(err, core.ErrNotFound) {
 		return nil, err
 	}
+	var username string
+	if in.Username != "" {
+		var err error
+		username, err = s.claimUsername(ctx, in.Username)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	encoded, err := s.deps.Hasher.Hash(ctx, in.Password)
 	if err != nil {
@@ -142,6 +151,17 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 		_ = s.deps.Store.DeleteUser(ctx, user.ID)
 		return nil, err
 	}
+	if username != "" {
+		usernameAccount := &core.Account{
+			ID: secret.NewID(), UserID: user.ID, Provider: usernameProvider,
+			ProviderUserID: username, Email: email, CreatedAt: now,
+		}
+		if err := s.deps.Store.CreateAccount(ctx, usernameAccount); err != nil {
+			_ = s.deps.Store.DeleteAccount(ctx, account.ID)
+			_ = s.deps.Store.DeleteUser(ctx, user.ID)
+			return nil, err
+		}
+	}
 	s.logInfo("sign_up", "user_id", user.ID)
 	s.deps.OnSignUp(ctx, redacted(user))
 	if s.deps.SendVerificationOnSignUp {
@@ -153,9 +173,11 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 }
 
 // SignIn verifies a password, rehashes if needed and creates a Session.
+// A Username may be supplied instead of an email; both use the same generic
+// failure path so callers cannot enumerate Users.
 func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignInResult, error) {
 	email := normalizeEmail(in.Email)
-	if email == "" {
+	if email == "" && in.Username == "" {
 		return nil, core.ErrInvalidEmail
 	}
 	if len(in.Password) < s.deps.Password.MinLength {
@@ -167,7 +189,13 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	if err := s.allow(ctx, "signin", in.RateLimitKey); err != nil {
 		return nil, err
 	}
-	user, err := s.deps.Store.UserByEmail(ctx, email)
+	var user *core.User
+	var err error
+	if email != "" {
+		user, err = s.deps.Store.UserByEmail(ctx, email)
+	} else {
+		user, err = s.findUserByUsername(ctx, in.Username)
+	}
 	if err != nil || user.Disabled {
 		s.dummyVerify(ctx, in.Password)
 		s.logInfo("sign_in_failure", "reason", "unavailable")

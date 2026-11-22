@@ -168,7 +168,7 @@ func New(cfg Config) (*Client, error) {
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
-		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
+		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password, Username: cfg.Username,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
@@ -208,6 +208,29 @@ func withDefaults(cfg Config) Config {
 	}
 	if cfg.Password.MaxLength == 0 {
 		cfg.Password.MaxLength = defaults.Password.MaxLength
+	}
+	if cfg.Username == nil {
+		cfg.Username = defaults.Username
+	} else {
+		if cfg.Username.MinLength == 0 {
+			cfg.Username.MinLength = defaults.Username.MinLength
+		}
+		if cfg.Username.MaxLength == 0 {
+			cfg.Username.MaxLength = defaults.Username.MaxLength
+		}
+	}
+	if cfg.Accounts == nil {
+		cfg.Accounts = defaults.Accounts
+	}
+	if cfg.TOTP == nil {
+		cfg.TOTP = defaults.TOTP
+	} else {
+		if cfg.TOTP.Digits == 0 {
+			cfg.TOTP.Digits = defaults.TOTP.Digits
+		}
+		if cfg.TOTP.Period == 0 {
+			cfg.TOTP.Period = defaults.TOTP.Period
+		}
 	}
 	if cfg.PathPrefix == "" {
 		cfg.PathPrefix = defaults.PathPrefix

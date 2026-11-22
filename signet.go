@@ -88,6 +88,9 @@ const (
 	// TokenEmailOTP proves a passwordless six-digit email sign-in.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenEmailOTP = core.TokenEmailOTP
+	// TokenTwoFactor proves a first factor awaiting a Second factor.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenTwoFactor = core.TokenTwoFactor
 )
 
 // Token is a single-use proof for one sensitive flow. Hash holds the stored
