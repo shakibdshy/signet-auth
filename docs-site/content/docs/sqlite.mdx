@@ -1,0 +1,45 @@
+---
+title: SQLite
+description: Bundled SQLite Store adapter and its migrations.
+---
+
+Signet ships a SQLite adapter in `github.com/shakibdshy/signet/store/sqlite`. It uses
+`modernc.org/sqlite`, so no CGO is required.
+
+```bash
+go get github.com/shakibdshy/signet/store/sqlite
+go get modernc.org/sqlite
+```
+
+## Setup
+
+```go
+import (
+	"database/sql"
+
+	"github.com/shakibdshy/signet/store/sqlite"
+	_ "modernc.org/sqlite"
+)
+
+db, err := sql.Open("sqlite", "file:signet.db?_pragma=foreign_keys(1)")
+if err != nil {
+	log.Fatal(err)
+}
+defer db.Close()
+
+store := sqlite.New(db)
+if err := store.Migrate(ctx); err != nil {
+	log.Fatal(err)
+}
+cfg.Store = store
+```
+
+`Migrate` applies embedded, idempotent SQL and enables `PRAGMA foreign_keys = ON`. When using a
+connection pool, include `foreign_keys=1` in the DSN so every connection has the pragma set. The
+caller owns the `*sql.DB` and its lifecycle.
+
+The DSN above creates `signet.db` in the working directory. Use a different path for production
+and back it up like any other database.
+
+See [Storage](/docs/storage) for the Store contracts and schema, and [PostgreSQL](/docs/postgres)
+for the other bundled adapter.

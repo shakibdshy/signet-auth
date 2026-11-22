@@ -1,0 +1,47 @@
+---
+title: PostgreSQL
+description: Bundled PostgreSQL Store adapter and its migrations.
+---
+
+Signet ships a PostgreSQL adapter in `github.com/shakibdshy/signet/store/postgres`, built on
+`pgxpool`.
+
+```bash
+go get github.com/shakibdshy/signet/store/postgres
+go get github.com/jackc/pgx/v5
+```
+
+## Setup
+
+```go
+import (
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/shakibdshy/signet/store/postgres"
+)
+
+pool, err := pgxpool.New(ctx, dsn)
+if err != nil {
+	log.Fatal(err)
+}
+defer pool.Close()
+if err := pool.Ping(ctx); err != nil {
+	log.Fatal(err)
+}
+
+store := postgres.New(pool)
+if err := store.Migrate(ctx); err != nil {
+	log.Fatal(err)
+}
+cfg.Store = store
+```
+
+The runnable examples default to
+`postgres://signet:signet@localhost:5432/signet?sslmode=disable`, overridable with
+`SIGNET_DATABASE_URL`. Use TLS and a dedicated role in production.
+
+`Migrate` applies embedded, idempotent SQL. Signet never runs migrations automatically — call it
+from your own startup or migration job. The caller owns the `*pgxpool.Pool` and its lifecycle.
+
+See [Storage](/docs/storage) for the Store contracts and schema, and [SQLite](/docs/sqlite) for
+the other bundled adapter.
