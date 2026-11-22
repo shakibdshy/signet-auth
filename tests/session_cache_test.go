@@ -105,7 +105,9 @@ func authenticateWithCookie(client *signet.Client, token string) int {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	req := httptest.NewRequest(http.MethodGet, "/private", nil)
-	req.AddCookie(&http.Cookie{Name: "test_session", Value: token})
+	req.AddCookie(&http.Cookie{
+		Name: "test_session", Value: token, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+	})
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	return rr.Code
@@ -250,6 +252,35 @@ func TestSessionCacheFlushOnPasswordReset(t *testing.T) {
 		Token: tokenFromMail(t, mailer), NewPassword: "new strong password",
 	}); err != nil {
 		t.Fatalf("ResetPassword: %v", err)
+	}
+	assertCacheFlushed(t, cache, token, client)
+}
+
+func TestSessionCacheFlushOnAccountDeletion(t *testing.T) {
+	store := &countingStore{Store: testutil.NewStore()}
+	cache := newFakeSessionCache()
+	client, token, mailer := cacheClient(t, cache, time.Minute, store)
+	authenticateWithCookie(client, token)
+	ctx := context.Background()
+	userID := cachedUserID(t, store)
+	if err := client.RequestUserDeletion(ctx, signet.RequestDeleteUserInput{UserID: userID}); err != nil {
+		t.Fatalf("RequestUserDeletion: %v", err)
+	}
+	if err := client.DeleteUser(ctx, signet.ConfirmDeleteUserInput{Token: tokenFromMail(t, mailer)}); err != nil {
+		t.Fatalf("DeleteUser: %v", err)
+	}
+	assertCacheFlushed(t, cache, token, client)
+}
+
+func TestSessionCacheFlushOnPasswordChange(t *testing.T) {
+	store := &countingStore{Store: testutil.NewStore()}
+	cache := newFakeSessionCache()
+	client, token, _ := cacheClient(t, cache, time.Minute, store)
+	authenticateWithCookie(client, token)
+	if err := client.ChangePassword(context.Background(), signet.ChangePasswordInput{
+		UserID: cachedUserID(t, store), CurrentPassword: "correct horse", NewPassword: "new strong password",
+	}); err != nil {
+		t.Fatalf("ChangePassword: %v", err)
 	}
 	assertCacheFlushed(t, cache, token, client)
 }

@@ -37,7 +37,6 @@ type Account struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-// Session is one authenticated visit by a User.
 // CachedSession is a short-lived copy of a resolved Session.
 type CachedSession struct {
 	User              *User
@@ -53,6 +52,7 @@ type SessionCache interface {
 	Flush(context.Context) error
 }
 
+// Session is one authenticated visit by a User.
 type Session struct {
 	ID                string     `json:"id"`
 	UserID            string     `json:"user_id"`

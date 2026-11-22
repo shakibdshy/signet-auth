@@ -58,6 +58,21 @@ yourself and decide whether to protect it:
 mux.Handle("/docs/", http.StripPrefix("/docs", signet.DocsHandler()))
 ```
 
+## Session cache
+
+Caching is off by default. Set `Session.CacheTTL` and supply a `SessionCache` to let a short-lived
+copy of a Session answer a lookup without a Store read. The TTL is capped by the Session idle
+timeout. A cache hit is bounded staleness: a revocation performed by another process may take up
+to that TTL to be observed (Revocation lag). Every revocation path flushes the cache. A cache
+error falls back to the Store; a Store error rejects the request.
+
+```go
+cfg.SessionCache = myCache // implements Get, Put and Flush
+cfg.Session.CacheTTL = 30 * time.Second
+```
+
+Leave both unset when exact, immediate revocation is required. See ADR-0008 in the repository.
+
 ## Fresh Sessions
 
 Set `Session.FreshAge` to require recent authentication for sensitive operations. A zero

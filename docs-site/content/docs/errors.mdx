@@ -27,6 +27,8 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrInvalidPasswordlessConfig | 500 internal_error | `Passwordless.MagicLinkTTL` or `Passwordless.OTPTTL` is negative. |
 | ErrInvalidJWTAlgorithm | 500 internal_error | Algorithm is outside the allowlist, or a token used a different one. |
 | ErrInvalidJWTKey | 500 internal_error | Key type does not match the algorithm. |
+| ErrInvalidKeyRing | 500 internal_error | A key ring is empty, mixed or contains duplicate keys. |
+| ErrInvalidRedirectPattern | 500 internal_error | A redirect pattern is not https, lacks two host labels, or misplaces the wildcard. |
 
 ## Credentials and email
 

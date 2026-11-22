@@ -50,6 +50,9 @@ auth, err := signet.New(cfg)
 | OAuth | *OAuthConfig | default nil = OAuth disabled | External sign-in providers. See [OAuth](/docs/oauth). |
 | Passwordless | *PasswordlessConfig | default 5-minute TTLs, sign-up allowed | Magic-link and email-OTP sign-in. See [Passwordless](/docs/passwordless). |
 | CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
+| CSRFKeys | [][]byte | empty = use CSRFKey | Ordered key ring; first signs, all verify. Each key must be 32 bytes. |
+| SessionCache | SessionCache | nil = disabled | Optional short-lived Session lookup cache; the Store stays authoritative. |
+| AllowedRedirectPatterns | []string | empty | https wildcard patterns for OAuth and passwordless redirects. |
 | JWTOnly | bool | default false | API-only mode: no session cookies and no CSRF key required. |
 
 Hooks receive a **redacted** User: `Email` and `Name` are blanked so callbacks cannot leak
@@ -88,6 +91,7 @@ a header.
 | --- | --- | --- | --- |
 | FreshAge | time.Duration | 0 (disabled) | Window since authentication for freshness checks. |
 | IdleTimeout | time.Duration | 30m | Extended on each successful request. |
+| CacheTTL | time.Duration | 0 = disabled | Lifetime of an optional SessionCache entry, capped by IdleTimeout. |
 | AbsoluteTimeout | time.Duration | 24h | Fixed at Session creation; never extended. |
 
 ## PasswordConfig
@@ -102,7 +106,8 @@ a header.
 | Field | Type | Default / constraint | Purpose |
 | --- | --- | --- | --- |
 | Algorithm | string | required: `HS256`, `RS256`, `EdDSA` | Signing algorithm. |
-| Key | any | required: `[]byte`, `*rsa.PrivateKey`, `ed25519.PrivateKey` | Signing key matching the algorithm. |
+| Key | any | required: `[]byte`, `*rsa.PrivateKey`, `ed25519.PrivateKey` | Signing key matching the algorithm; legacy single-key form. |
+| Keys | []any | empty = use Key | Ordered key ring; first signs, all verify. All keys must match Algorithm. |
 | AccessTTL | time.Duration | 15m | Access token lifetime. |
 | RefreshTTL | time.Duration | 30 * 24h | Refresh token lifetime. |
 | Issuer | string | optional | Claim checked on verification. |
