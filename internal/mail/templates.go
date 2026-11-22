@@ -21,11 +21,17 @@ type defaultTemplates struct {
 	resetText   *texttemplate.Template
 	changedHTML *htmltemplate.Template
 	changedText *texttemplate.Template
+	magicHTML   *htmltemplate.Template
+	magicText   *texttemplate.Template
+	otpHTML     *htmltemplate.Template
+	otpText     *texttemplate.Template
 }
+
+var defaults = newDefaultTemplates()
 
 // DefaultTemplates is the built-in email template set. HTML is rendered with
 // html/template and the plain-text alternative with text/template.
-var DefaultTemplates core.EmailTemplates = newDefaultTemplates()
+var DefaultTemplates core.EmailTemplates = defaults
 
 func newDefaultTemplates() *defaultTemplates {
 	return &defaultTemplates{
@@ -39,6 +45,10 @@ func newDefaultTemplates() *defaultTemplates {
 		changeText:  texttemplate.Must(texttemplate.New("change").Parse("Hello {{.Name}},\n\nConfirm your new email address:\n{{.URL}}\n\nThis link expires {{.ExpiresAt}}.\n")),
 		changedHTML: htmltemplate.Must(htmltemplate.New("changed").Parse(`<p>Hello {{.Name}},</p><p>Your password was changed. If you did not do this, contact support.</p>`)),
 		changedText: texttemplate.Must(texttemplate.New("changed").Parse("Hello {{.Name}},\n\nYour password was changed. If you did not do this, contact support.\n")),
+		magicHTML:   htmltemplate.Must(htmltemplate.New("magic").Parse(`<p>Hello {{.Name}},</p><p><a href="{{.URL}}">Sign in</a></p><p>This link expires {{.ExpiresAt}}. If you did not request it, ignore the message.</p>`)),
+		magicText:   texttemplate.Must(texttemplate.New("magic").Parse("Hello {{.Name}},\n\nSign in with this link:\n{{.URL}}\n\nThis link expires {{.ExpiresAt}}. If you did not request it, ignore this message.\n")),
+		otpHTML:     htmltemplate.Must(htmltemplate.New("otp").Parse(`<p>Hello {{.Name}},</p><p>Your sign-in code is <strong>{{.Code}}</strong>.</p><p>This code expires {{.ExpiresAt}}. If you did not request it, ignore the message.</p>`)),
+		otpText:     texttemplate.Must(texttemplate.New("otp").Parse("Hello {{.Name}},\n\nYour sign-in code is {{.Code}}.\n\nThis code expires {{.ExpiresAt}}. If you did not request it, ignore this message.\n")),
 	}
 }
 
@@ -87,4 +97,32 @@ func (d *defaultTemplates) DeleteUser(data core.TemplateData) core.Message {
 		To: data.Email, Subject: "Confirm account deletion",
 		TextBody: render(d.deleteText, data), HTMLBody: render(d.deleteHTML, data),
 	}
+}
+
+// MagicLinkMessage renders the built-in magic-link email. Custom template
+// sets that do not implement MagicLinkTemplates still get this message.
+func MagicLinkMessage(data core.TemplateData) core.Message {
+	return core.Message{
+		To: data.Email, Subject: "Sign in with a magic link",
+		TextBody: render(defaults.magicText, data), HTMLBody: render(defaults.magicHTML, data),
+	}
+}
+
+// EmailOTPMessage renders the built-in one-time code email. Custom template
+// sets that do not implement EmailOTPTemplates still get this message.
+func EmailOTPMessage(data core.TemplateData) core.Message {
+	return core.Message{
+		To: data.Email, Subject: "Your sign-in code",
+		TextBody: render(defaults.otpText, data), HTMLBody: render(defaults.otpHTML, data),
+	}
+}
+
+// MagicLink renders the passwordless magic-link email.
+func (d *defaultTemplates) MagicLink(data core.TemplateData) core.Message {
+	return MagicLinkMessage(data)
+}
+
+// EmailOTP renders the passwordless one-time code email.
+func (d *defaultTemplates) EmailOTP(data core.TemplateData) core.Message {
+	return EmailOTPMessage(data)
 }

@@ -17,6 +17,10 @@ import (
 type API interface {
 	SignUp(context.Context, core.SignUpInput) (*core.SignUpResult, error)
 	SignIn(context.Context, core.SignInInput) (*core.SignInResult, error)
+	SendMagicLink(context.Context, core.SendMagicLinkInput) error
+	VerifyMagicLink(context.Context, core.VerifyMagicLinkInput) (*core.SignInResult, error)
+	SendEmailOTP(context.Context, core.SendEmailOTPInput) error
+	VerifyEmailOTP(context.Context, core.VerifyEmailOTPInput) (*core.SignInResult, error)
 	SignOut(context.Context, core.SignOutInput) error
 	ChangePassword(context.Context, core.ChangePasswordInput) error
 	RequestEmailChange(context.Context, core.ChangeEmailInput) error
@@ -65,6 +69,10 @@ type Endpoint struct {
 var Endpoints = []Endpoint{
 	{Name: "signup", Anonymous: true},
 	{Name: "signin", Anonymous: true},
+	{Name: "send-magic-link", Anonymous: true},
+	{Name: "verify-magic-link", Anonymous: true},
+	{Name: "send-otp", Anonymous: true},
+	{Name: "verify-otp", Anonymous: true},
 	{Name: "signout"},
 	{Name: "sessions"},
 	{Name: "session"},
@@ -102,6 +110,14 @@ func (h *Handler) Handler() http.Handler {
 			h.handleSignUp(w, r)
 		case "signin":
 			h.handleSignIn(w, r)
+		case "send-magic-link":
+			h.handleSendMagicLink(w, r)
+		case "verify-magic-link":
+			h.handleVerifyMagicLink(w, r)
+		case "send-otp":
+			h.handleSendOTP(w, r)
+		case "verify-otp":
+			h.handleVerifyOTP(w, r)
 		case "signout":
 			h.handleSignOut(w, r)
 		case "sessions":
@@ -182,6 +198,101 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		"user":          result.User,
 		"session_token": result.SessionToken,
 		"csrf_token":    csrfToken,
+	})
+}
+
+func (h *Handler) handleSendMagicLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.SendMagicLinkInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = h.clientIP(r)
+	if err := h.api.SendMagicLink(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	in := core.VerifyMagicLinkInput{
+		Token:        r.URL.Query().Get("token"),
+		CallbackURL:  r.URL.Query().Get("callback_url"),
+		RateLimitKey: h.clientIP(r),
+	}
+	result, err := h.api.VerifyMagicLink(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	callback := in.CallbackURL
+	if callback == "" {
+		// The emailed link carries the callback inside its proof; the query
+		// parameter is optional and, when present, must match the embedded one.
+		callback = result.CallbackURL
+	}
+	if callback != "" {
+		http.Redirect(w, r, callback, http.StatusFound)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user": result.User, "session_token": result.SessionToken,
+	})
+}
+
+func (h *Handler) handleSendOTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.SendEmailOTPInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = h.clientIP(r)
+	if err := h.api.SendEmailOTP(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleVerifyOTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.VerifyEmailOTPInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = h.clientIP(r)
+	result, err := h.api.VerifyEmailOTP(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user": result.User, "session_token": result.SessionToken,
 	})
 }
 

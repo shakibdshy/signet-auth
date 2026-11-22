@@ -82,12 +82,7 @@ func (s *Service) provider(name string) core.OAuthProvider {
 }
 
 func (s *Service) redirectAllowed(redirect string) bool {
-	for _, allowed := range s.cfg.AllowedRedirects {
-		if redirect == allowed {
-			return true
-		}
-	}
-	return false
+	return core.RedirectAllowed(redirect, s.cfg.AllowedRedirects)
 }
 
 func (s *Service) seal(value any) (string, error) {

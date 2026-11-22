@@ -19,6 +19,16 @@ var (
 	ErrSessionNotFresh = core.ErrSessionNotFresh
 	// ErrTokenInvalid reports a malformed, unknown or already-used Token.
 	ErrTokenInvalid = core.ErrTokenInvalid
+	// ErrTokenConsumed reports a Token that was already used; it also matches ErrTokenInvalid.
+	ErrTokenConsumed = core.ErrTokenConsumed
+	// ErrInvalidOTP reports a missing, malformed, unknown or expired email OTP.
+	ErrInvalidOTP = core.ErrInvalidOTP
+	// ErrOTPAlreadyUsed reports an email OTP that was already consumed.
+	ErrOTPAlreadyUsed = core.ErrOTPAlreadyUsed
+	// ErrInvalidMagicLink reports a missing, malformed, unknown or expired magic link.
+	ErrInvalidMagicLink = core.ErrInvalidMagicLink
+	// ErrMagicLinkAlreadyUsed reports a magic link that was already consumed.
+	ErrMagicLinkAlreadyUsed = core.ErrMagicLinkAlreadyUsed
 	// ErrMissingStore reports that Config.Store was not supplied.
 	ErrMissingStore = core.ErrMissingStore
 	// ErrMissingMailer reports that Config.Mailer was not supplied.
@@ -48,6 +58,8 @@ var (
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
 	ErrInvalidOAuthConfig = core.ErrInvalidOAuthConfig
+	// ErrInvalidPasswordlessConfig reports a negative proof lifetime.
+	ErrInvalidPasswordlessConfig = core.ErrInvalidPasswordlessConfig
 	// ErrOAuthDisabled reports OAuth use while Config.OAuth is nil.
 	ErrOAuthDisabled = core.ErrOAuthDisabled
 	// ErrOAuthProviderNotFound reports an unregistered provider name.

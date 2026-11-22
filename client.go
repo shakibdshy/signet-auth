@@ -62,6 +62,9 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
+		return nil, ErrInvalidPasswordlessConfig
+	}
 	limiter := ratelimit.New(cfg.RateLimiter, cfg.RateLimitRules)
 	known := make(map[string]bool, len(httpapi.Endpoints))
 	for _, endpoint := range httpapi.Endpoints {
@@ -137,10 +140,16 @@ func New(cfg Config) (*Client, error) {
 	if cfg.OAuth != nil {
 		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
 	}
+	var oauthRedirects []string
+	if cfg.OAuth != nil {
+		oauthRedirects = cfg.OAuth.AllowedRedirects
+	}
 	c.verification = auth.NewVerification(auth.VerificationDependencies{
 		Store: cfg.Store, Tokens: c.tokens, Mailer: cfg.Mailer, Templates: cfg.Templates,
 		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
-		AppURL: cfg.AppURL, Password: cfg.Password, Hasher: cfg.PasswordHasher,
+		AppURL: cfg.AppURL, PathPrefix: cfg.PathPrefix, Password: cfg.Password, Hasher: cfg.PasswordHasher,
+		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
+		CreateSession: c.createSession,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
@@ -197,6 +206,16 @@ func withDefaults(cfg Config) Config {
 	if cfg.Templates == nil {
 		cfg.Templates = DefaultTemplates
 	}
+	if cfg.Passwordless == nil {
+		cfg.Passwordless = defaults.Passwordless
+	} else {
+		if cfg.Passwordless.MagicLinkTTL == 0 {
+			cfg.Passwordless.MagicLinkTTL = defaults.Passwordless.MagicLinkTTL
+		}
+		if cfg.Passwordless.OTPTTL == 0 {
+			cfg.Passwordless.OTPTTL = defaults.Passwordless.OTPTTL
+		}
+	}
 	return cfg
 }
 
@@ -219,6 +238,26 @@ func (c *Client) SignUp(ctx context.Context, in SignUpInput) (*SignUpResult, err
 // cannot tell whether an email is registered.
 func (c *Client) SignIn(ctx context.Context, in SignInInput) (*SignInResult, error) {
 	return c.auth.SignIn(ctx, in)
+}
+
+// SendMagicLink emails a single-use magic-link sign-in proof.
+func (c *Client) SendMagicLink(ctx context.Context, in SendMagicLinkInput) error {
+	return c.verification.SendMagicLink(ctx, in)
+}
+
+// VerifyMagicLink consumes a magic-link proof and creates a Session.
+func (c *Client) VerifyMagicLink(ctx context.Context, in VerifyMagicLinkInput) (*SignInResult, error) {
+	return c.verification.VerifyMagicLink(ctx, in)
+}
+
+// SendEmailOTP emails a single-use six-digit sign-in code.
+func (c *Client) SendEmailOTP(ctx context.Context, in SendEmailOTPInput) error {
+	return c.verification.SendEmailOTP(ctx, in)
+}
+
+// VerifyEmailOTP consumes a sign-in code and creates a Session.
+func (c *Client) VerifyEmailOTP(ctx context.Context, in VerifyEmailOTPInput) (*SignInResult, error) {
+	return c.verification.VerifyEmailOTP(ctx, in)
 }
 
 // SignOut revokes the Session identified by a Session token. Unknown or

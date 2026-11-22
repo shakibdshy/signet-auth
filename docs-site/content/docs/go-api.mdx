@@ -23,6 +23,10 @@ only `github.com/shakibdshy/signet`.
 | --- | --- |
 | `SignUp(ctx, SignUpInput) (*SignUpResult, error)` | Create a User and its credential Account. |
 | `SignIn(ctx, SignInInput) (*SignInResult, error)` | Verify a password, rehash if needed, create a Session. |
+| `SendMagicLink(ctx, SendMagicLinkInput) error` | Email a single-use magic-link proof. |
+| `VerifyMagicLink(ctx, VerifyMagicLinkInput) (*SignInResult, error)` | Consume a magic-link proof and create a Session. |
+| `SendEmailOTP(ctx, SendEmailOTPInput) error` | Email a six-digit sign-in code. |
+| `VerifyEmailOTP(ctx, VerifyEmailOTPInput) (*SignInResult, error)` | Consume a code and create a Session. |
 | `SignOut(ctx, SignOutInput) error` | Revoke the Session named by the token; unknown tokens are a no-op. |
 | `VerifyFreshSession(ctx, string) error` | Check that a Session was authenticated within FreshAge. |
 | `RequireFreshSession(http.Handler) http.Handler` | Middleware that rejects stale Sessions with 401. |

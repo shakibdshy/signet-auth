@@ -49,7 +49,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -155,7 +155,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -256,7 +256,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -352,7 +352,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -451,7 +451,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -549,7 +549,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -645,7 +645,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -746,7 +746,189 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/send-magic-link": {
+      "post": {
+        "operationId": "send-magic-link_post",
+        "summary": "POST /send-magic-link",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMagicLinkInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/send-otp": {
+      "post": {
+        "operationId": "send-otp_post",
+        "summary": "POST /send-otp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailOTPInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -847,7 +1029,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -948,7 +1130,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1044,7 +1226,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1140,7 +1322,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1242,7 +1424,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1356,7 +1538,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1457,7 +1639,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1563,7 +1745,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1661,7 +1843,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1762,7 +1944,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1863,7 +2045,235 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify-magic-link": {
+      "get": {
+        "operationId": "verify-magic-link_get",
+        "summary": "GET /verify-magic-link",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "callback_url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "session_token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "session_token"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify-otp": {
+      "post": {
+        "operationId": "verify-otp_post",
+        "summary": "POST /verify-otp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailOTPInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "session_token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "session_token"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1932,14 +2342,18 @@
         "properties": {
           "error": {
             "enum": [
+              "code_already_used",
               "csrf",
               "email_exists",
               "email_not_verified",
               "internal_error",
+              "invalid_code",
               "invalid_credentials",
               "invalid_input",
+              "invalid_link",
               "invalid_request",
               "invalid_token",
+              "link_already_used",
               "not_found",
               "oauth_account_conflict",
               "oauth_email_not_verified",
@@ -2037,6 +2451,37 @@
         "required": [
           "token",
           "new_password"
+        ],
+        "type": "object"
+      },
+      "SendEmailOTPInput": {
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "SendMagicLinkInput": {
+        "properties": {
+          "callback_url": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
         ],
         "type": "object"
       },
@@ -2232,6 +2677,21 @@
         },
         "required": [
           "token"
+        ],
+        "type": "object"
+      },
+      "VerifyEmailOTPInput": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code"
         ],
         "type": "object"
       }

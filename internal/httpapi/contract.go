@@ -27,12 +27,21 @@ type ResponseSpec struct {
 	Fields []Field
 }
 
+// Parameter is an HTTP input that is not part of the JSON request body.
+type Parameter struct {
+	Name     string
+	In       string // "query" or "header"
+	Required bool
+	Type     string // OpenAPI scalar type
+}
+
 // Method is one HTTP method served by an endpoint.
 type Method struct {
-	Verb     string
-	Request  reflect.Type
-	Response ResponseSpec
-	Status   int
+	Verb       string
+	Request    reflect.Type
+	Response   ResponseSpec
+	Status     int
+	Parameters []Parameter
 }
 
 // ContractEndpoint describes one route and its methods.
@@ -87,6 +96,27 @@ func ContractFor() Contract {
 					user, strField("session_token"), strField("csrf_token"),
 				}}, Status: http.StatusOK,
 			}}},
+			{Name: "send-magic-link", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SendMagicLinkInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "verify-magic-link", Anonymous: true, Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{
+					user, strField("session_token"),
+				}}, Status: http.StatusOK,
+				Parameters: []Parameter{
+					{Name: "token", In: "query", Required: true, Type: "string"},
+					{Name: "callback_url", In: "query", Required: false, Type: "string"},
+				},
+			}}},
+			{Name: "send-otp", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SendEmailOTPInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "verify-otp", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.VerifyEmailOTPInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					user, strField("session_token"),
+				}}, Status: http.StatusOK,
+			}}},
 			{Name: "signout", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignOutInput{}), Status: http.StatusNoContent,
 			}}},
@@ -139,16 +169,26 @@ func ContractFor() Contract {
 			}}},
 			{Name: "oauth/callback", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Status: http.StatusFound,
+				Parameters: []Parameter{
+					{Name: "code", In: "query", Required: true, Type: "string"},
+					{Name: "state", In: "query", Required: true, Type: "string"},
+				},
 			}}},
 			{Name: "csrf-token", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("token")}}, Status: http.StatusOK,
 			}}},
 		},
 		OptionalFields: map[string][]string{
-			"TokenInput": {"email", "password", "refresh_token"},
+			"TokenInput":         {"email", "password", "refresh_token"},
+			"SendMagicLinkInput": {"name", "callback_url"},
+			"SendEmailOTPInput":  {"name"},
 		},
 		Errors: []ErrorSpec{
 			{core.ErrRateLimited, http.StatusTooManyRequests, "rate_limited", "too many requests"},
+			{core.ErrOTPAlreadyUsed, http.StatusUnauthorized, "code_already_used", "this code has already been used; request a new one"},
+			{core.ErrInvalidOTP, http.StatusUnauthorized, "invalid_code", "invalid or expired code"},
+			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
+			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
 			{core.ErrTokenInvalid, http.StatusUnauthorized, "invalid_token", "invalid token"},
 			{core.ErrTokenExpired, http.StatusUnauthorized, "invalid_token", "invalid token"},
 			{core.ErrRefreshReuse, http.StatusUnauthorized, "invalid_token", "invalid token"},

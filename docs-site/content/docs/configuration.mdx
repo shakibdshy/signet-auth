@@ -45,9 +45,10 @@ auth, err := signet.New(cfg)
 | JWT | *JWTConfig | default nil = cookie sessions only | Bearer access/refresh tokens. See [JWT](/docs/jwt). |
 | RequireVerifiedEmail | *bool | default nil = **true** | Block sign-in for unverified Users. Set a `false` pointer to disable. |
 | SendVerificationOnSignUp | *bool | default nil = **true** | Issue a verification Token on sign-up. Set a `false` pointer to disable. |
-| AppURL | string | no default; set for email flows | Origin used to build `/verify` and `/reset` links. |
+| AppURL | string | no default; set for email flows | Origin used to build email links; `PathPrefix` is prepended to each link path. |
 | Templates | EmailTemplates | default `DefaultTemplates` | Renders verification, reset and changed-password messages. |
 | OAuth | *OAuthConfig | default nil = OAuth disabled | External sign-in providers. See [OAuth](/docs/oauth). |
+| Passwordless | *PasswordlessConfig | default 5-minute TTLs, sign-up allowed | Magic-link and email-OTP sign-in. See [Passwordless](/docs/passwordless). |
 | CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
 | JWTOnly | bool | default false | API-only mode: no session cookies and no CSRF key required. |
 

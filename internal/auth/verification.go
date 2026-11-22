@@ -20,19 +20,24 @@ const (
 // VerificationDependencies holds the collaborators for the verification and
 // reset flows.
 type VerificationDependencies struct {
-	Store     core.Store
-	Tokens    *token.Service
-	Mailer    core.Mailer
-	Templates core.EmailTemplates
-	Clock     core.Clock
-	Limiter   core.RateLimiter
-	Logger    *slog.Logger
-	AppURL    string
-	Password  core.PasswordConfig
-	Hasher    core.PasswordHasher
+	Store          core.Store
+	Tokens         *token.Service
+	Mailer         core.Mailer
+	Templates      core.EmailTemplates
+	Clock          core.Clock
+	Limiter        core.RateLimiter
+	Logger         *slog.Logger
+	AppURL         string
+	PathPrefix     string
+	Password       core.PasswordConfig
+	Hasher         core.PasswordHasher
+	Passwordless   *core.PasswordlessConfig
+	OAuthRedirects []string
+	CreateSession  func(context.Context, string) (string, error)
 }
 
-// VerificationService implements email verification and password reset.
+// VerificationService implements email verification, password reset and
+// passwordless sign-in.
 type VerificationService struct{ deps VerificationDependencies }
 
 // NewVerification returns a VerificationService.
@@ -49,7 +54,7 @@ func (s *VerificationService) logWarn(msg string, attrs ...any) {
 }
 
 func (s *VerificationService) emailLink(path, raw string) string {
-	return strings.TrimRight(s.deps.AppURL, "/") + path + "?token=" + raw
+	return strings.TrimRight(s.deps.AppURL, "/") + strings.TrimRight(s.deps.PathPrefix, "/") + path + "?token=" + raw
 }
 
 // SendVerification sends a verification email. It succeeds for unknown emails

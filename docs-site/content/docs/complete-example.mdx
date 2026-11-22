@@ -186,6 +186,37 @@ func tokenFromEmailLink() string {
 }
 ```
 
+## Passwordless sign-in
+
+The same `auth` client can issue and verify magic links and email OTPs. Add an explicit
+redirect allowlist when you want a post-login destination beyond `AppURL`:
+
+```go
+allowSignUps := true
+cfg.Passwordless = &signet.PasswordlessConfig{
+    MagicLinkTTL:     5 * time.Minute,
+    OTPTTL:           5 * time.Minute,
+    AllowSignUp:      &allowSignUps,
+    AllowedRedirects: []string{"https://app.example.com/welcome"},
+}
+// Set cfg.Passwordless before signet.New(cfg) in main.go above.
+
+err = auth.SendMagicLink(ctx, signet.SendMagicLinkInput{
+    Email: "ada@example.com", CallbackURL: "https://app.example.com/welcome",
+})
+result, err := auth.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: tokenFromEmail})
+
+err = auth.SendEmailOTP(ctx, signet.SendEmailOTPInput{Email: "grace@example.com"})
+result, err = auth.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{
+    Email: "grace@example.com", Code: "123456",
+})
+```
+
+The HTTP equivalents are `POST /send-magic-link`, `GET /verify-magic-link`,
+`POST /send-otp` and `POST /verify-otp`. They are anonymous and CSRF-exempt, and set the
+session cookie on success. Configure 5/min and 3/min send limits in your own limiter —
+`RateLimitRule` has no window field. See [Passwordless sign-in](/docs/passwordless).
+
 ## How the flow works
 
 1. `sqlite.New(db)` adapts your database to Signet's four `Store` contracts. `Migrate` creates the tables.

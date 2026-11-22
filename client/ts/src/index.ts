@@ -86,6 +86,26 @@ export function createSignetClient(options: SignetClientOptions) {
 			return data;
 		},
 
+		async sendMagicLink(
+			body: RequestBody<"/send-magic-link", "post">,
+		): Promise<SuccessBody<"/send-magic-link", "post", 200>> {
+			return unwrap(await api.POST("/send-magic-link", { body }));
+		},
+
+		async verifyMagicLink(
+			params: paths["/verify-magic-link"]["get"]["parameters"]["query"],
+		): Promise<SuccessBody<"/verify-magic-link", "get", 200>> {
+			return unwrap(await api.GET("/verify-magic-link", { params: { query: params } }));
+		},
+
+		async sendOtp(body: RequestBody<"/send-otp", "post">): Promise<SuccessBody<"/send-otp", "post", 200>> {
+			return unwrap(await api.POST("/send-otp", { body }));
+		},
+
+		async verifyOtp(body: RequestBody<"/verify-otp", "post">): Promise<SuccessBody<"/verify-otp", "post", 200>> {
+			return unwrap(await api.POST("/verify-otp", { body }));
+		},
+
 		async signOut(body: RequestBody<"/signout", "post">): Promise<SuccessBody<"/signout", "post", 204>> {
 			return unwrap(await api.POST("/signout", { body, headers: await csrfHeaders() }));
 		},

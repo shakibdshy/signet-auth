@@ -9,11 +9,11 @@ The person whose identity Signet manages. A User is the stable subject that Acco
 _Avoid_: account, member, principal
 
 **Account**:
-A named way a User authenticates: either a credential or a link to an external identity provider. A User has one credential Account and may have several provider Accounts.
+A named way a User authenticates: either a credential or a link to an external identity provider. A User has at most one credential Account and may have several provider Accounts.
 _Avoid_: provider, login method, identity
 
 **Credential account**:
-The Account that holds a User's password verifier.
+The Account that holds a User's password verifier. It is created when the User sets a password; a User who signs in only with a proof has no credential Account.
 _Avoid_: password record, user password
 
 **Session**:
@@ -25,8 +25,16 @@ The raw value a Session presents when authenticating. It is stored only as a dig
 _Avoid_: bearer token, session secret
 
 **Token**:
-A single-use proof for one sensitive flow: email verification, email change, password reset, email change confirmation, account deletion, OAuth account linking, refresh or state.
-_Avoid_: one-time code
+A single-use proof for one sensitive flow: email verification, email change, password reset, email change confirmation, account deletion, OAuth account linking, refresh, state, email OTP sign-in or magic-link sign-in. Only its digest is stored.
+_Avoid_: verification value, one-time secret
+
+**Email OTP**:
+A six-digit one-time code delivered to a User's email as a single-use proof of that address.
+_Avoid_: passcode, verification code
+
+**Magic link**:
+A URL carrying a single-use Token that signs a User in when opened.
+_Avoid_: login link, sign-in link
 
 **Access token**:
 A short-lived bearer credential presented to an API on each request.
