@@ -24,6 +24,26 @@ _Avoid_: login, cookie
 The raw value a Session presents when authenticating. It is stored only as a digest and is distinct from a Token.
 _Avoid_: bearer token, session secret
 
+**Session cache**:
+An optional, short-lived copy of a Session used to answer a lookup without a Store read.
+_Avoid_: session store, cached session
+
+**Secondary store**:
+A Store backed by a system other than the application's primary database.
+_Avoid_: secondary storage, cache store
+
+**Revocation lag**:
+The time between a Session being revoked and every cache reflecting that revocation.
+_Avoid_: staleness window
+
+**Key ring**:
+An ordered set of signing keys in which the first signs and every key can verify.
+_Avoid_: key list, key set
+
+**Redirect pattern**:
+A configured pattern that matches a set of redirect destinations, used where an exact allowlist is insufficient.
+_Avoid_: wildcard origin, origin pattern
+
 **Token**:
 A single-use proof for one sensitive flow: email verification, email change, password reset, email change confirmation, account deletion, OAuth account linking, refresh, state, email OTP sign-in or magic-link sign-in. Only its digest is stored.
 _Avoid_: verification value, one-time secret
