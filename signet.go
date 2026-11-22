@@ -88,6 +88,9 @@ const (
 	// TokenEmailOTP proves a passwordless six-digit email sign-in.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenEmailOTP = core.TokenEmailOTP
+	// TokenTwoFactor proves a first factor awaiting a Second factor.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenTwoFactor = core.TokenTwoFactor
 )
 
 // Token is a single-use proof for one sensitive flow. Hash holds the stored
@@ -129,6 +132,18 @@ type Argon2idHasher = auth.Argon2idHasher
 // Session is one authenticated visit by a User.
 type Session = core.Session
 
+// AccountInfo is the safe representation of an Account.
+type AccountInfo = core.AccountInfo
+
+// ListAccountsInput selects the User whose Accounts should be listed.
+type ListAccountsInput = core.ListAccountsInput
+
+// ListAccountsResult contains the safe fields of a User's Accounts.
+type ListAccountsResult = core.ListAccountsResult
+
+// UnlinkAccountInput identifies one Account to unlink.
+type UnlinkAccountInput = core.UnlinkAccountInput
+
 // SessionInfo is the safe representation of a Session.
 type SessionInfo = core.SessionInfo
 
@@ -155,6 +170,24 @@ type SignInInput = core.SignInInput
 
 // SignInResult is the outcome of a successful sign-in.
 type SignInResult = core.SignInResult
+
+// EnableTwoFactorInput enables Second factor enrollment.
+type EnableTwoFactorInput = core.EnableTwoFactorInput
+
+// EnableTwoFactorResult carries a provisioning URI and Backup codes.
+type EnableTwoFactorResult = core.EnableTwoFactorResult
+
+// VerifyTwoFactorInput exchanges a Two-factor challenge for a Session.
+type VerifyTwoFactorInput = core.VerifyTwoFactorInput
+
+// DisableTwoFactorInput removes a Second factor enrollment.
+type DisableTwoFactorInput = core.DisableTwoFactorInput
+
+// RegenerateBackupCodesInput replaces all Backup codes.
+type RegenerateBackupCodesInput = core.RegenerateBackupCodesInput
+
+// RegenerateBackupCodesResult carries fresh Backup codes.
+type RegenerateBackupCodesResult = core.RegenerateBackupCodesResult
 
 // SendMagicLinkInput requests a magic-link sign-in email.
 type SendMagicLinkInput = core.SendMagicLinkInput

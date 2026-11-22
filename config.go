@@ -28,6 +28,21 @@ type CachedSession = core.CachedSession
 // prevent hashing denial of service as well as weak passwords.
 type PasswordConfig = core.PasswordConfig
 
+// UsernameConfig controls Username normalization and validation.
+type UsernameConfig = core.UsernameConfig
+
+// AccountConfig controls account-management safeguards.
+type AccountConfig = core.AccountConfig
+
+// TOTPConfig controls TOTP code generation and verification.
+type TOTPConfig = core.TOTPConfig
+
+// TOTPStore persists Second factor enrollment state.
+type TOTPStore = core.TOTPStore
+
+// TOTPState is the persisted state of a Second factor enrollment.
+type TOTPState = core.TOTPState
+
 // PasswordlessConfig controls magic-link and email-OTP sign-in.
 type PasswordlessConfig = core.PasswordlessConfig
 
@@ -54,6 +69,9 @@ func DefaultConfig() Config {
 			MinLength: 8,
 			MaxLength: 128,
 		},
+		Username: &UsernameConfig{MinLength: 3, MaxLength: 30},
+		Accounts: &AccountConfig{FreshWindow: 5 * time.Minute},
+		TOTP:     &TOTPConfig{Digits: 6, Period: 30, Window: 1},
 		Passwordless: &PasswordlessConfig{
 			MagicLinkTTL: 5 * time.Minute,
 			OTPTTL:       5 * time.Minute,

@@ -18,9 +18,9 @@ cfg.OAuth = &signet.OAuthConfig{
 }
 ```
 
-Google requests `openid email profile` and reads `/oauth2/v3/userinfo`; GitHub requests
-`user:email` and reads `/user` plus `/user/emails`. Fields on `google.Provider` and
-`github.Provider` can override endpoints in tests; leave them empty in production.
+Signet ships two provider adapters: [Google](/docs/google) and [GitHub](/docs/github). Each is a
+small `OAuthProvider` implementation; you can add another provider without changing Signet
+internals.
 
 `POST /oauth/start` returns the provider authorization URL. `GET /oauth/callback`
 redeems the code, consumes the encrypted single-use state, and redirects to the
@@ -37,5 +37,3 @@ one-time link token for explicit account linking via `LinkOAuthAccount`.
 A provider Account owned by another User returns `ErrOAuthAccountConflict`; creation is
 rolled back on failure. On a successful OAuth sign-in the redacted `OnSignIn` hook fires.
 
-You can add another provider by implementing the public `OAuthProvider` interface —
-no change to Signet internals is needed.

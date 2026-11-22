@@ -58,6 +58,20 @@ var (
 	ErrInvalidKeyRing = core.ErrInvalidKeyRing
 	// ErrInvalidRedirectPattern reports a malformed redirect pattern.
 	ErrInvalidRedirectPattern = core.ErrInvalidRedirectPattern
+	// ErrInvalidUsername reports a malformed or reserved Username.
+	ErrInvalidUsername = core.ErrInvalidUsername
+	// ErrUsernameTaken reports a Username already owned by another User.
+	ErrUsernameTaken = core.ErrUsernameTaken
+	// ErrLastAccount reports an unlink that would leave a User with no Account.
+	ErrLastAccount = core.ErrLastAccount
+	// ErrTOTPNotEnabled reports a Second factor operation for an unenrolled User.
+	ErrTOTPNotEnabled = core.ErrTOTPNotEnabled
+	// ErrTOTPInvalid reports an invalid TOTP code or Backup code.
+	ErrTOTPInvalid = core.ErrTOTPInvalid
+	// ErrTwoFactorRequired reports a sign-in that needs a Second factor.
+	ErrTwoFactorRequired = core.ErrTwoFactorRequired
+	// ErrTOTPNotConfigured reports a Second factor operation without configuration.
+	ErrTOTPNotConfigured = core.ErrTOTPNotConfigured
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

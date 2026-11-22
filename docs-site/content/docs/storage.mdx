@@ -16,32 +16,16 @@ into `Store`:
 Lookup misses return `ErrNotFound`. Implementing the four contracts is enough to plug in a
 custom schema; see `docs/custom-schema.md` in the repository.
 
-## SQLite
+## Bundled adapters
 
-```go
-db, err := sql.Open("sqlite", "file:signet.db?_pragma=foreign_keys(1)")
-store := sqlite.New(db)
-if err := store.Migrate(ctx); err != nil { /* handle */ }
-cfg.Store = store
-```
+| Adapter | Package | Guide |
+| --- | --- | --- |
+| SQLite | `store/sqlite` | [SQLite](/docs/sqlite) |
+| PostgreSQL | `store/postgres` | [PostgreSQL](/docs/postgres) |
 
-`Migrate` applies embedded, idempotent SQL and enables `PRAGMA foreign_keys = ON`. With a
-connection pool, include `foreign_keys=1` in the DSN for every connection. The caller owns
-the `*sql.DB` and its lifecycle.
-
-## PostgreSQL
-
-```go
-pool, err := pgxpool.New(ctx, dsn)
-store := postgres.New(pool)
-if err := store.Migrate(ctx); err != nil { /* handle */ }
-cfg.Store = store
-```
-
-The example apps default to
-`postgres://signet:signet@localhost:5432/signet?sslmode=disable`, overridable with
-`SIGNET_DATABASE_URL`. Migrations are explicit: Signet never runs them automatically in
-your application unless you call `Migrate`.
+Both adapters expose `Migrate(ctx)`, which applies embedded, idempotent SQL. Signet never runs
+migrations automatically — call `Migrate` from your own startup or migration job. The caller owns
+the database handle and its lifecycle.
 
 ## The bundled schema
 

@@ -23,8 +23,9 @@ type Field struct {
 // ResponseSpec describes a response body. A Ref means a single typed body,
 // Fields means a wrapper object, and neither means no body.
 type ResponseSpec struct {
-	Ref    string
-	Fields []Field
+	Ref      string
+	Fields   []Field
+	Optional []string
 }
 
 // Parameter is an HTTP input that is not part of the JSON request body.
@@ -92,8 +93,41 @@ func ContractFor() Contract {
 			}}},
 			{Name: "signin", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignInInput{}),
+				Response: ResponseSpec{
+					Fields: []Field{
+						user, strField("session_token"), strField("csrf_token"),
+						strField("two_factor_challenge"), strField("error"),
+					},
+					Optional: []string{"session_token", "csrf_token", "two_factor_challenge", "error"},
+				}, Status: http.StatusOK,
+			}}},
+			{Name: "accounts", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{
+					typeField("accounts", []core.AccountInfo{}),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "unlink-account", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.UnlinkAccountInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "enable-two-factor", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.EnableTwoFactorInput{}),
 				Response: ResponseSpec{Fields: []Field{
-					user, strField("session_token"), strField("csrf_token"),
+					strField("totp_uri"), strField("challenge"), typeField("backup_codes", []string{}),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "verify-two-factor", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.VerifyTwoFactorInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					user, strField("session_token"),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "disable-two-factor", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.DisableTwoFactorInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "regenerate-backup-codes", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.RegenerateBackupCodesInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					typeField("backup_codes", []string{}),
 				}}, Status: http.StatusOK,
 			}}},
 			{Name: "send-magic-link", Anonymous: true, Methods: []Method{{
@@ -179,7 +213,10 @@ func ContractFor() Contract {
 			}}},
 		},
 		OptionalFields: map[string][]string{
-			"TokenInput":         {"email", "password", "refresh_token"},
+			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
+			"SignUpInput":        {"username"},
+			"SignInInput":        {"username"},
+			"SignOutInput":       {"session_token"},
 			"SendMagicLinkInput": {"name", "callback_url"},
 			"SendEmailOTPInput":  {"name"},
 		},
@@ -189,6 +226,13 @@ func ContractFor() Contract {
 			{core.ErrInvalidOTP, http.StatusUnauthorized, "invalid_code", "invalid or expired code"},
 			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
 			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
+			{core.ErrInvalidUsername, http.StatusBadRequest, "invalid_input", "invalid username"},
+			{core.ErrUsernameTaken, http.StatusBadRequest, "username_taken", "username already taken"},
+			{core.ErrLastAccount, http.StatusBadRequest, "last_account", "cannot unlink the last account"},
+			{core.ErrTOTPNotEnabled, http.StatusBadRequest, "two_factor_not_enabled", "second factor is not enabled"},
+			{core.ErrTOTPInvalid, http.StatusUnauthorized, "invalid_code", "invalid second factor code"},
+			{core.ErrTwoFactorRequired, http.StatusUnauthorized, "two_factor_required", "second factor required"},
+			{core.ErrTOTPNotConfigured, http.StatusNotFound, "not_found", "second factor is not configured"},
 			{core.ErrTokenInvalid, http.StatusUnauthorized, "invalid_token", "invalid token"},
 			{core.ErrTokenExpired, http.StatusUnauthorized, "invalid_token", "invalid token"},
 			{core.ErrRefreshReuse, http.StatusUnauthorized, "invalid_token", "invalid token"},

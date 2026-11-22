@@ -13,18 +13,19 @@ version. Missing documentation is never the reason — every shipped feature has
 - **Email/password auth** — sign-up, sign-in, sign-out, rehash, anti-enumeration. See [Quickstart](/docs/quickstart) and [Security](/docs/security).
 - **Sessions** — hashed tokens, idle/absolute deadlines, freshness checks, list/revoke, secure cookies and CSRF. See [Sessions and cookies](/docs/sessions).
 - **Email verification, email change, password reset/change and verified account deletion** — single-use Tokens, templates and full revocation. See [Verification and reset](/docs/verification-and-reset).
-- **OAuth sign-in** — Google and GitHub, PKCE, encrypted state, verified-only linking and custom providers. See [OAuth sign-in](/docs/oauth).
+- **OAuth sign-in** — [Google](/docs/google) and [GitHub](/docs/github) adapters, PKCE, encrypted state, verified-only linking and custom providers. See [OAuth sign-in](/docs/oauth).
 - **JWT mode** — Access/Refresh Tokens, rotation and replay containment. See [JWT mode](/docs/jwt).
 - **Passwordless sign-in** — magic links and six-digit email OTPs, digest-only proofs, verified email and Session issuance. See [Passwordless sign-in](/docs/passwordless).
 - **Session and token hardening** — opt-in Session cache, CSRF/JWT key rings, opt-in JWKS handler and validated redirect patterns. See [Sessions](/docs/sessions), [JWT mode](/docs/jwt) and [Security](/docs/security).
-- **Storage adapters** — PostgreSQL and SQLite with explicit migrations and a conformance suite. See [Storage](/docs/storage).
+- **Username, account management and Second factor** — username sign-in, safe account listing/unlinking, TOTP with Backup codes and Two-factor challenges. See [Username and accounts](/docs/accounts) and [Second factor](/docs/two-factor).
+- **Storage adapters** — [SQLite](/docs/sqlite) and [PostgreSQL](/docs/postgres) with explicit migrations and a conformance suite. See [Storage](/docs/storage).
 - **Mailers and templates** — console and SMTP adapters, overridable templates. See [Mail](/docs/mail).
 - **Developer surface** — typed Go API, HTTP endpoints, generated OpenAPI contract, typed TypeScript client, docs handler and Fumadocs site. Per-endpoint rate-limit rules and trusted-proxy keys are configurable. See [Go API](/docs/go-api), [HTTP API](/docs/http-api), [Configuration](/docs/configuration), [Tooling](/docs/tooling).
 - **Security controls** — Argon2id with bounded parsing, rate-limiting interface, redacted hooks, structured events. See [Security](/docs/security).
 
 ## Not implemented yet
 
-The #44 foundation and passwordless sign-in are shipped. Other roadmap items remain researched but not implemented.
+The foundation, passwordless, hardening and Phase 3 sign-in features are shipped. Other roadmap items remain researched but not implemented.
 
 ### Known limitations
 
@@ -32,15 +33,15 @@ The #44 foundation and passwordless sign-in are shipped. Other roadmap items rem
   transaction across them. A best-effort delete removes the User if the second call fails.
 - Rate limits use a boolean `RateLimiter` interface with per-endpoint rules and opt-in
   trusted-proxy keys; the library does not ship a window-aware limiter.
-- Only Google and GitHub ship as OAuth providers. There is no account unlink/list API.
+- Only Google and GitHub ship as OAuth providers.
   JWKS publication is opt-in and asymmetric-only; key rings and redirect patterns are opt-in.
 - There is no framework-specific reactive client, no CLI and no queryable audit log.
 
 ### Researched but not planned
 
 A capability survey of Better Auth lives in `docs/research/better-auth-authentication-features.md`.
-It records features Signet does not have: TOTP two-factor, passkeys, phone OTP,
-username sign-in, anonymous sessions, organizations, roles/API keys, OAuth/OIDC provider,
+It records features Signet does not have: passkeys, phone OTP,
+anonymous sessions, organizations, roles/API keys, OAuth/OIDC provider,
 SSO/SCIM, device flow, captcha, compromised-password checks and anomaly detection. It is a
 reference for future decisions, not a promise of delivery.
 

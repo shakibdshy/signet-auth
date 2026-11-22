@@ -1,75 +1,156 @@
 ---
 title: Frontend client
-description: Type-safe auth calls from a React app in a separate repository.
+description: Call Signet from a browser app with a typed TypeScript client.
 ---
 
-Signet publishes `api/signet.openapi.json`, generated from the same declarative
-contract the handlers use. The `@shakibdshy/signet-client` package is generated
-from that spec, giving a frontend compile-time checked methods and a typed error
-union.
+The `@shakibdshy/signet-client` package is generated from Signet's OpenAPI contract, so the
+methods and error codes match the server. You need **Node.js 20+**.
+
+## Install
+
+The package is not published to npm yet. Until it is, install it from a local checkout of this
+repository:
 
 ```bash
-npm install @shakibdshy/signet-client
+cd /path/to/signet/client/ts
+npm install
+npm run build
+
+cd /path/to/your-frontend
+npm install /path/to/signet/client/ts
 ```
+
+When a published version is available, this becomes `npm install @shakibdshy/signet-client`.
+
+## Create the client
 
 ```ts
 import { createSignetClient, SignetApiError } from '@shakibdshy/signet-client';
 
-const auth = createSignetClient({ baseURL: 'https://api.example.com' });
-
-const { user } = await auth.signUp({
-  email: 'user@example.com',
-  password: 'correct horse battery staple',
-  name: 'Ada',
+export const auth = createSignetClient({
+  // Origin + your backend's Config.PathPrefix. If the Go server mounts
+  // auth.Handler() at /auth, baseURL MUST include /auth.
+  baseURL: 'https://api.example.com/auth',
 });
+```
 
-try {
-  await auth.signIn({ email: 'user@example.com', password: 'wrong' });
-} catch (err) {
-  if (err instanceof SignetApiError && err.code === 'invalid_credentials') {
-    // show a generic sign-in error
+<Callout title="Most common mistake">
+Using only `https://api.example.com` as `baseURL` when the backend mounts Signet at `/auth`.
+The generated client calls `/signup`, so without the prefix every request goes to
+`https://api.example.com/signup` and returns 404.
+</Callout>
+
+Cookies are included automatically. The client fetches a CSRF token from `GET /csrf-token`,
+caches it, and sends `X-CSRF-Token` on state-changing calls. You do not manage CSRF yourself.
+
+## A complete login form
+
+```tsx
+import { useState } from 'react';
+import { auth, SignetApiError } from './signet-client';
+
+export function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [challenge, setChallenge] = useState('');
+  const [code, setCode] = useState('');
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    try {
+      const result = await auth.signIn({ email, password });
+      if (result.two_factor_challenge) {
+        setChallenge(result.two_factor_challenge);
+        return;
+      }
+      setUser(result.user);
+    } catch (err) {
+      setError(err instanceof SignetApiError ? 'Invalid email or password.' : 'Something went wrong.');
+    }
   }
+
+  async function verifySecondFactor(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    try {
+      const result = await auth.verifyTwoFactor({ challenge, code });
+      setUser(result.user);
+    } catch (err) {
+      setError(err instanceof SignetApiError ? 'Invalid or expired code.' : 'Something went wrong.');
+    }
+  }
+
+  async function logout() {
+    await auth.signOut({});
+    setUser(null);
+  }
+
+  if (user) {
+    return <div>Signed in as {user.email} <button onClick={logout}>Sign out</button></div>;
+  }
+  if (challenge) {
+    return (
+      <form onSubmit={verifySecondFactor}>
+        <input value={code} onChange={e => setCode(e.target.value)} placeholder="Authenticator code" />
+        <button type="submit">Verify</button>
+        {error && <p role="alert">{error}</p>}
+      </form>
+    );
+  }
+  return (
+    <form onSubmit={submit}>
+      <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
+      <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+      <button type="submit">Sign in</button>
+      {error && <p role="alert">{error}</p>}
+    </form>
+  );
 }
 ```
 
-Cookies are included on every request. The CSRF token is fetched lazily from
-`GET /csrf-token`, cached, and sent as `X-CSRF-Token` on state-changing calls.
-After a sign-in the token is refreshed from the response.
+`signUp` works the same way. To render the signed-in User on page load, call the `/session`
+endpoint or expose the User from your own server-rendered route; the client does not keep a
+reactive session store.
 
 ## Passwordless sign-in
 
-The client exposes the four passwordless endpoints. They are anonymous and CSRF-exempt, so no
-`X-CSRF-Token` is fetched for them.
+These endpoints are anonymous and CSRF-exempt.
 
 ```ts
-// Magic link: send the email, then the browser opens the link.
 await auth.sendMagicLink({
   email: 'ada@example.com',
   callback_url: 'https://app.example.com/welcome', // must be allowlisted on the server
 });
 
-// If your app handles the link itself, read token from the URL and exchange it:
+// If your app owns the link route, exchange the token from the URL:
 const sent = await auth.verifyMagicLink({
   token: new URL(location.href).searchParams.get('token')!,
   callback_url: 'https://app.example.com/welcome',
 });
-// sent?.user, sent?.session_token
 
-// Email OTP: request a six-digit code, then submit it with the same email.
 await auth.sendOtp({ email: 'grace@example.com' });
-const result = await auth.verifyOtp({
-  email: 'grace@example.com',
-  code: '123456',
-});
-// result?.user, result?.session_token
+const result = await auth.verifyOtp({ email: 'grace@example.com', code: '123456' });
 ```
 
-A clicked magic link normally navigates directly to `GET /verify-magic-link`, which sets the
-cookies and redirects. Call `verifyMagicLink()` yourself only when your frontend owns that
-route. Both verification methods return the typed `user` and `session_token` body; a redirect
-returns no JSON body.
+A normal clicked link navigates to `GET /verify-magic-link`, which sets cookies and redirects;
+call `verifyMagicLink()` only when your frontend handles that route itself.
 
-Handle passwordless failures with the published error codes:
+## Second factor management
+
+```ts
+const enabled = await auth.enableTwoFactor({ password });
+await auth.verifyTwoFactor({ challenge: enabled.challenge, code: '123456' });
+const fresh = await auth.regenerateBackupCodes({ password });
+await auth.disableTwoFactor({ password });
+```
+
+Enable, regenerate and disable are authenticated. Enrollment stays pending until the first
+successful TOTP code; only then will `signIn` return a challenge.
+
+## Handling errors
 
 ```ts
 try {
@@ -77,13 +158,15 @@ try {
 } catch (err) {
   if (err instanceof SignetApiError) {
     switch (err.code) {
-      case 'invalid_code':        // wrong email, expired or rotated code
-      case 'invalid_link':        // malformed, expired or rotated magic link
+      case 'invalid_code':
+      case 'invalid_link':
         return showMessage('That code or link is no longer valid. Request a new one.');
-      case 'code_already_used':   // OTP consumed
-      case 'link_already_used':   // magic link consumed
+      case 'code_already_used':
+      case 'link_already_used':
         return showMessage('You already used that proof. Request a new one.');
-      case 'invalid_request':     // callback not allowlisted or mismatched
+      case 'two_factor_required':
+        return showMessage('Enter your authenticator code to continue.');
+      case 'invalid_request':
         return showMessage('That sign-in link is not valid for this app.');
       case 'rate_limited':
         return showMessage('Too many attempts. Try again shortly.');
@@ -93,15 +176,12 @@ try {
 }
 ```
 
-The full list of codes lives in [Errors](/docs/errors); the request and response shapes come
-from the generated [OpenAPI contract](/docs/openapi). See
-[Passwordless sign-in](/docs/passwordless) for the server-side setup and
-[Magic-link sign-in](/docs/magic-link) / [Email OTP sign-in](/docs/email-otp) for each flow.
+All codes are listed in [Errors](/docs/errors); request and response shapes come from the
+generated [OpenAPI contract](/docs/openapi). Server setup lives in [Passwordless sign-in](/docs/passwordless),
+[Second factor](/docs/two-factor) and [Username and accounts](/docs/accounts).
 
-## With a separate backend repository
+## Separate backend repository
 
-The backend team merges this base spec into its own application spec and publishes
-a versioned SDK. The frontend installs that SDK; a breaking server shape change is
-a major version and fails the build at the affected call sites. The compiler — not
-a shared Git repository — is the contract. See the HTTP API reference for the
-exact request and response shapes.
+The backend team can merge this base spec into its own application spec and publish a versioned
+SDK. The frontend then depends on that SDK; a breaking server shape change becomes a major
+version and fails the build at the affected call sites. See [HTTP API](/docs/http-api).

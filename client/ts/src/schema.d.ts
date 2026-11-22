@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /accounts */
+        get: operations["accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/change-email": {
         parameters: {
             query?: never;
@@ -72,6 +89,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/disable-two-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /disable-two-factor */
+        post: operations["disable-two-factor_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enable-two-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /enable-two-factor */
+        post: operations["enable-two-factor_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/callback": {
         parameters: {
             query?: never;
@@ -100,6 +151,23 @@ export interface paths {
         put?: never;
         /** POST /oauth/start */
         post: operations["oauth/start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/regenerate-backup-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /regenerate-backup-codes */
+        post: operations["regenerate-backup-codes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -311,6 +379,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/unlink-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /unlink-account */
+        post: operations["unlink-account_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/verify-change-email": {
         parameters: {
             query?: never;
@@ -379,13 +464,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/verify-two-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /verify-two-factor */
+        post: operations["verify-two-factor_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountInfo: {
+            /** Format: date-time */
+            created_at: string;
+            email: string;
+            email_verified: boolean;
+            id: string;
+            provider: string;
+            provider_user_id: string;
+        };
         ApiError: {
             /** @enum {string} */
-            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "unauthorized";
+            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
             message: string;
         };
         ChangeEmailInput: {
@@ -399,12 +510,21 @@ export interface components {
         ConfirmDeleteUserInput: {
             token: string;
         };
+        DisableTwoFactorInput: {
+            password: string;
+        };
+        EnableTwoFactorInput: {
+            password: string;
+        };
         OAuthStartInput: {
             provider: string;
             redirect: string;
         };
         OAuthStartResult: {
             url: string;
+        };
+        RegenerateBackupCodesInput: {
+            password: string;
         };
         ResetPasswordInput: {
             new_password: string;
@@ -441,16 +561,20 @@ export interface components {
         SignInInput: {
             email: string;
             password: string;
+            username?: string;
         };
         SignOutInput: {
-            session_token: string;
+            session_token?: string;
         };
         SignUpInput: {
             email: string;
             name: string;
             password: string;
+            username?: string;
         };
         TokenInput: {
+            challenge?: string;
+            code?: string;
             email?: string;
             password?: string;
             refresh_token?: string;
@@ -459,6 +583,10 @@ export interface components {
             access_token: string;
             expires_in: number;
             refresh_token: string;
+            two_factor_challenge?: string;
+        };
+        UnlinkAccountInput: {
+            account_id: string;
         };
         User: {
             /** Format: date-time */
@@ -481,6 +609,10 @@ export interface components {
             code: string;
             email: string;
         };
+        VerifyTwoFactorInput: {
+            challenge: string;
+            code: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -490,6 +622,91 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        accounts: components["schemas"]["AccountInfo"][];
+                    };
+                };
+            };
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "change-email_post": {
         parameters: {
             query?: never;
@@ -512,7 +729,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -599,7 +816,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -686,7 +903,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -771,7 +988,187 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "disable-two-factor_post": {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisableTwoFactorInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "enable-two-factor_post": {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnableTwoFactorInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        backup_codes: string[];
+                        challenge: string;
+                        totp_uri: string;
+                    };
+                };
+            };
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -855,7 +1252,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -942,7 +1339,98 @@ export interface operations {
                     "application/json": components["schemas"]["OAuthStartResult"];
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "regenerate-backup-codes_post": {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegenerateBackupCodesInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        backup_codes: string[];
+                    };
+                };
+            };
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1025,7 +1513,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1112,7 +1600,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1197,7 +1685,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1282,7 +1770,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1369,7 +1857,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1456,7 +1944,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1539,7 +2027,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1624,7 +2112,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1707,7 +2195,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1792,13 +2280,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        csrf_token: string;
-                        session_token: string;
+                        csrf_token?: string;
+                        error?: string;
+                        session_token?: string;
+                        two_factor_challenge?: string;
                         user: components["schemas"]["User"];
                     };
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1885,7 +2375,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1974,7 +2464,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2061,7 +2551,94 @@ export interface operations {
                     "application/json": components["schemas"]["TokenPair"];
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "unlink-account_post": {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnlinkAccountInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2148,7 +2725,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2235,7 +2812,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2324,7 +2901,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2414,7 +2991,97 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_request */
+            /** @description invalid_input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "verify-two-factor_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyTwoFactorInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        session_token: string;
+                        user: components["schemas"]["User"];
+                    };
+                };
+            };
+            /** @description invalid_input */
             400: {
                 headers: {
                     [name: string]: unknown;

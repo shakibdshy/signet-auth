@@ -1,85 +1,149 @@
 ---
 title: Quickstart
-description: Add sign-up and sign-in to a Go application in a few lines.
+description: A runnable Signet server in about 30 lines, plus a curl smoke test.
 ---
 
-## Install
+This page gets a small Go server running with email/password sign-up and sign-in. You will need
+**Go 1.26 or newer**. For the frontend steps you will also need Node.js 20+; see
+[Frontend client](/docs/frontend-client).
+
+## 1. Create a module and install Signet
 
 ```bash
+mkdir signet-demo && cd signet-demo
+go mod init example.com/signet-demo
 go get github.com/shakibdshy/signet
+go get modernc.org/sqlite
 ```
 
-## Configure a Client
-
-A `Store`, `Mailer`, `RateLimiter` and 32-byte CSRF key are required. Bundled
-adapters live in `store/sqlite`, `store/postgres` and `mailer/console` (development
-only).
+## 2. Create `main.go`
 
 ```go
-cfg := signet.DefaultConfig()
-cfg.Store = myStore
-cfg.Mailer = console.New(os.Stdout)
-cfg.RateLimiter = myLimiter
-cfg.CSRFKey = key // 32 random bytes
-cfg.AppURL = "https://app.example.com"
+package main
 
-auth, err := signet.New(cfg)
-if err != nil {
-    log.Fatal(err)
+import (
+	"context"
+	"crypto/rand"
+	"database/sql"
+	"log"
+	"net/http"
+	"os"
+	"sync"
+
+	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/mailer/console"
+	"github.com/shakibdshy/signet/store/sqlite"
+	_ "modernc.org/sqlite"
+)
+
+// A minimal rate limiter for development. Use a shared store in production.
+type memoryLimiter struct {
+	mu   sync.Mutex
+	hits map[string]int
+}
+
+func (l *memoryLimiter) Allow(_ context.Context, key string) (bool, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.hits[key]++
+	return l.hits[key] <= 10, nil
+}
+
+func main() {
+	ctx := context.Background()
+
+	// Open SQLite and create Signet's four tables.
+	db, err := sql.Open("sqlite", "file:signet.db?_pragma=foreign_keys(1)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	store := sqlite.New(db)
+	if err := store.Migrate(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	// CSRF tokens are HMAC-signed; the key must be exactly 32 random bytes.
+	csrfKey := make([]byte, 32)
+	if _, err := rand.Read(csrfKey); err != nil {
+		log.Fatal(err)
+	}
+
+	cfg := signet.DefaultConfig()
+	cfg.Store = store
+	cfg.Mailer = console.New(os.Stdout) // development only: prints links
+	cfg.RateLimiter = &memoryLimiter{hits: make(map[string]int)}
+	cfg.CSRFKey = csrfKey
+	cfg.AppURL = "http://localhost:8080" // origin only, no path
+	cfg.PathPrefix = "/auth"             // where the HTTP endpoints are mounted
+
+	// Local convenience: skip email verification. Remove both lines in production.
+	off := false
+	cfg.RequireVerifiedEmail = &off
+	cfg.SendVerificationOnSignUp = &off
+
+	auth, err := signet.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mux := http.NewServeMux()
+	// Signet's handler expects the full /auth/... path — do not use StripPrefix.
+	mux.Handle("/auth/", auth.Handler())
+	mux.Handle("/private", auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := signet.UserFromContext(r.Context())
+		if !ok {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte("hello " + user.Email + "\n"))
+	})))
+
+	log.Println("listening on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 ```
 
-`DefaultConfig()` supplies secure defaults for cookies, sessions and passwords.
-Insecure options are named `Insecure*` and emit warnings when used.
+Run `go mod tidy && go run .`.
 
-Every field, default and pointer-semantics rule is listed in the [Configuration](/docs/configuration) reference; failures are mapped in [Errors](/docs/errors).
+## 3. Test it with curl
 
-## Use the programmatic API
+```bash
+curl -i -X POST http://localhost:8080/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ada@example.com","password":"correct horse"}'
 
-```go
-_, err := auth.SignUp(ctx, signet.SignUpInput{
-    Email: "user@example.com", Password: "correct horse battery staple",
-})
-result, err := auth.SignIn(ctx, signet.SignInInput{
-    Email: "user@example.com", Password: "correct horse battery staple",
-})
+curl -i -X POST http://localhost:8080/auth/signin \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ada@example.com","password":"correct horse"}'
 ```
 
-## Or mount the HTTP API
+The sign-in response contains `session_token` and `csrf_token` and sets a session cookie. Use
+that cookie to access `/private`. State-changing HTTP requests also need `X-CSRF-Token`; the
+[Frontend client](/docs/frontend-client) sends it automatically.
 
-```go
-mux.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
-```
+## What the pieces mean
 
-This exposes `/signup`, `/signin`, `/signout`, `/sessions`, `/session`, `/token`,
-`/csrf-token` and the verification, reset and OAuth endpoints under your prefix.
-State-changing requests require a signed CSRF token — see [Sessions and cookies](/docs/sessions).
-
-<Callout title="Development only">
-`mailer/console` prints messages instead of sending them. Use `mailer/smtp` in
-production; STARTTLS is the default.
+<Callout title="Glossary in 60 seconds">
+A **User** is the person. An **Account** is one way they sign in (a password, Google, or a
+Username). A **Session** is one authenticated visit, identified by an opaque **Session token**.
+A **Token** is a single-use proof for one sensitive flow — different from a Session token.
+See the [GLOSSARY.md](https://github.com/shakibdshy/signet/blob/main/GLOSSARY.md).
 </Callout>
 
-## Sign out
+- `Store` adapts your database. `Migrate` creates the tables; Signet never migrates implicitly.
+- `Mailer` sends verification and reset links. `console.New` prints them to stdout for development.
+- `RateLimiter` decides whether a request key is allowed. You own its implementation and window.
+- `CSRFKey` signs CSRF tokens; `AppURL` is the origin used in emailed links.
+- `PathPrefix` says where the endpoints live. Mount `auth.Handler()` at that path **without**
+  `http.StripPrefix`.
 
-```go
-if err := auth.SignOut(ctx, signet.SignOutInput{SessionToken: result.SessionToken}); err != nil {
-    log.Fatal(err)
-}
-```
+`DefaultConfig()` supplies secure cookie, session and password defaults. Insecure options are
+named `Insecure*` and emit warnings. See [Configuration](/docs/configuration) and
+[Errors](/docs/errors) for the full reference.
 
-The HTTP equivalent is `POST /signout`, which also clears the session cookie.
+## Next steps
 
-## Runnable examples
-
-Five separate Go modules show the same API with different routers: `examples/stdlib`,
-`examples/chi`, `examples/echo`, `examples/gin` and `examples/fiber`. Each uses a
-PostgreSQL database, defaulting to
-`postgres://signet:signet@localhost:5432/signet?sslmode=disable`; override it with
-`SIGNET_DATABASE_URL`. They call `Migrate(ctx)` at startup, use the console mailer and an
-in-memory limiter, mount auth under `/auth`, and disable email verification for local
-convenience. Copy one as the starting point for your application.
-
-<Callout title="JWT-only applications">
-`Config.JWTOnly` skips session cookies, so no `CSRFKey` is required. See [JWT](/docs/jwt).
-</Callout>
+- [Complete example](/docs/complete-example) — optional hardening and the Go API.
+- [Sessions and cookies](/docs/sessions) — cookies, CSRF and revocation.
+- [Frontend client](/docs/frontend-client) — call these endpoints from a browser app.

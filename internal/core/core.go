@@ -70,7 +70,7 @@ type Session struct {
 // silently omitted.
 var AllTokenKinds = []TokenKind{
 	TokenVerifyEmail, TokenChangeEmail, TokenDeleteUser, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
-	TokenMagicLink, TokenEmailOTP,
+	TokenMagicLink, TokenEmailOTP, TokenTwoFactor,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -100,6 +100,9 @@ const (
 	// TokenEmailOTP proves a passwordless six-digit email sign-in.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenEmailOTP TokenKind = "email_otp"
+	// TokenTwoFactor proves a first factor awaiting a Second factor.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenTwoFactor TokenKind = "two_factor"
 )
 
 // Token is a single-use proof for one sensitive flow.
@@ -348,6 +351,11 @@ type Config struct {
 	Session                  SessionConfig
 	SessionCache             SessionCache
 	Password                 PasswordConfig
+	Username                 *UsernameConfig
+	TOTPStore                TOTPStore
+	TOTPKey                  []byte
+	TOTP                     *TOTPConfig
+	Accounts                 *AccountConfig
 	PathPrefix               string
 	InsecureAllowHTTPCookies bool
 	InsecureDisableCSRF      bool
@@ -386,6 +394,42 @@ type SessionConfig struct {
 	FreshAge time.Duration
 }
 
+// UsernameConfig controls Username normalization and validation.
+type UsernameConfig struct {
+	MinLength int
+	MaxLength int
+	Reserved  []string
+	Normalize func(string) string
+}
+
+// AccountConfig controls account-management safeguards.
+type AccountConfig struct {
+	FreshWindow time.Duration
+}
+
+// TOTPConfig controls TOTP code generation and verification.
+type TOTPConfig struct {
+	Digits int
+	Period int
+	Window int
+	Issuer string
+}
+
+// TOTPState is the persisted state of a User's Second factor enrollment.
+type TOTPState struct {
+	Secret      string
+	BackupCodes []string
+	Verified    bool
+}
+
+// TOTPStore persists TOTP enrollment state. It is optional; without one,
+// Second factor is unavailable.
+type TOTPStore interface {
+	Get(context.Context, string) (*TOTPState, error)
+	Put(context.Context, string, *TOTPState) error
+	Delete(context.Context, string) error
+}
+
 // PasswordConfig bounds accepted password lengths.
 type PasswordConfig struct {
 	MinLength int
@@ -397,6 +441,7 @@ type SignUpInput struct {
 	Email        string `json:"email"`
 	Password     string `json:"password"`
 	Name         string `json:"name"`
+	Username     string `json:"username"`
 	RateLimitKey string `json:"-"`
 }
 
@@ -406,6 +451,7 @@ type SignUpResult struct{ User *User }
 // SignInInput is the input to a sign-in.
 type SignInInput struct {
 	Email        string `json:"email"`
+	Username     string `json:"username"`
 	Password     string `json:"password"`
 	RateLimitKey string `json:"-"`
 }
@@ -414,9 +460,77 @@ type SignInInput struct {
 type SignInResult struct {
 	User         *User
 	SessionToken string
+	// TwoFactorChallenge is returned instead of a Session when a Second factor is required.
+	TwoFactorChallenge string `json:"two_factor_challenge,omitempty"`
 	// CallbackURL is the allowlisted callback embedded in a magic-link proof.
 	// It is transport-only and never serialised.
 	CallbackURL string `json:"-"`
+}
+
+// AccountInfo is the safe representation of an Account.
+type AccountInfo struct {
+	ID             string    `json:"id"`
+	Provider       string    `json:"provider"`
+	ProviderUserID string    `json:"provider_user_id"`
+	Email          string    `json:"email"`
+	EmailVerified  bool      `json:"email_verified"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// ListAccountsInput selects the User whose Accounts should be listed.
+type ListAccountsInput struct{ UserID string }
+
+// ListAccountsResult contains the safe fields of a User's Accounts.
+type ListAccountsResult struct{ Accounts []*AccountInfo }
+
+// UnlinkAccountInput identifies one Account to unlink and the Session proving
+// the request is recent.
+type UnlinkAccountInput struct {
+	UserID       string `json:"-"`
+	AccountID    string `json:"account_id"`
+	SessionToken string `json:"-"`
+	RateLimitKey string `json:"-"`
+}
+
+// EnableTwoFactorInput enables Second factor enrollment.
+type EnableTwoFactorInput struct {
+	UserID       string `json:"-"`
+	Password     string `json:"password"`
+	RateLimitKey string `json:"-"`
+}
+
+// EnableTwoFactorResult carries a provisioning URI and the initial Backup codes.
+type EnableTwoFactorResult struct {
+	TOTPURI     string   `json:"totp_uri"`
+	Challenge   string   `json:"challenge"`
+	BackupCodes []string `json:"backup_codes"`
+}
+
+// VerifyTwoFactorInput exchanges a Two-factor challenge for a Session.
+type VerifyTwoFactorInput struct {
+	Challenge    string `json:"challenge"`
+	Code         string `json:"code"`
+	RateLimitKey string `json:"-"`
+}
+
+// DisableTwoFactorInput removes a User's Second factor enrollment.
+type DisableTwoFactorInput struct {
+	UserID       string `json:"-"`
+	Password     string `json:"password"`
+	RateLimitKey string `json:"-"`
+}
+
+// RegenerateBackupCodesInput replaces all Backup codes.
+type RegenerateBackupCodesInput struct {
+	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
+	Password     string `json:"password"`
+	RateLimitKey string `json:"-"`
+}
+
+// RegenerateBackupCodesResult carries a fresh set of Backup codes.
+type RegenerateBackupCodesResult struct {
+	BackupCodes []string `json:"backup_codes"`
 }
 
 // SendMagicLinkInput requests a magic-link sign-in email.
@@ -531,14 +645,17 @@ type TokenInput struct {
 	Email        string `json:"email"`
 	Password     string `json:"password"`
 	RefreshToken string `json:"refresh_token"`
+	Challenge    string `json:"challenge"`
+	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
 }
 
 // TokenPair is the result of a token exchange.
 type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
+	AccessToken        string `json:"access_token"`
+	RefreshToken       string `json:"refresh_token"`
+	ExpiresIn          int64  `json:"expires_in"`
+	TwoFactorChallenge string `json:"two_factor_challenge,omitempty"`
 }
 
 // OAuthStartInput selects a provider and redirect target.
@@ -630,6 +747,20 @@ var (
 	ErrInvalidKeyRing = errors.New("signet: invalid key ring")
 	// ErrInvalidRedirectPattern reports a malformed redirect pattern.
 	ErrInvalidRedirectPattern = errors.New("signet: invalid redirect pattern")
+	// ErrInvalidUsername reports a malformed or reserved Username.
+	ErrInvalidUsername = errors.New("signet: invalid username")
+	// ErrUsernameTaken reports a Username already owned by another User.
+	ErrUsernameTaken = errors.New("signet: username already taken")
+	// ErrLastAccount reports an unlink that would leave a User with no Account.
+	ErrLastAccount = errors.New("signet: cannot unlink the last account")
+	// ErrTOTPNotEnabled reports a Second factor operation for an unenrolled User.
+	ErrTOTPNotEnabled = errors.New("signet: second factor is not enabled")
+	// ErrTOTPInvalid reports an invalid TOTP code or Backup code.
+	ErrTOTPInvalid = errors.New("signet: invalid second factor code")
+	// ErrTwoFactorRequired reports a sign-in that needs a Second factor.
+	ErrTwoFactorRequired = errors.New("signet: second factor required")
+	// ErrTOTPNotConfigured reports a Second factor operation without a configured store or key.
+	ErrTOTPNotConfigured = errors.New("signet: second factor is not configured")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

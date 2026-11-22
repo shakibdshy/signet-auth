@@ -67,6 +67,9 @@ func New(cfg Config) (*Client, error) {
 	if err := core.ValidateRedirectPatterns(cfg.AllowedRedirectPatterns); err != nil {
 		return nil, err
 	}
+	if cfg.TOTPStore != nil && len(cfg.TOTPKey) != 32 {
+		return nil, ErrTOTPNotConfigured
+	}
 	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
 		return nil, ErrInvalidPasswordlessConfig
 	}
@@ -168,12 +171,18 @@ func New(cfg Config) (*Client, error) {
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
-		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password,
+		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password, Username: cfg.Username,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
 		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
+		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
+		FreshWindow: cfg.Accounts.FreshWindow, Tokens: c.tokens,
+		TOTPStore: cfg.TOTPStore, TOTPKey: cfg.TOTPKey, TOTP: cfg.TOTP, AppURL: cfg.AppURL,
 	})
+	if c.jwtService != nil {
+		c.jwtService.SetVerifyTwoFactor(c.auth.VerifyTwoFactor)
+	}
 	return c, nil
 }
 
@@ -208,6 +217,31 @@ func withDefaults(cfg Config) Config {
 	}
 	if cfg.Password.MaxLength == 0 {
 		cfg.Password.MaxLength = defaults.Password.MaxLength
+	}
+	if cfg.Username == nil {
+		cfg.Username = defaults.Username
+	} else {
+		if cfg.Username.MinLength == 0 {
+			cfg.Username.MinLength = defaults.Username.MinLength
+		}
+		if cfg.Username.MaxLength == 0 {
+			cfg.Username.MaxLength = defaults.Username.MaxLength
+		}
+	}
+	if cfg.Accounts == nil {
+		cfg.Accounts = defaults.Accounts
+	} else if cfg.Accounts.FreshWindow <= 0 {
+		cfg.Accounts.FreshWindow = defaults.Accounts.FreshWindow
+	}
+	if cfg.TOTP == nil {
+		cfg.TOTP = defaults.TOTP
+	} else {
+		if cfg.TOTP.Digits == 0 {
+			cfg.TOTP.Digits = defaults.TOTP.Digits
+		}
+		if cfg.TOTP.Period == 0 {
+			cfg.TOTP.Period = defaults.TOTP.Period
+		}
 	}
 	if cfg.PathPrefix == "" {
 		cfg.PathPrefix = defaults.PathPrefix
@@ -263,6 +297,26 @@ func (c *Client) SendMagicLink(ctx context.Context, in SendMagicLinkInput) error
 // VerifyMagicLink consumes a magic-link proof and creates a Session.
 func (c *Client) VerifyMagicLink(ctx context.Context, in VerifyMagicLinkInput) (*SignInResult, error) {
 	return c.verification.VerifyMagicLink(ctx, in)
+}
+
+// EnableTwoFactor starts Second factor enrollment.
+func (c *Client) EnableTwoFactor(ctx context.Context, in EnableTwoFactorInput) (*EnableTwoFactorResult, error) {
+	return c.auth.EnableTwoFactor(ctx, in)
+}
+
+// VerifyTwoFactor exchanges a Two-factor challenge for a Session.
+func (c *Client) VerifyTwoFactor(ctx context.Context, in VerifyTwoFactorInput) (*SignInResult, error) {
+	return c.auth.VerifyTwoFactor(ctx, in)
+}
+
+// DisableTwoFactor removes a User's Second factor enrollment.
+func (c *Client) DisableTwoFactor(ctx context.Context, in DisableTwoFactorInput) error {
+	return c.auth.DisableTwoFactor(ctx, in)
+}
+
+// RegenerateBackupCodes replaces all Backup codes.
+func (c *Client) RegenerateBackupCodes(ctx context.Context, in RegenerateBackupCodesInput) (*RegenerateBackupCodesResult, error) {
+	return c.auth.RegenerateBackupCodes(ctx, in)
 }
 
 // SendEmailOTP emails a single-use six-digit sign-in code.
@@ -413,6 +467,16 @@ func (c *Client) JWKSHandler() http.Handler {
 	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
+// ListAccounts returns the safe fields of a User's Accounts.
+func (c *Client) ListAccounts(ctx context.Context, in ListAccountsInput) (*ListAccountsResult, error) {
+	return c.auth.ListAccounts(ctx, in)
+}
+
+// UnlinkAccount removes one Account after a recent Session check.
+func (c *Client) UnlinkAccount(ctx context.Context, in UnlinkAccountInput) error {
+	return c.auth.UnlinkAccount(ctx, in)
+}
+
 // ListSessions returns the Sessions belonging to a User.
 func (c *Client) ListSessions(ctx context.Context, in ListSessionsInput) (*ListSessionsResult, error) {
 	sessions, err := c.sessions.List(ctx, in.UserID)
@@ -519,6 +583,13 @@ func (a httpAdapter) Authenticate(w http.ResponseWriter, r *http.Request, requir
 }
 func (a httpAdapter) CurrentSession(r *http.Request) (*Session, error) {
 	return a.currentSession(r)
+}
+func (a httpAdapter) SessionTokenFromRequest(r *http.Request) string {
+	cookie, err := r.Cookie(a.cookies.Name())
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
 }
 
 // UserFromContext returns the authenticated User carried by a request context.

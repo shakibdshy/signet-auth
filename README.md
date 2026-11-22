@@ -17,6 +17,7 @@ any router, and it never owns your database schema.
 - Email verification and password reset with single-use, hashed tokens
 - Passwordless sign-in with magic links and six-digit email OTPs
 - Opt-in session caching, key rotation rings, JWKS publication and redirect patterns
+- Username sign-in, guarded account unlinking and optional TOTP Second factor with Backup codes
 - Same-origin checks and signed double-submit CSRF protection
 - PostgreSQL and SQLite adapters with explicit, embedded migrations
 - Pluggable storage, mail, password hashing, rate limiting and logging
@@ -82,7 +83,8 @@ func main() {
 Mount `auth.Handler()` on any router to expose `/signup`, `/signin`, `/signout`,
 `/sessions`, `/session`, `/token`, `/csrf-token` and the verification, reset and
 OAuth endpoints, and the passwordless `send-magic-link`, `verify-magic-link`,
-`send-otp` and `verify-otp` endpoints. Runnable apps for five routers — standard library, Chi, Echo,
+`send-otp` and `verify-otp` endpoints, plus the account, Second factor and JWT challenge
+endpoints. Runnable apps for five routers — standard library, Chi, Echo,
 Gin and Fiber — live in [`examples/`](examples/).
 
 ## Security
@@ -158,7 +160,7 @@ no schema ownership.
 
 Sign-up writes the User and its credential Account in two store calls; if the
 second fails, Signet deletes the new User on a best-effort basis. There is no
-transaction across Store calls. Passkeys, TOTP, phone OTP and organizations
+transaction across Store calls. Passkeys, phone OTP and organizations
 are planned for later versions.
 
 ## Project layout

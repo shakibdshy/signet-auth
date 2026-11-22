@@ -5,6 +5,7 @@ const client = createSignetClient({ baseURL: "https://api.example.com" });
 
 void client.signUp({ email: "user@example.com", password: "correct horse", name: "Ada" });
 void client.signIn({ email: "user@example.com", password: "correct horse" });
+void client.signOut({});
 void client.exchangeToken({ email: "user@example.com", password: "correct horse" });
 void client.sendVerification({ email: "user@example.com" });
 void client.verifyEmail({ token: "proof" });

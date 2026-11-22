@@ -17,6 +17,10 @@ import (
 type API interface {
 	SignUp(context.Context, core.SignUpInput) (*core.SignUpResult, error)
 	SignIn(context.Context, core.SignInInput) (*core.SignInResult, error)
+	EnableTwoFactor(context.Context, core.EnableTwoFactorInput) (*core.EnableTwoFactorResult, error)
+	VerifyTwoFactor(context.Context, core.VerifyTwoFactorInput) (*core.SignInResult, error)
+	DisableTwoFactor(context.Context, core.DisableTwoFactorInput) error
+	RegenerateBackupCodes(context.Context, core.RegenerateBackupCodesInput) (*core.RegenerateBackupCodesResult, error)
 	SendMagicLink(context.Context, core.SendMagicLinkInput) error
 	VerifyMagicLink(context.Context, core.VerifyMagicLinkInput) (*core.SignInResult, error)
 	SendEmailOTP(context.Context, core.SendEmailOTPInput) error
@@ -27,6 +31,9 @@ type API interface {
 	VerifyEmailChange(context.Context, core.VerifyEmailChangeInput) error
 	RequestUserDeletion(context.Context, core.RequestDeleteUserInput) error
 	DeleteUser(context.Context, core.ConfirmDeleteUserInput) error
+	ListAccounts(context.Context, core.ListAccountsInput) (*core.ListAccountsResult, error)
+	UnlinkAccount(context.Context, core.UnlinkAccountInput) error
+	SessionTokenFromRequest(*http.Request) string
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
 	RevokeSession(context.Context, core.RevokeSessionInput) error
 	RevokeAllSessions(context.Context, core.RevokeAllSessionsInput) error
@@ -74,6 +81,12 @@ var Endpoints = []Endpoint{
 	{Name: "send-otp", Anonymous: true},
 	{Name: "verify-otp", Anonymous: true},
 	{Name: "signout"},
+	{Name: "enable-two-factor"},
+	{Name: "verify-two-factor", Anonymous: true},
+	{Name: "disable-two-factor"},
+	{Name: "regenerate-backup-codes"},
+	{Name: "accounts"},
+	{Name: "unlink-account"},
 	{Name: "sessions"},
 	{Name: "session"},
 	{Name: "token", Anonymous: true},
@@ -120,6 +133,18 @@ func (h *Handler) Handler() http.Handler {
 			h.handleVerifyOTP(w, r)
 		case "signout":
 			h.handleSignOut(w, r)
+		case "enable-two-factor":
+			h.handleEnableTwoFactor(w, r)
+		case "verify-two-factor":
+			h.handleVerifyTwoFactor(w, r)
+		case "disable-two-factor":
+			h.handleDisableTwoFactor(w, r)
+		case "regenerate-backup-codes":
+			h.handleRegenerateBackupCodes(w, r)
+		case "accounts":
+			h.handleAccounts(w, r)
+		case "unlink-account":
+			h.handleUnlinkAccount(w, r)
 		case "sessions":
 			h.handleSessions(w, r)
 		case "session":
@@ -187,6 +212,13 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	result, err := h.api.SignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
+		return
+	}
+	if result.TwoFactorChallenge != "" {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"user": result.User, "two_factor_challenge": result.TwoFactorChallenge,
+			"error": "two_factor_required",
+		})
 		return
 	}
 	csrfToken, err := h.api.SetSessionCookies(w, result.SessionToken)
@@ -310,6 +342,142 @@ func (h *Handler) handleSignOut(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) handleEnableTwoFactor(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.EnableTwoFactorInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.RateLimitKey = h.clientIP(r)
+	result, err := h.api.EnableTwoFactor(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleVerifyTwoFactor(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.VerifyTwoFactorInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.RateLimitKey = h.clientIP(r)
+	result, err := h.api.VerifyTwoFactor(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "session_token": result.SessionToken})
+}
+
+func (h *Handler) handleDisableTwoFactor(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.DisableTwoFactorInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.RateLimitKey = h.clientIP(r)
+	if err := h.api.DisableTwoFactor(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleRegenerateBackupCodes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.RegenerateBackupCodesInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	in.RateLimitKey = h.clientIP(r)
+	result, err := h.api.RegenerateBackupCodes(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	result, err := h.api.ListAccounts(r.Context(), core.ListAccountsInput{UserID: user.ID})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accounts": result.Accounts})
+}
+
+func (h *Handler) handleUnlinkAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.UnlinkAccountInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	in.RateLimitKey = h.clientIP(r)
+	if err := h.api.UnlinkAccount(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *Handler) handleSessions(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.api.Authenticate(w, r, true)
 	if !ok {
@@ -370,6 +538,12 @@ func (h *Handler) handleToken(w http.ResponseWriter, r *http.Request) {
 	pair, err := h.api.ExchangeToken(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
+		return
+	}
+	if pair.TwoFactorChallenge != "" {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"two_factor_challenge": pair.TwoFactorChallenge, "error": "two_factor_required",
+		})
 		return
 	}
 	writeJSON(w, http.StatusOK, pair)

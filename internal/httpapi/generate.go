@@ -159,6 +159,10 @@ func (g *generator) responseSchema(spec ResponseSpec) (any, error) {
 	}
 	properties := make(map[string]any, len(spec.Fields))
 	required := make([]string, 0, len(spec.Fields))
+	optional := make(map[string]bool, len(spec.Optional))
+	for _, name := range spec.Optional {
+		optional[name] = true
+	}
 	for _, field := range spec.Fields {
 		if field.Schema.Type != nil {
 			properties[field.Name] = g.schemaFor(field.Schema.Type)
@@ -169,7 +173,9 @@ func (g *generator) responseSchema(spec ResponseSpec) (any, error) {
 			}
 			properties[field.Name] = g.schemaFor(t)
 		}
-		required = append(required, field.Name)
+		if !optional[field.Name] {
+			required = append(required, field.Name)
+		}
 	}
 	return map[string]any{"type": "object", "properties": properties, "required": required}, nil
 }
