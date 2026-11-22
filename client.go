@@ -62,6 +62,9 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
+		return nil, ErrInvalidPasswordlessConfig
+	}
 	limiter := ratelimit.New(cfg.RateLimiter, cfg.RateLimitRules)
 	known := make(map[string]bool, len(httpapi.Endpoints))
 	for _, endpoint := range httpapi.Endpoints {
@@ -146,7 +149,7 @@ func New(cfg Config) (*Client, error) {
 		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
 		AppURL: cfg.AppURL, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
-		CreateSession: c.createSession, OnSignUp: cfg.OnSignUp,
+		CreateSession: c.createSession,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,

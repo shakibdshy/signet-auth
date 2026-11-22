@@ -33,10 +33,10 @@ type VerificationDependencies struct {
 	Passwordless   *core.PasswordlessConfig
 	OAuthRedirects []string
 	CreateSession  func(context.Context, string) (string, error)
-	OnSignUp       func(context.Context, *core.User)
 }
 
-// VerificationService implements email verification and password reset.
+// VerificationService implements email verification, password reset and
+// passwordless sign-in.
 type VerificationService struct{ deps VerificationDependencies }
 
 // NewVerification returns a VerificationService.

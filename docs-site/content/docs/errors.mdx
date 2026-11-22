@@ -24,6 +24,7 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrInsecureConfig | 500 internal_error | Cookies are not secure. Use `DefaultConfig()` or the explicit `Insecure*` opt-in. |
 | ErrInvalidCSRFConfig | 500 internal_error | `CSRFKey` is not 32 bytes and `JWTOnly` is false. |
 | ErrInvalidOAuthConfig | 500 internal_error | OAuth providers, redirects or `StateKey` are invalid. |
+| ErrInvalidPasswordlessConfig | 500 internal_error | `Passwordless.MagicLinkTTL` or `Passwordless.OTPTTL` is negative. |
 | ErrInvalidJWTAlgorithm | 500 internal_error | Algorithm is outside the allowlist, or a token used a different one. |
 | ErrInvalidJWTKey | 500 internal_error | Key type does not match the algorithm. |
 
@@ -48,7 +49,7 @@ sign in first and send the session cookie and CSRF token.
 | ErrNotFound | no dedicated mapping — surfaces as 500 internal_error | Entity or Session not found. `404 not_found` comes from JWT/OAuth-disabled sentinels and unknown routes. |
 | ErrInvalidRateLimitRule | 500 internal_error | A rule names an endpoint that is not published. |
 | ErrSessionNotFresh | 401 unauthorized | Session is older than the configured FreshAge; re-authenticate. |
-| ErrTokenInvalid | 401 invalid_token | Malformed, unknown, consumed or replayed Token. |
+| ErrTokenInvalid | 401 invalid_token | Malformed, unknown, consumed or replayed Token, including a magic link or OTP code. |
 | ErrTokenExpired | 401 invalid_token | Token past its expiry; request a fresh one. |
 | ErrRefreshReuse | 401 invalid_token | Refresh replay. All Sessions and Tokens for that User were revoked; sign in again. |
 
@@ -68,7 +69,7 @@ sign in first and send the session cookie and CSRF token.
 
 | Sentinel | HTTP / wire code | Meaning and action |
 | --- | --- | --- |
-| ErrRateLimited | 429 rate_limited | Too many attempts; retry later. |
+| ErrRateLimited | 429 rate_limited | Too many attempts, including failed OTP guesses; retry later. |
 | ErrInvalidCSRFConfig | 500 internal_error | See configuration errors above. |
 
 ## CSRF wire errors

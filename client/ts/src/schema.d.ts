@@ -2302,7 +2302,10 @@ export interface operations {
     };
     "verify-magic-link_get": {
         parameters: {
-            query?: never;
+            query: {
+                token: string;
+                callback_url?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

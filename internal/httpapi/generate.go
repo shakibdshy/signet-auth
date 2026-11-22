@@ -222,11 +222,11 @@ func Generate(contract Contract) ([]byte, error) {
 					},
 				}
 			}
-			if endpoint.Name == "oauth/callback" {
-				op.Parameters = []oasParameter{
-					{Name: "code", In: "query", Required: true, Schema: map[string]any{"type": "string"}},
-					{Name: "state", In: "query", Required: true, Schema: map[string]any{"type": "string"}},
-				}
+			for _, parameter := range method.Parameters {
+				op.Parameters = append(op.Parameters, oasParameter{
+					Name: parameter.Name, In: parameter.In, Required: parameter.Required,
+					Schema: map[string]any{"type": parameter.Type},
+				})
 			}
 			if endpoint.Auth {
 				op.Security = []map[string][]string{{"sessionCookie": {}}}

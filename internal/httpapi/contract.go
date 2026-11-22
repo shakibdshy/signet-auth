@@ -27,12 +27,21 @@ type ResponseSpec struct {
 	Fields []Field
 }
 
+// Parameter is an HTTP input that is not part of the JSON request body.
+type Parameter struct {
+	Name     string
+	In       string // "query" or "header"
+	Required bool
+	Type     string // OpenAPI scalar type
+}
+
 // Method is one HTTP method served by an endpoint.
 type Method struct {
-	Verb     string
-	Request  reflect.Type
-	Response ResponseSpec
-	Status   int
+	Verb       string
+	Request    reflect.Type
+	Response   ResponseSpec
+	Status     int
+	Parameters []Parameter
 }
 
 // ContractEndpoint describes one route and its methods.
@@ -94,6 +103,10 @@ func ContractFor() Contract {
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
 					user, strField("session_token"),
 				}}, Status: http.StatusOK,
+				Parameters: []Parameter{
+					{Name: "token", In: "query", Required: true, Type: "string"},
+					{Name: "callback_url", In: "query", Required: false, Type: "string"},
+				},
 			}}},
 			{Name: "send-otp", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SendEmailOTPInput{}), Status: http.StatusOK,
@@ -156,6 +169,10 @@ func ContractFor() Contract {
 			}}},
 			{Name: "oauth/callback", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Status: http.StatusFound,
+				Parameters: []Parameter{
+					{Name: "code", In: "query", Required: true, Type: "string"},
+					{Name: "state", In: "query", Required: true, Type: "string"},
+				},
 			}}},
 			{Name: "csrf-token", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("token")}}, Status: http.StatusOK,

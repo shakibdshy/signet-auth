@@ -21,7 +21,8 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | "a proof sets `EmailVerified = true`" | `TestMagicLinkAutoCreatesVerifiedUser`, `TestEmailOTPAutoCreatesVerifiedUser` |
 | "no password or Session revocation for existing users" | `TestMagicLinkSignsInExistingUser` (credential sign-in still available) |
 | "one `PasswordlessConfig` pointer on `Config`" | `TestPasswordlessDefaultsHoldForHandBuiltConfig` |
-| "a mismatched query callback is rejected" | `TestMagicLinkRejectsOffOriginCallback` |
+| "a mismatched query callback is rejected" | `TestMagicLinkRejectsMismatchedCallbackAtVerification`, `TestMagicLinkRejectsUnlistedSameOriginCallback` |
+| "New validates cfg" (negative passwordless TTL) | `TestPasswordlessConfigValidationRejectsNegativeTTL` |
 | "with no callback, verification returns session JSON" | `TestMagicLinkHTTPFlowSetsCookie` |
 | "resend rotates the proof" | `TestMagicLinkResendRotatesProof`, `TestEmailOTPReplayAndResendRotation` |
 | "failed guesses throttled through the RateLimiter" | `TestEmailOTPFailedGuessesAreThrottled` |
@@ -34,7 +35,7 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | Proofs are single-use and replay fails | `TestMagicLinkVerificationIsSingleUse`, `TestEmailOTPReplayAndResendRotation` |
 | Resend invalidates the previous proof | `TestMagicLinkResendRotatesProof`, `TestEmailOTPReplayAndResendRotation` |
 | Expired proofs are rejected | `TestMagicLinkExpiresWithClock`, `TestEmailOTPExpiresWithClock` |
-| Off-origin redirects are rejected | `TestMagicLinkRejectsOffOriginCallback` |
+| Off-origin redirects are rejected | `TestMagicLinkRejectsOffOriginCallback`, `TestMagicLinkRejectsUnlistedSameOriginCallback`, `TestMagicLinkRejectsMismatchedCallbackAtVerification` |
 | Unknown emails do not disclose registration or enable mail relay | `TestMagicLinkSendIsSilentWhenSignUpDisabled`, `TestEmailOTPSendIsSilentWhenSignUpDisabled` |
 | Standard sentinel errors reach callers | `TestPasswordlessErrorsUseStandardSentinels` |
 | All four endpoints consult the limiter | `TestPasswordlessSendEndpointsAreRateLimited`, `TestPasswordlessVerifyEndpointsAreRateLimited` |

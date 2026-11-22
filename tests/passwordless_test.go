@@ -25,6 +25,9 @@ func passwordlessClient(t *testing.T) (*signet.Client, *testutil.Store, *testuti
 	cfg.Mailer = mailer
 	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.AppURL = "https://app.example.com"
+	cfg.Passwordless = &signet.PasswordlessConfig{
+		AllowedRedirects: []string{"https://app.example.com/welcome"},
+	}
 	client, err := signet.New(cfg)
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -84,6 +87,9 @@ func passwordlessClientWithConfig(t *testing.T, configure func(*signet.Config)) 
 	cfg.Mailer = mailer
 	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.AppURL = "https://app.example.com"
+	cfg.Passwordless = &signet.PasswordlessConfig{
+		AllowedRedirects: []string{"https://app.example.com/welcome"},
+	}
 	if configure != nil {
 		configure(&cfg)
 	}
@@ -324,6 +330,17 @@ func TestPasswordlessDefaultsHoldForHandBuiltConfig(t *testing.T) {
 	}
 }
 
+func TestPasswordlessConfigValidationRejectsNegativeTTL(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.Passwordless = &signet.PasswordlessConfig{OTPTTL: -time.Second}
+	if _, err := signet.New(cfg); !errors.Is(err, signet.ErrInvalidPasswordlessConfig) {
+		t.Fatalf("error = %v, want ErrInvalidPasswordlessConfig", err)
+	}
+}
+
 func TestPasswordlessErrorsUseStandardSentinels(t *testing.T) {
 	client, _, _ := passwordlessClient(t)
 	ctx := context.Background()
@@ -446,6 +463,36 @@ func TestMagicLinkRejectsOffOriginCallback(t *testing.T) {
 		Email: "user@example.com", CallbackURL: "https://evil.example.com/steal",
 	}); err == nil {
 		t.Fatal("off-origin callback should be rejected")
+	}
+	if len(mailer.Messages) != 0 {
+		t.Fatalf("no mail should be sent: %+v", mailer.Messages)
+	}
+}
+
+func TestMagicLinkRejectsMismatchedCallbackAtVerification(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendMagicLink(ctx, signet.SendMagicLinkInput{
+		Email: "user@example.com", CallbackURL: "https://app.example.com/welcome",
+	}); err != nil {
+		t.Fatalf("SendMagicLink: %v", err)
+	}
+	raw := magicLinkTokenFromMail(t, mailer)
+	_, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{
+		Token: raw, CallbackURL: "https://app.example.com/other",
+	})
+	if !errors.Is(err, signet.ErrOAuthRedirectNotAllowed) {
+		t.Fatalf("error = %v, want ErrOAuthRedirectNotAllowed", err)
+	}
+}
+
+func TestMagicLinkRejectsUnlistedSameOriginCallback(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendMagicLink(ctx, signet.SendMagicLinkInput{
+		Email: "user@example.com", CallbackURL: "https://app.example.com/attacker",
+	}); err == nil {
+		t.Fatal("same-origin but unlisted callback should be rejected")
 	}
 	if len(mailer.Messages) != 0 {
 		t.Fatalf("no mail should be sent: %+v", mailer.Messages)

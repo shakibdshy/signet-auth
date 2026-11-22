@@ -44,11 +44,18 @@ clients can use JWT mode instead.
 
 ## Tokens
 
-Verification, reset, OAuth state/link and refresh proofs are random, single-use and stored
-only as digests. `ConsumeToken` is an atomic conditional update, and digests are compared in
-constant time. Expired Tokens are rejected. Refresh replay is containment, not just an
-error: all Sessions and all Token kinds for that User are revoked and `ErrRefreshReuse` is
-returned.
+Verification, reset, OAuth state/link, magic-link, email-OTP and refresh proofs are random,
+single-use and stored only as digests. `ConsumeToken` is an atomic conditional update, and
+digests are compared in constant time. Expired Tokens are rejected. An OTP stores
+`Digest(email + ":" + code)`, so neither the raw code nor a reusable secret is persisted.
+Refresh replay is containment, not just an error: all Sessions and all Token kinds for that
+User are revoked and `ErrRefreshReuse` is returned.
+
+Passwordless callbacks use the same exact-match allowlist as OAuth: a URL must appear in
+`Passwordless.AllowedRedirects`, `OAuth.AllowedRedirects`, or equal `AppURL`. A same-origin
+but unlisted path is rejected. Unknown emails produce a silent success with no mail and no
+proof when `AllowSignUp` is false, and failed OTP guesses are throttled through the
+`RateLimiter` keyed by email and client IP.
 
 ## OAuth
 

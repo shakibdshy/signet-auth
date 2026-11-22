@@ -15,6 +15,7 @@ any router, and it never owns your database schema.
 - Cookie sessions with idle and absolute timeouts, plus optional JWT access and refresh tokens
 - OAuth sign-in with Google and GitHub, PKCE and verified-only account linking
 - Email verification and password reset with single-use, hashed tokens
+- Passwordless sign-in with magic links and six-digit email OTPs
 - Same-origin checks and signed double-submit CSRF protection
 - PostgreSQL and SQLite adapters with explicit, embedded migrations
 - Pluggable storage, mail, password hashing, rate limiting and logging
@@ -79,7 +80,8 @@ func main() {
 
 Mount `auth.Handler()` on any router to expose `/signup`, `/signin`, `/signout`,
 `/sessions`, `/session`, `/token`, `/csrf-token` and the verification, reset and
-OAuth endpoints. Runnable apps for five routers — standard library, Chi, Echo,
+OAuth endpoints, and the passwordless `send-magic-link`, `verify-magic-link`,
+`send-otp` and `verify-otp` endpoints. Runnable apps for five routers — standard library, Chi, Echo,
 Gin and Fiber — live in [`examples/`](examples/).
 
 ## Security
@@ -89,7 +91,7 @@ Gin and Fiber — live in [`examples/`](examples/).
 - State-changing requests carrying a session cookie are checked against `Origin` and `Sec-Fetch-Site` and require a signed double-submit CSRF token in `X-CSRF-Token`. This applies to headerless clients too when they use cookies; use JWT mode for non-browser clients. Obtain the token from `GET /csrf-token` or the sign-in response.
 - Verification, reset and refresh tokens are random, single-use, short-lived and stored only as digests; unknown-email responses do not disclose account existence.
 - OAuth uses PKCE with an encrypted, expiring state and an allowlisted redirect target. Only verified emails are auto-linked.
-- Rate limiting applies to sign-up, sign-in, reset and verification endpoints. Nothing logs passwords, tokens or secrets.
+- Rate limiting applies to sign-up, sign-in, reset, verification and passwordless endpoints, with per-endpoint rules and opt-in trusted-proxy keys. Nothing logs passwords, tokens or secrets.
 
 Only disable protections with the explicitly named `Insecure*` options, which emit warnings. See [`SECURITY.md`](SECURITY.md) for reporting vulnerabilities.
 
@@ -155,7 +157,7 @@ no schema ownership.
 
 Sign-up writes the User and its credential Account in two store calls; if the
 second fails, Signet deletes the new User on a best-effort basis. There is no
-transaction across Store calls. Passkeys, TOTP, magic links and organizations
+transaction across Store calls. Passkeys, TOTP, phone OTP and organizations
 are planned for later versions.
 
 ## Project layout

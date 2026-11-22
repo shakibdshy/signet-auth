@@ -42,13 +42,7 @@ func (s *VerificationService) redirectAllowed(redirect string) bool {
 	if core.RedirectAllowed(redirect, s.deps.OAuthRedirects) {
 		return true
 	}
-	base := strings.TrimRight(s.deps.AppURL, "/")
-	if core.RedirectAllowed(redirect, []string{base}) {
-		return true
-	}
-	baseURL, baseErr := url.Parse(base)
-	target, targetErr := url.Parse(redirect)
-	return baseErr == nil && targetErr == nil && target.Scheme == baseURL.Scheme && target.Host == baseURL.Host
+	return core.RedirectAllowed(redirect, []string{strings.TrimRight(s.deps.AppURL, "/")})
 }
 
 // proofSubject is the rotation key for a proof issued before a User exists.
@@ -180,9 +174,6 @@ func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, emai
 		}
 		if err := s.deps.Store.CreateUser(ctx, user); err != nil {
 			return nil, err
-		}
-		if s.deps.OnSignUp != nil {
-			s.deps.OnSignUp(ctx, user)
 		}
 	} else {
 		if user.Disabled {

@@ -532,6 +532,8 @@ var (
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
 	ErrInvalidOAuthConfig = errors.New("signet: invalid oauth configuration")
+	// ErrInvalidPasswordlessConfig reports invalid passwordless configuration.
+	ErrInvalidPasswordlessConfig = errors.New("signet: invalid passwordless configuration")
 	// ErrOAuthDisabled reports disabled OAuth.
 	ErrOAuthDisabled = errors.New("signet: oauth is disabled")
 	// ErrOAuthProviderNotFound reports an unknown provider.

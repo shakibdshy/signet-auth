@@ -48,6 +48,8 @@ var (
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
 	ErrInvalidOAuthConfig = core.ErrInvalidOAuthConfig
+	// ErrInvalidPasswordlessConfig reports a negative proof lifetime.
+	ErrInvalidPasswordlessConfig = core.ErrInvalidPasswordlessConfig
 	// ErrOAuthDisabled reports OAuth use while Config.OAuth is nil.
 	ErrOAuthDisabled = core.ErrOAuthDisabled
 	// ErrOAuthProviderNotFound reports an unregistered provider name.
