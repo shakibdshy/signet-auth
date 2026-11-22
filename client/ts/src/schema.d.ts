@@ -561,7 +561,7 @@ export interface components {
         SignInInput: {
             email: string;
             password: string;
-            username: string;
+            username?: string;
         };
         SignOutInput: {
             session_token: string;
@@ -570,7 +570,7 @@ export interface components {
             email: string;
             name: string;
             password: string;
-            username: string;
+            username?: string;
         };
         TokenInput: {
             challenge?: string;
