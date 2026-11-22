@@ -74,24 +74,83 @@ does.
 Set `Config.LastSignInMethod` to record the method of a User's most recent successful sign-in in a
 signed, HttpOnly cookie. No database column is added and the cookie is not readable by scripts.
 
+### 1. Configure it in Go
+
 ```go
+cfg := signet.DefaultConfig()
+cfg.Store = store
+cfg.Mailer = mailer
+cfg.RateLimiter = limiter
+cfg.CSRFKey = csrfKey // required: 32 bytes, also signs this cookie
+cfg.AppURL = "http://localhost:8080"
+cfg.PathPrefix = "/auth"
+
 cfg.LastSignInMethod = &signet.LastSignInMethodConfig{
-    TTL:        30 * 24 * time.Hour,
-    CookieName: "signet_last_method",
+    TTL:        30 * 24 * time.Hour, // default when zero
+    CookieName: "signet_last_method", // default when empty
     BeforeStore: func(ctx context.Context, method string) bool {
-        return consentGiven(ctx) // false still allows sign-in
+        return true // return false to skip the cookie; sign-in still succeeds
     },
 }
+
+auth, err := signet.New(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+mux := http.NewServeMux()
+mux.Handle("/auth/", auth.Handler())
 ```
 
-The feature requires CSRF keys for signing; JWT-only applications cannot enable it. The method is
-returned in `SignInResult.LastSignInMethod`: `password`, `username`, `magic-link`, `email-otp`, or
-the OAuth provider name. Completing a Two-factor challenge preserves the first factor.
+The feature requires CSRF keys for signing; **JWT-only applications cannot enable it** — `New`
+returns an error. A `BeforeStore` callback returning `false` skips the cookie without failing
+sign-in.
 
-Use `Client.SetLastMethodCookie` and `Client.ClearLastSignInMethod` in your own handlers. The HTTP
-adapter writes the cookie automatically on successful sign-in responses. Read it with
-`Client.LastSignInMethod(r)` or `GET /last-sign-in-method`, which returns `{"method":"password"}`.
-Tampered cookies are treated as absent.
+### 2. Let the HTTP adapter write it
+
+When `auth.Handler()` is mounted at `PathPrefix`, the adapter writes the cookie automatically on
+every successful sign-in response: password, username, magic link, email OTP, OAuth, and after a
+Two-factor challenge. Completing a challenge preserves the first factor rather than replacing it
+with a TOTP method.
+
+The method is also returned in `SignInResult.LastSignInMethod`: `password`, `username`,
+`magic-link`, `email-otp`, or the OAuth provider name.
+
+### 3. Read it over HTTP
+
+```text
+GET /auth/last-sign-in-method  →  200 {"method":"password"}
+```
+
+The endpoint is anonymous and CSRF-exempt. The value is `""` when the feature is disabled, the
+cookie is absent, or its signature is invalid. Tampered cookies are never trusted.
+
+### 4. Use it from your own Go handler
+
+```go
+result, err := auth.SignIn(ctx, signet.SignInInput{Email: email, Password: password})
+if err != nil {
+    // handle error
+}
+
+auth.SetLastMethodCookie(w, result.LastSignInMethod) // if you produce the Session yourself
+method := auth.LastSignInMethod(ctx, r)              // read the signed cookie
+auth.ClearLastSignInMethod(w)                        // expire it
+```
+
+`Client.LastSignInMethod` takes the request so it can read the cookie; the HTTP adapter passes the
+request context through for you.
+
+### 5. Read it from the frontend
+
+```ts
+import { createSignetClient } from '@shakibdshy/signet-client';
+
+const auth = createSignetClient({ baseURL: 'https://api.example.com/auth' });
+const { method } = await auth.lastSignInMethod();
+```
+
+The `baseURL` must include the backend `PathPrefix`; otherwise the generated client calls
+`/last-sign-in-method` instead of `/auth/last-sign-in-method`.
 
 ## Out of scope
 
