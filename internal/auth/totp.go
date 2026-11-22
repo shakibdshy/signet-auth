@@ -95,7 +95,11 @@ func totpAt(secret string, at time.Time, digits, period int) string {
 	sum := mac.Sum(nil)
 	offset := sum[len(sum)-1] & 0x0f
 	value := binary.BigEndian.Uint32(sum[offset:offset+4]) & 0x7fffffff
-	return fmt.Sprintf("%0*d", digits, value%1000000)
+	modulus := uint32(1)
+	for i := 0; i < digits; i++ {
+		modulus *= 10
+	}
+	return fmt.Sprintf("%0*d", digits, value%modulus)
 }
 
 func (s *Service) codeMatches(secret, presented string) bool {
@@ -213,12 +217,18 @@ func (s *Service) EnableTwoFactor(ctx context.Context, in core.EnableTwoFactorIn
 	if err := s.deps.TOTPStore.Put(ctx, userID, &core.TOTPState{Secret: encrypted, BackupCodes: digests}); err != nil {
 		return nil, err
 	}
+	challenge, _, err := s.deps.Tokens.Issue(ctx, userID, core.TokenTwoFactor, challengeTTL)
+	if err != nil {
+		return nil, err
+	}
 	user, err := s.deps.Store.UserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	s.logInfo("two_factor_enabled_pending", "user_id", userID)
-	return &core.EnableTwoFactorResult{TOTPURI: s.provisioningURI(user.Email, rawSecret), BackupCodes: codes}, nil
+	return &core.EnableTwoFactorResult{
+		TOTPURI: s.provisioningURI(user.Email, rawSecret), Challenge: challenge, BackupCodes: codes,
+	}, nil
 }
 
 // VerifyTwoFactor exchanges a Two-factor challenge for a Session.
@@ -229,11 +239,13 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 	if in.Challenge == "" || in.Code == "" {
 		return nil, core.ErrTokenInvalid
 	}
-	if err := s.allow(ctx, "verify-two-factor", secret.Digest(in.Challenge)); err != nil {
+	proof, err := s.deps.Tokens.ByHash(ctx, core.TokenTwoFactor, in.Challenge)
+	if err != nil {
 		return nil, err
 	}
-	proof, err := s.deps.Tokens.Consume(ctx, core.TokenTwoFactor, in.Challenge)
-	if err != nil {
+	// Throttle before consuming: a wrong guess must not burn the challenge,
+	// otherwise the attempt cap could never be reached.
+	if err := s.allow(ctx, "verify-two-factor", secret.Digest(in.Challenge)); err != nil {
 		return nil, err
 	}
 	state, err := s.deps.TOTPStore.Get(ctx, proof.UserID)
@@ -270,6 +282,9 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 			return nil, err
 		}
 		s.logInfo("backup_code_used", "user_id", proof.UserID)
+	}
+	if _, err := s.deps.Tokens.Consume(ctx, core.TokenTwoFactor, in.Challenge); err != nil {
+		return nil, err
 	}
 	user, err := s.deps.Store.UserByID(ctx, proof.UserID)
 	if err != nil {
@@ -318,6 +333,10 @@ func (s *Service) RegenerateBackupCodes(ctx context.Context, in core.RegenerateB
 	}
 	if err := s.verifyPassword(ctx, userID, in.Password); err != nil {
 		return nil, err
+	}
+	fresh, err := s.deps.IsSessionFresh(ctx, in.SessionToken, s.deps.FreshWindow)
+	if err != nil || !fresh {
+		return nil, core.ErrSessionNotFresh
 	}
 	state, err := s.deps.TOTPStore.Get(ctx, userID)
 	if err != nil || !state.Verified {

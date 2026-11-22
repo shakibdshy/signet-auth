@@ -107,7 +107,7 @@ func ContractFor() Contract {
 			{Name: "enable-two-factor", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.EnableTwoFactorInput{}),
 				Response: ResponseSpec{Fields: []Field{
-					strField("totp_uri"), typeField("backup_codes", []string{}),
+					strField("totp_uri"), strField("challenge"), typeField("backup_codes", []string{}),
 				}}, Status: http.StatusOK,
 			}}},
 			{Name: "verify-two-factor", Anonymous: true, Methods: []Method{{

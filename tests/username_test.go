@@ -90,6 +90,32 @@ func TestUsernameDuplicateRejected(t *testing.T) {
 	}
 }
 
+func TestSignInRejectsBothIdentifiers(t *testing.T) {
+	client, _ := usernameClient(t, nil)
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{
+		Email: "user@example.com", Password: "correct horse", Username: "ada",
+	}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	_, err := client.SignIn(ctx, signet.SignInInput{
+		Email: "user@example.com", Username: "ada", Password: "correct horse",
+	})
+	if !errors.Is(err, signet.ErrInvalidEmail) {
+		t.Fatalf("error = %v, want ErrInvalidEmail", err)
+	}
+}
+
+func TestInvalidUsernameUsesDedicatedSentinel(t *testing.T) {
+	client, _ := usernameClient(t, nil)
+	_, err := client.SignUp(context.Background(), signet.SignUpInput{
+		Email: "user@example.com", Password: "correct horse", Username: "ab",
+	})
+	if !errors.Is(err, signet.ErrInvalidUsername) {
+		t.Fatalf("error = %v, want ErrInvalidUsername", err)
+	}
+}
+
 func TestUsernameValidationAndReservedNames(t *testing.T) {
 	client, _ := usernameClient(t, func(cfg *signet.Config) {
 		cfg.Username = &signet.UsernameConfig{Reserved: []string{"admin"}}

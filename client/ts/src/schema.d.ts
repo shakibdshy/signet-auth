@@ -1163,6 +1163,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         backup_codes: string[];
+                        challenge: string;
                         totp_uri: string;
                     };
                 };

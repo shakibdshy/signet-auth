@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
@@ -132,6 +133,40 @@ func TestTwoFactorEnableRequiresConfirmation(t *testing.T) {
 	}
 }
 
+func TestTwoFactorStateIsEncryptedAndCodesDigested(t *testing.T) {
+	client, totpStore, userID := twoFactorClient(t, nil)
+	enabled := enableFactor(t, client, userID)
+	state, err := totpStore.Get(context.Background(), userID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	parsed, err := url.Parse(enabled.TOTPURI)
+	if err != nil {
+		t.Fatalf("parse URI: %v", err)
+	}
+	rawSecret := parsed.Query().Get("secret")
+	if rawSecret == "" || strings.Contains(state.Secret, rawSecret) {
+		t.Fatalf("TOTP secret is not encrypted: %q", state.Secret)
+	}
+	stored := strings.Join(state.BackupCodes, " ")
+	for _, code := range enabled.BackupCodes {
+		if strings.Contains(stored, code) {
+			t.Fatalf("backup code stored in plaintext: %q", code)
+		}
+	}
+}
+
+func TestRegenerateBackupCodesRequiresEnrollment(t *testing.T) {
+	client, _, userID := twoFactorClient(t, nil)
+	session, _ := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	_, err := client.RegenerateBackupCodes(context.Background(), signet.RegenerateBackupCodesInput{
+		UserID: userID, SessionToken: session.SessionToken, Password: "correct horse",
+	})
+	if !errors.Is(err, signet.ErrTOTPNotEnabled) {
+		t.Fatalf("error = %v, want ErrTOTPNotEnabled", err)
+	}
+}
+
 func TestTwoFactorChallengeAndVerification(t *testing.T) {
 	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
 	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
@@ -142,12 +177,8 @@ func TestTwoFactorChallengeAndVerification(t *testing.T) {
 		t.Fatalf("invalid challenge error = %v", err)
 	}
 
-	// Confirm enrollment through a challenge issued for a fresh sign-in.
-	first, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
-	if err != nil {
-		t.Fatalf("SignIn: %v", err)
-	}
-	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: first.TwoFactorChallenge, Code: code}); err != nil {
+	// Confirm enrollment with the challenge returned by EnableTwoFactor.
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: code}); err != nil {
 		t.Fatalf("VerifyTwoFactor: %v", err)
 	}
 
@@ -170,9 +201,9 @@ func TestTwoFactorBackupCodesAreSingleUse(t *testing.T) {
 	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
 	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
+	initial, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
 	enabled := enableFactor(t, client, userID)
-	first, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
-	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: first.TwoFactorChallenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
 		t.Fatalf("confirm enrollment: %v", err)
 	}
 	backup := enabled.BackupCodes[0]
@@ -184,7 +215,9 @@ func TestTwoFactorBackupCodesAreSingleUse(t *testing.T) {
 	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: replay.TwoFactorChallenge, Code: backup}); !errors.Is(err, signet.ErrTOTPInvalid) {
 		t.Fatalf("replayed backup code error = %v", err)
 	}
-	fresh, err := client.RegenerateBackupCodes(ctx, signet.RegenerateBackupCodesInput{UserID: userID, Password: "correct horse"})
+	fresh, err := client.RegenerateBackupCodes(ctx, signet.RegenerateBackupCodesInput{
+		UserID: userID, SessionToken: initial.SessionToken, Password: "correct horse",
+	})
 	if err != nil {
 		t.Fatalf("RegenerateBackupCodes: %v", err)
 	}
@@ -198,8 +231,7 @@ func TestTwoFactorWrongCodeAndDisable(t *testing.T) {
 	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
 	enabled := enableFactor(t, client, userID)
-	first, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
-	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: first.TwoFactorChallenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 	challenge, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
@@ -223,8 +255,7 @@ func TestJWTTokenExchangeRequiresSecondFactor(t *testing.T) {
 	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
 	ctx := context.Background()
 	enabled := enableFactor(t, client, userID)
-	first, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
-	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: first.TwoFactorChallenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 	pair, err := client.ExchangeToken(ctx, signet.TokenInput{Email: "user@example.com", Password: "correct horse"})
@@ -239,6 +270,107 @@ func TestJWTTokenExchangeRequiresSecondFactor(t *testing.T) {
 	})
 	if err != nil || final.AccessToken == "" {
 		t.Fatalf("token exchange with second factor = %+v, %v", final, err)
+	}
+}
+
+type perKeyLimiter struct {
+	mu     sync.Mutex
+	counts map[string]int
+	limit  int
+}
+
+func (l *perKeyLimiter) Allow(_ context.Context, key string) (bool, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.counts == nil {
+		l.counts = make(map[string]int)
+	}
+	l.counts[key]++
+	return l.counts[key] <= l.limit, nil
+}
+
+func TestTwoFactorFailedAttemptsAreThrottled(t *testing.T) {
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) {
+		cfg.Clock = clock
+		cfg.RateLimiter = &perKeyLimiter{limit: 5}
+	})
+	ctx := context.Background()
+	enabled := enableFactor(t, client, userID)
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	signIn, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	var throttled bool
+	for i := 0; i < 6; i++ {
+		if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{
+			Challenge: signIn.TwoFactorChallenge, Code: "000000",
+		}); errors.Is(err, signet.ErrRateLimited) {
+			throttled = true
+		}
+	}
+	if !throttled {
+		t.Fatal("expected failed attempts to be throttled")
+	}
+}
+
+func TestTwoFactorChallengeExpires(t *testing.T) {
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	ctx := context.Background()
+	enabled := enableFactor(t, client, userID)
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	signIn, _ := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	clock.At = clock.At.Add(6 * time.Minute)
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: signIn.TwoFactorChallenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err == nil {
+		t.Fatal("expired challenge should be rejected")
+	}
+}
+
+func TestRegenerateBackupCodesRequiresFreshSession(t *testing.T) {
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	ctx := context.Background()
+	initial, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	enabled := enableFactor(t, client, userID)
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	clock.At = clock.At.Add(6 * time.Minute)
+	_, err = client.RegenerateBackupCodes(ctx, signet.RegenerateBackupCodesInput{
+		UserID: userID, SessionToken: initial.SessionToken, Password: "correct horse",
+	})
+	if !errors.Is(err, signet.ErrSessionNotFresh) {
+		t.Fatalf("stale regeneration error = %v", err)
+	}
+}
+
+func TestHTTPSignInReturnsChallengeWithoutSession(t *testing.T) {
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	client, _, userID := twoFactorClient(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	ctx := context.Background()
+	enabled := enableFactor(t, client, userID)
+	if _, err := client.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{Challenge: enabled.Challenge, Code: totpCode(t, enabled.TOTPURI, clock.At)}); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/signin", strings.NewReader(`{"email":"user@example.com","password":"correct horse"}`))
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != 200 || !strings.Contains(rr.Body.String(), "two_factor_challenge") {
+		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+	for _, cookie := range rr.Result().Cookies() {
+		if strings.Contains(cookie.Name, "session") {
+			t.Fatalf("session cookie set before second factor: %+v", cookie)
+		}
 	}
 }
 

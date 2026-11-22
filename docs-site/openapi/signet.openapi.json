@@ -651,12 +651,16 @@
                       },
                       "type": "array"
                     },
+                    "challenge": {
+                      "type": "string"
+                    },
                     "totp_uri": {
                       "type": "string"
                     }
                   },
                   "required": [
                     "totp_uri",
+                    "challenge",
                     "backup_codes"
                   ],
                   "type": "object"

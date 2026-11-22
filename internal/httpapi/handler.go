@@ -214,6 +214,13 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	if result.TwoFactorChallenge != "" {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"user": result.User, "two_factor_challenge": result.TwoFactorChallenge,
+			"error": "two_factor_required",
+		})
+		return
+	}
 	csrfToken, err := h.api.SetSessionCookies(w, result.SessionToken)
 	if err != nil {
 		writeAuthError(w, err)
@@ -420,6 +427,7 @@ func (h *Handler) handleRegenerateBackupCodes(w http.ResponseWriter, r *http.Req
 		return
 	}
 	in.UserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
 	in.RateLimitKey = h.clientIP(r)
 	result, err := h.api.RegenerateBackupCodes(r.Context(), in)
 	if err != nil {
@@ -530,6 +538,12 @@ func (h *Handler) handleToken(w http.ResponseWriter, r *http.Request) {
 	pair, err := h.api.ExchangeToken(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
+		return
+	}
+	if pair.TwoFactorChallenge != "" {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"two_factor_challenge": pair.TwoFactorChallenge, "error": "two_factor_required",
+		})
 		return
 	}
 	writeJSON(w, http.StatusOK, pair)

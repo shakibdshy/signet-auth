@@ -26,6 +26,10 @@ password. It returns a `totp_uri` for authenticator apps and ten `backup_codes` 
 enabled, err := auth.EnableTwoFactor(ctx, signet.EnableTwoFactorInput{
     UserID: userID, Password: "correct horse",
 })
+// Confirm with enabled.Challenge and a code from the authenticator app.
+_, err = auth.VerifyTwoFactor(ctx, signet.VerifyTwoFactorInput{
+    Challenge: enabled.Challenge, Code: "123456",
+})
 ```
 
 ## Signing in with a Second factor
@@ -54,7 +58,7 @@ confirmation, are single-use, and a used code is removed. Wrong TOTP and Backup 
 
 ```go
 fresh, err := auth.RegenerateBackupCodes(ctx, signet.RegenerateBackupCodesInput{
-    UserID: userID, Password: "correct horse",
+    UserID: userID, SessionToken: sessionToken, Password: "correct horse",
 })
 err = auth.DisableTwoFactor(ctx, signet.DisableTwoFactorInput{
     UserID: userID, Password: "correct horse",

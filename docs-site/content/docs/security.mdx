@@ -57,6 +57,19 @@ but unlisted path is rejected. Unknown emails produce a silent success with no m
 proof when `AllowSignUp` is false, and failed OTP guesses are throttled through the
 `RateLimiter` keyed by email and client IP.
 
+## Username, account changes and Second factor
+
+A Username is normalized and validated before it is stored as an Account; a failed sign-in is
+generic whether the Username exists or the password is wrong. Unlinking requires a Session within
+`Accounts.FreshWindow` and refuses to remove a User's last Account, because a Second factor alone
+cannot sign in.
+
+TOTP secrets are encrypted with a dedicated key and Backup codes are stored only as digests. A
+Two-factor challenge is a single-use Token: a wrong code does not consume it, but five failed
+attempts are throttled through the rate limiter. Challenges expire after five minutes, enrollment
+is inactive until a first code succeeds, and the JWT token exchange returns a challenge rather
+than tokens for enrolled Users.
+
 ## Key rotation and redirect patterns
 
 Signing keys can be supplied as an ordered ring for both CSRF and JWT: the first key signs and

@@ -230,6 +230,8 @@ func withDefaults(cfg Config) Config {
 	}
 	if cfg.Accounts == nil {
 		cfg.Accounts = defaults.Accounts
+	} else if cfg.Accounts.FreshWindow <= 0 {
+		cfg.Accounts.FreshWindow = defaults.Accounts.FreshWindow
 	}
 	if cfg.TOTP == nil {
 		cfg.TOTP = defaults.TOTP

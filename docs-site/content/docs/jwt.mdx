@@ -29,6 +29,25 @@ Calling an exchange or verification method without `Config.JWT` returns `ErrJWTD
 Set `JWTOnly` for API-only applications: no session cookies are issued and no
 CSRF key is required.
 
+## Second factor and /token
+
+When a User has Second factor enabled, a password-only `POST /token` does not return tokens. It
+returns `{"two_factor_challenge": "...", "error": "two_factor_required"}`. Post that challenge
+with a TOTP code or Backup code to receive the Access/Refresh pair:
+
+```ts
+const first = await fetch('/token', {
+  method: 'POST', body: JSON.stringify({ email, password }),
+});
+const challenge = (await first.json()).two_factor_challenge;
+
+const pair = await fetch('/token', {
+  method: 'POST', body: JSON.stringify({ challenge, code: '123456' }),
+});
+```
+
+The challenge is single-use and expires after five minutes. See [Second factor](/docs/two-factor).
+
 ## Key rotation and JWKS
 
 For rotation, set `Keys` instead of the legacy single `Key`. The first key signs and every key

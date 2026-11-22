@@ -187,7 +187,7 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 // failure path so callers cannot enumerate Users.
 func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignInResult, error) {
 	email := normalizeEmail(in.Email)
-	if email == "" && in.Username == "" {
+	if (email == "" && in.Username == "") || (email != "" && in.Username != "") {
 		return nil, core.ErrInvalidEmail
 	}
 	if len(in.Password) < s.deps.Password.MinLength {
@@ -231,8 +231,8 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	}
 	s.rehashIfNeeded(ctx, account, in.Password, user.ID)
 	if s.deps.TOTPStore != nil {
-		_, stateErr := s.deps.TOTPStore.Get(ctx, user.ID)
-		if stateErr == nil {
+		state, stateErr := s.deps.TOTPStore.Get(ctx, user.ID)
+		if stateErr == nil && state.Verified {
 			challenge, _, issueErr := s.deps.Tokens.Issue(ctx, user.ID, core.TokenTwoFactor, challengeTTL)
 			if issueErr != nil {
 				return nil, issueErr

@@ -502,6 +502,7 @@ type EnableTwoFactorInput struct {
 // EnableTwoFactorResult carries a provisioning URI and the initial Backup codes.
 type EnableTwoFactorResult struct {
 	TOTPURI     string   `json:"totp_uri"`
+	Challenge   string   `json:"challenge"`
 	BackupCodes []string `json:"backup_codes"`
 }
 
@@ -522,6 +523,7 @@ type DisableTwoFactorInput struct {
 // RegenerateBackupCodesInput replaces all Backup codes.
 type RegenerateBackupCodesInput struct {
 	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
 	Password     string `json:"password"`
 	RateLimitKey string `json:"-"`
 }

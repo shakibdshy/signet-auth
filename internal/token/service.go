@@ -59,6 +59,26 @@ func (s *Service) IssueWithData(ctx context.Context, userID string, kind core.To
 	return raw, token, nil
 }
 
+// ByHash looks up a Token without consuming it. It rejects used and expired
+// proofs so a caller can validate an input before claiming the Token.
+func (s *Service) ByHash(ctx context.Context, kind core.TokenKind, raw string) (*core.Token, error) {
+	digest := secret.Digest(raw)
+	token, err := s.store.TokenByHash(ctx, kind, digest)
+	if errors.Is(err, core.ErrNotFound) {
+		return nil, core.ErrTokenInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	if token.UsedAt != nil {
+		return nil, core.ErrTokenConsumed
+	}
+	if !s.clock.Now().Before(token.ExpiresAt) {
+		return nil, core.ErrTokenExpired
+	}
+	return token, nil
+}
+
 // ParseData extracts the opaque data embedded by IssueWithData.
 func ParseData(raw string) (string, error) {
 	parts := strings.Split(raw, ".")

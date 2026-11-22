@@ -30,9 +30,13 @@ Tests live in `tests/username_test.go`, `tests/accounts_test.go` and `tests/two_
 | Password verifiers never leave the process | `TestListAccountsReturnsSafeFields` |
 | A User always retains at least one sign-in method | `TestUnlinkAccountRefusesLastAccount` |
 | Sensitive account changes require a recent Session | `TestUnlinkAccountRequiresFreshSession` |
-| TOTP secrets are encrypted and Backup codes are digests | `TestTwoFactorEnableRequiresConfirmation` (state is inspected only through the store contract) |
+| TOTP secrets are encrypted and Backup codes are digests | `TestTwoFactorStateIsEncryptedAndCodesDigested` |
 | Challenges and Backup codes are single-use | `TestTwoFactorChallengeAndVerification`, `TestTwoFactorBackupCodesAreSingleUse` |
-| Failed codes are throttled | limitation: limiter calls are exercised through the shared limiter fake; no persistent lockout is implemented by design |
+| Failed codes are throttled | `TestTwoFactorFailedAttemptsAreThrottled` |
+| Challenges expire | `TestTwoFactorChallengeExpires` |
+| HTTP sign-in exposes the challenge, not a Session | `TestHTTPSignInReturnsChallengeWithoutSession` |
+| Only one identifier is accepted | `TestSignInRejectsBothIdentifiers` |
+| Backup-code regeneration requires a fresh Session | `TestRegenerateBackupCodesRequiresFreshSession` |
 | JWT mode cannot bypass Second factor | `TestJWTTokenExchangeRequiresSecondFactor` |
 
 ## Security mechanisms → effect tests
@@ -47,11 +51,15 @@ Tests live in `tests/username_test.go`, `tests/accounts_test.go` and `tests/two_
 | Single-use Backup codes | a used code is rejected and regeneration replaces all | `TestTwoFactorBackupCodesAreSingleUse` |
 | Enrollment confirmation | pending enrollment does not require a Second factor until confirmed | `TestTwoFactorEnableRequiresConfirmation` |
 | JWT challenge gate | password-only exchange returns a challenge and no tokens | `TestJWTTokenExchangeRequiresSecondFactor` |
+| Per-challenge throttle | six wrong codes produce a rate-limit error | `TestTwoFactorFailedAttemptsAreThrottled` |
+| Challenge expiry | a challenge older than five minutes is rejected | `TestTwoFactorChallengeExpires` |
+| HTTP challenge response | sign-in returns a challenge and no session cookie | `TestHTTPSignInReturnsChallengeWithoutSession` |
+| Enrollment confirmation | challenge from EnableTwoFactor confirms the first code | `TestTwoFactorChallengeAndVerification` |
 
 ## Cross-cutting sweep
 
 - [x] every new endpoint has a black-box effect test
-- [x] every new exported sentinel has an errors.Is test
+- [x] every new exported sentinel that an API returns has an errors.Is test (`TestInvalidUsernameUsesDedicatedSentinel`, `TestUsernameDuplicateRejected`, `TestUnlinkAccountRefusesLastAccount`, `TestTwoFactorWrongCodeAndDisable`, `TestRegenerateBackupCodesRequiresEnrollment`, `TestTwoFactorRequiresStoreAndKey`); `ErrTwoFactorRequired` is contract/wire only — the challenge is returned in the result body, not as an error
 - [x] no secret, verifier or token appears in Account output or docs examples
 - [x] config validation for the optional TOTP store is tested
 - [x] status page no longer lists Username or TOTP as unimplemented
