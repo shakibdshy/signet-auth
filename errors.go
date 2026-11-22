@@ -19,6 +19,12 @@ var (
 	ErrSessionNotFresh = core.ErrSessionNotFresh
 	// ErrTokenInvalid reports a malformed, unknown or already-used Token.
 	ErrTokenInvalid = core.ErrTokenInvalid
+	// ErrTokenConsumed reports a Token that was already used; it also matches ErrTokenInvalid.
+	ErrTokenConsumed = core.ErrTokenConsumed
+	// ErrInvalidOTP reports a missing, malformed, unknown or expired email OTP.
+	ErrInvalidOTP = core.ErrInvalidOTP
+	// ErrOTPAlreadyUsed reports an email OTP that was already consumed.
+	ErrOTPAlreadyUsed = core.ErrOTPAlreadyUsed
 	// ErrMissingStore reports that Config.Store was not supplied.
 	ErrMissingStore = core.ErrMissingStore
 	// ErrMissingMailer reports that Config.Mailer was not supplied.

@@ -49,7 +49,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -155,7 +155,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -256,7 +256,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -352,7 +352,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -451,7 +451,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -549,7 +549,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -645,7 +645,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -746,7 +746,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -837,7 +837,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -928,7 +928,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1029,7 +1029,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1130,7 +1130,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1226,7 +1226,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1322,7 +1322,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1424,7 +1424,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1538,7 +1538,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1639,7 +1639,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1745,7 +1745,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1843,7 +1843,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -1944,7 +1944,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -2045,7 +2045,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -2163,7 +2163,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -2273,7 +2273,7 @@
             }
           },
           "401": {
-            "description": "invalid_token",
+            "description": "code_already_used",
             "content": {
               "application/json": {
                 "schema": {
@@ -2342,10 +2342,12 @@
         "properties": {
           "error": {
             "enum": [
+              "code_already_used",
               "csrf",
               "email_exists",
               "email_not_verified",
               "internal_error",
+              "invalid_code",
               "invalid_credentials",
               "invalid_input",
               "invalid_request",

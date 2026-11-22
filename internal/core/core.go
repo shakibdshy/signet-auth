@@ -5,6 +5,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/netip"
@@ -500,6 +501,13 @@ var (
 	ErrTokenExpired = errors.New("signet: token expired")
 	// ErrTokenInvalid reports an invalid Token.
 	ErrTokenInvalid = errors.New("signet: token invalid")
+	// ErrTokenConsumed reports a Token that was already used. It wraps
+	// ErrTokenInvalid so existing callers keep treating replay as invalid.
+	ErrTokenConsumed = fmt.Errorf("%w: already consumed", ErrTokenInvalid)
+	// ErrInvalidOTP reports a missing, malformed, unknown or expired email OTP.
+	ErrInvalidOTP = errors.New("signet: invalid or expired code")
+	// ErrOTPAlreadyUsed reports an email OTP that was already consumed.
+	ErrOTPAlreadyUsed = errors.New("signet: code already used")
 	// ErrInvalidRateLimitRule reports a rule for an unknown endpoint name.
 	ErrInvalidRateLimitRule = errors.New("signet: invalid rate limit rule")
 	// ErrSessionNotFresh reports a Session outside the freshness window.

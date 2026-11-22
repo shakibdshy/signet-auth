@@ -385,7 +385,7 @@ export interface components {
     schemas: {
         ApiError: {
             /** @enum {string} */
-            error: "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "unauthorized";
+            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "unauthorized";
             message: string;
         };
         ChangeEmailInput: {
@@ -521,7 +521,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -608,7 +608,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -695,7 +695,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -780,7 +780,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -864,7 +864,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -951,7 +951,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1034,7 +1034,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1121,7 +1121,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1206,7 +1206,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1291,7 +1291,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1378,7 +1378,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1465,7 +1465,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1548,7 +1548,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1633,7 +1633,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1716,7 +1716,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1807,7 +1807,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1894,7 +1894,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1983,7 +1983,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2070,7 +2070,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2157,7 +2157,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2244,7 +2244,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2333,7 +2333,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2423,7 +2423,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description invalid_token */
+            /** @description code_already_used */
             401: {
                 headers: {
                     [name: string]: unknown;

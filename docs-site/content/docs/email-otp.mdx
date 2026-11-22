@@ -81,8 +81,9 @@ in the [step-by-step guide](/docs/passwordless).
 
 ## 4. What verification changes
 
-- The OTP Token is consumed atomically. Replay and rotated codes return `invalid_token` (401);
-  a code past `OTPTTL` returns the same standard invalid-token error.
+- The OTP Token is consumed atomically. A replayed code returns `ErrOTPAlreadyUsed` /
+  `code_already_used` (401). A code submitted for a different email, a rotated code, or one past
+  `OTPTTL` returns `ErrInvalidOTP` / `invalid_code` (401).
 - The email becomes verified. An existing password and Sessions are unchanged.
 - A new Session is created. The Go API returns its raw token; the HTTP API sets the cookie.
 - A brand-new email produces a User with no credential Account.

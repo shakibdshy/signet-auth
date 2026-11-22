@@ -83,14 +83,15 @@ func (s *Service) Consume(ctx context.Context, kind core.TokenKind, raw string) 
 		return nil, err
 	}
 	if token.UsedAt != nil {
-		return nil, core.ErrTokenInvalid
+		return nil, core.ErrTokenConsumed
 	}
 	if !s.clock.Now().Before(token.ExpiresAt) {
 		return nil, core.ErrTokenExpired
 	}
 	consumed, err := s.store.ConsumeToken(ctx, kind, digest)
 	if errors.Is(err, core.ErrNotFound) {
-		return nil, core.ErrTokenInvalid
+		// A concurrent consume won the race; the proof is no longer usable.
+		return nil, core.ErrTokenConsumed
 	}
 	if err != nil {
 		return nil, err

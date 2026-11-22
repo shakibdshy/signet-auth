@@ -330,6 +330,68 @@ func TestPasswordlessDefaultsHoldForHandBuiltConfig(t *testing.T) {
 	}
 }
 
+func TestEmailOTPWrongEmailReturnsInvalidCode(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendEmailOTP(ctx, signet.SendEmailOTPInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendEmailOTP: %v", err)
+	}
+	code := otpCodeFromMail(t, mailer)
+	_, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{
+		Email: "other@example.com", Code: code,
+	})
+	if !errors.Is(err, signet.ErrInvalidOTP) {
+		t.Fatalf("error = %v, want ErrInvalidOTP", err)
+	}
+}
+
+func TestEmailOTPConsumedCodeReportsAlreadyUsed(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendEmailOTP(ctx, signet.SendEmailOTPInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendEmailOTP: %v", err)
+	}
+	code := otpCodeFromMail(t, mailer)
+	if _, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{
+		Email: "user@example.com", Code: code,
+	}); err != nil {
+		t.Fatalf("first VerifyEmailOTP: %v", err)
+	}
+	_, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{
+		Email: "user@example.com", Code: code,
+	})
+	if !errors.Is(err, signet.ErrOTPAlreadyUsed) {
+		t.Fatalf("error = %v, want ErrOTPAlreadyUsed", err)
+	}
+}
+
+func TestEmailOTPErrorWireCodes(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendEmailOTP(ctx, signet.SendEmailOTPInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendEmailOTP: %v", err)
+	}
+	code := otpCodeFromMail(t, mailer)
+	handler := client.Handler()
+	post := func(body string) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/verify-otp", strings.NewReader(body))
+		handler.ServeHTTP(rr, req)
+		return rr
+	}
+	wrong := post(`{"email":"other@example.com","code":"` + code + `"}`)
+	if wrong.Code != http.StatusUnauthorized || !strings.Contains(wrong.Body.String(), `"error":"invalid_code"`) {
+		t.Fatalf("wrong email: status = %d body = %s", wrong.Code, wrong.Body.String())
+	}
+	if _, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{Email: "user@example.com", Code: code}); err != nil {
+		t.Fatalf("VerifyEmailOTP: %v", err)
+	}
+	replay := post(`{"email":"user@example.com","code":"` + code + `"}`)
+	if replay.Code != http.StatusUnauthorized || !strings.Contains(replay.Body.String(), `"error":"code_already_used"`) {
+		t.Fatalf("replay: status = %d body = %s", replay.Code, replay.Body.String())
+	}
+}
+
 func TestPasswordlessConfigValidationRejectsNegativeTTL(t *testing.T) {
 	cfg := testutil.NewConfig()
 	cfg.Store = testutil.NewStore()
@@ -347,7 +409,7 @@ func TestPasswordlessErrorsUseStandardSentinels(t *testing.T) {
 	if _, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: "garbage"}); !errors.Is(err, signet.ErrTokenInvalid) {
 		t.Fatalf("magic link error = %v", err)
 	}
-	if _, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{Email: "user@example.com", Code: "abc"}); !errors.Is(err, signet.ErrTokenInvalid) {
+	if _, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{Email: "user@example.com", Code: "abc"}); !errors.Is(err, signet.ErrInvalidOTP) {
 		t.Fatalf("otp error = %v", err)
 	}
 	denied, _, _ := passwordlessClientWithConfig(t, func(cfg *signet.Config) {

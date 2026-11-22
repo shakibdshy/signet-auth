@@ -268,8 +268,11 @@ func (s *VerificationService) SendEmailOTP(ctx context.Context, in core.SendEmai
 // consulted first so a wrong guess is throttled without burning the proof.
 func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.VerifyEmailOTPInput) (*core.SignInResult, error) {
 	email := normalizeEmail(in.Email)
-	if email == "" || len(in.Code) != 6 {
-		return nil, core.ErrTokenInvalid
+	if email == "" {
+		return nil, core.ErrInvalidEmail
+	}
+	if len(in.Code) != 6 {
+		return nil, core.ErrInvalidOTP
 	}
 	client := in.RateLimitKey
 	if client == "" {
@@ -280,12 +283,19 @@ func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.Verify
 	}
 	for _, char := range in.Code {
 		if char < '0' || char > '9' {
-			return nil, core.ErrTokenInvalid
+			return nil, core.ErrInvalidOTP
 		}
 	}
 	proof := email + ":" + in.Code
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenEmailOTP, proof); err != nil {
-		return nil, err
+		switch {
+		case errors.Is(err, core.ErrTokenConsumed):
+			return nil, core.ErrOTPAlreadyUsed
+		case errors.Is(err, core.ErrTokenInvalid), errors.Is(err, core.ErrTokenExpired):
+			return nil, core.ErrInvalidOTP
+		default:
+			return nil, err
+		}
 	}
 	result, err := s.finishPasswordlessSignIn(ctx, email, "")
 	if err != nil {

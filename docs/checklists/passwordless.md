@@ -38,6 +38,7 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | Off-origin redirects are rejected | `TestMagicLinkRejectsOffOriginCallback`, `TestMagicLinkRejectsUnlistedSameOriginCallback`, `TestMagicLinkRejectsMismatchedCallbackAtVerification` |
 | Unknown emails do not disclose registration or enable mail relay | `TestMagicLinkSendIsSilentWhenSignUpDisabled`, `TestEmailOTPSendIsSilentWhenSignUpDisabled` |
 | Standard sentinel errors reach callers | `TestPasswordlessErrorsUseStandardSentinels` |
+| Wrong email and already-used OTP have distinct errors | `TestEmailOTPWrongEmailReturnsInvalidCode`, `TestEmailOTPConsumedCodeReportsAlreadyUsed`, `TestEmailOTPErrorWireCodes` |
 | All four endpoints consult the limiter | `TestPasswordlessSendEndpointsAreRateLimited`, `TestPasswordlessVerifyEndpointsAreRateLimited` |
 | No secrets in logs | `TestPasswordlessFlowsDoNotLogSecrets` |
 | Anti-enumeration paths do comparable work | limitation: unknown-and-disabled path generates and digests a proof but does not render a template; transport time still differs without queued delivery |
@@ -48,6 +49,7 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | --- | --- | --- |
 | Digest-only proof storage | stored Hash differs from the emailed code; replay fails | `TestEmailOTPSignsInExistingUser` |
 | Atomic consume | second verification of the same proof fails | `TestEmailOTPReplayAndResendRotation`, `TestMagicLinkVerificationIsSingleUse` |
+| Consumed OTP gets an actionable error | replay returns `code_already_used`, not a generic token error | `TestEmailOTPConsumedCodeReportsAlreadyUsed`, `TestEmailOTPErrorWireCodes` |
 | Rotation | old proof/code rejected after resend | `TestMagicLinkResendRotatesProof`, `TestEmailOTPReplayAndResendRotation` |
 | Redirect allowlist | off-origin callback rejected and no mail sent | `TestMagicLinkRejectsOffOriginCallback` |
 | Rate limiter | 429 on all four HTTP endpoints; throttled wrong guesses | `TestPasswordlessSendEndpointsAreRateLimited`, `TestPasswordlessVerifyEndpointsAreRateLimited`, `TestEmailOTPFailedGuessesAreThrottled` |
