@@ -1,6 +1,7 @@
 # Better Auth authentication features, mapped to Signet
 
 **Research date:** 2026-11-21.
+**Signet status updated:** 2026-11-22 — foundation, session/token hardening, passwordless sign-in and Phase 3 sign-in/Second factor are shipped. See `docs-site/content/docs/status.mdx` for the authoritative shipped list.
 **Source version:** Better Auth **1.7.x**, the current stable line. The root index identifies
 1.7 as "Latest" and 1.8 as beta ([version index](https://better-auth.com/llms.txt)); the
 documentation index fetched for this note is the [1.7.x index](https://better-auth.com/docs/llms.txt).
@@ -23,7 +24,8 @@ Statuses in the mapping table are deliberately conservative:
 - **missing** — no equivalent in Signet's public API.
 
 Sources for Signet's current state: `README.md`, `config.go`, `client.go`, `signet.go`,
-`internal/core/core.go`, `internal/httpapi/handler.go`, and `docs/adr/0003`, `docs/adr/0004`.
+`internal/core/core.go`, `internal/httpapi/handler.go`, `docs-site/content/docs/status.mdx`,
+and ADRs 0003, 0004, 0005, 0006, 0007, 0008, 0009 and 0010.
 
 ---
 
@@ -257,29 +259,29 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | Auto sign-in after sign-up / after verification | [Options](https://better-auth.com/docs/reference/options) | missing | `SignUp` returns only a User; verification does not create a session. |
 | Email enumeration protection | [Security](https://better-auth.com/docs/reference/security) | already | Generic failures + dummy-hash timing parity; no synthetic-user response builder. |
 | Password reset | [Email & Password](https://better-auth.com/docs/authentication/email-password) | already | Signet also revokes *all* sessions on reset (Better Auth's option is off by default). |
-| Change password / set password / verify password | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | missing | Only the reset flow exists; no authenticated change/set/verify endpoint. |
+| Change password / set password / verify password | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | `ChangePassword` is public, password-verified and revokes Sessions/Tokens; server-only `setPassword` and `verifyPassword` are not implemented. |
 | Update user profile | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | `UpdateUser` exists on the Store layer but is not exposed on `Client`. |
-| Change email (verified new address, confirm current) | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | missing | No `changeEmail` flow. |
-| Delete user with verification | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | `DeleteUser` exists on Store; no public delete flow or confirmation gate. |
+| Change email (verified new address, confirm current) | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | already | Two-phase `RequestEmailChange`/`VerifyEmailChange`; the new address is proven by a hashed single-use Token. Confirming via the current address is not implemented. |
+| Delete user with verification | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | already | `RequestUserDeletion`/`DeleteUser` use an emailed single-use proof and explicit child deletion per ADR-0006. |
 | `validateUserInfo` identity policy gate | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | Verified-only OAuth auto-linking is enforced; no general policy callback. |
 | Social OAuth (35+ built-in providers) | [OAuth](https://better-auth.com/docs/concepts/oauth) · [Index](https://better-auth.com/docs/llms.txt) | partial | Google and GitHub built in; `OAuthProvider` interface allows more without core changes. |
 | OAuth PKCE and encrypted/expiring state | [Security](https://better-auth.com/docs/reference/security) | already | PKCE and encrypted, expiring, allowlisted state in Signet. |
 | `mapProfileToUser`, ID-token sign-in, provider token refresh APIs | [OAuth](https://better-auth.com/docs/concepts/oauth) | partial | Provider mapping/ID-token handling are internal; no `getAccessToken`/`refreshToken`/`accountInfo`. |
-| Account linking and unlinking | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | Consent-based verified-only linking exists; no unlink, list accounts or policy toggles. |
+| Account linking and unlinking | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | Consent-based verified-only linking, safe account listing and guarded unlinking are public; no `trustedProviders`/`allowDifferentEmails` policy toggles. |
 | Session list / revoke / revoke-all | [Session Management](https://better-auth.com/docs/concepts/session-management) | already | `ListSessions`, `RevokeSession`, `RevokeAllSessions`; no `revokeOtherSessions`. |
 | Sliding session expiry (`expiresIn`/`updateAge`) | [Session Management](https://better-auth.com/docs/concepts/session-management) | partial | Signet has idle + absolute timeouts instead of sliding refresh. |
-| Session freshness (`freshAge`) | [Session Management](https://better-auth.com/docs/concepts/session-management) | missing | No freshness concept on Signet sessions. |
-| Signed cookie cache (compact/JWT/JWE) | [Session Management](https://better-auth.com/docs/concepts/session-management) | missing | Every Signet request resolves the session from the Store. |
-| Secondary storage (sessions, verification, rate limits) | [Database](https://better-auth.com/docs/concepts/database) | missing | Pluggable `Store` and `RateLimiter` exist, but no key/value secondary-storage layer. |
+| Session freshness (`freshAge`) | [Session Management](https://better-auth.com/docs/concepts/session-management) | already | `Session.FreshAge`, `VerifyFreshSession` and `RequireFreshSession`, measured from `CreatedAt` per ADR-0005; account changes use a separate `Accounts.FreshWindow`. |
+| Signed cookie cache (compact/JWT/JWE) | [Session Management](https://better-auth.com/docs/concepts/session-management) | partial | An opt-in `SessionCache` with bounded staleness and Store-authoritative revocation exists (ADR-0008); no compact/JWE cookie encoding. |
+| Secondary storage (sessions, verification, rate limits) | [Database](https://better-auth.com/docs/concepts/database) | partial | A Redis-style Secondary store is an alternative `Store` implementation; no separate key/value interface or rate-limit counter storage. |
 | Stateless cookie sessions | [Session Management](https://better-auth.com/docs/concepts/session-management) | partial | Signet's JWT mode is stateless for API clients but cookie sessions remain Store-backed. |
 | Secure cookies, `HttpOnly`, `SameSite`, prefixes | [Cookies](https://better-auth.com/docs/concepts/cookies) | already | `__Host-` prefix where valid; `InsecureAllowHTTPCookies` must be opted into. |
 | Cross-subdomain cookies | [Cookies](https://better-auth.com/docs/concepts/cookies) | partial | `Cookie.Domain` is configurable; no first-class cross-subdomain mode. |
 | CSRF: origin checks + Fetch Metadata + signed double-submit | [Security](https://better-auth.com/docs/reference/security) | already | Signet uses a signed double-submit token plus `Origin`/`Sec-Fetch-Site`; equivalent outcome. |
-| Trusted origins (wildcards/dynamic/custom schemes) | [Options](https://better-auth.com/docs/reference/options) | partial | Signet has an app origin and an exact OAuth redirect allowlist only. |
-| Rate limiting with per-path rules and storage backends | [Rate Limit](https://better-auth.com/docs/concepts/rate-limit) | partial | `RateLimiter` interface applied to sign-up/sign-in/reset/verify/token/OAuth; no rule engine. |
-| Proxy-aware IP handling and IPv6 subnet limits | [Rate Limit](https://better-auth.com/docs/concepts/rate-limit) | partial | Signet derives rate-limit keys from `r.RemoteAddr`; no XFF, trusted proxies or IPv6 normalization. |
-| Token encryption at rest / secret rotation | [Options](https://better-auth.com/docs/reference/options) · [Security](https://better-auth.com/docs/reference/security) | partial | Signet hashes session/flow tokens digests and encrypts OAuth state; keys are fixed at construction. |
-| JWT access/refresh tokens with rotation | [JWT plugin](https://better-auth.com/docs/plugins/jwt) | partial | Signet issues/validates JWTs with replay containment; no JWKS endpoint or key rotation. |
+| Trusted origins (wildcards/dynamic/custom schemes) | [Options](https://better-auth.com/docs/reference/options) | partial | Exact allowlists plus validated `https://*.example.com` Redirect patterns for OAuth and passwordless; no dynamic per-request functions or custom schemes, and CSRF same-origin is never widened. |
+| Rate limiting with per-path rules and storage backends | [Rate Limit](https://better-auth.com/docs/concepts/rate-limit) | partial | Per-endpoint `RateLimitRules` and key prefixes are published and validated; the library ships no window-aware limiter or counter storage. |
+| Proxy-aware IP handling and IPv6 subnet limits | [Rate Limit](https://better-auth.com/docs/concepts/rate-limit) | partial | Opt-in `TrustedProxies` CIDRs with right-to-left XFF walking and spoof protection; no IPv6 subnet normalization. |
+| Token encryption at rest / secret rotation | [Options](https://better-auth.com/docs/reference/options) · [Security](https://better-auth.com/docs/reference/security) | partial | Digests for single-use proofs, encrypted OAuth state and TOTP secrets, plus ordered key rings for CSRF/JWT; no generic versioned-secret registry. |
+| JWT access/refresh tokens with rotation | [JWT plugin](https://better-auth.com/docs/plugins/jwt) | already | Access/Refresh tokens, rotation, replay containment, key rings, opt-in JWKS with `kid`, and a Second-factor challenge gate on `/token`. |
 | Bearer authentication from a session token | [Bearer](https://better-auth.com/docs/plugins/bearer) | partial | `VerifyAccessToken` + JWT mode serve API clients; no opaque-session bearer plugin. |
 | `auth.api` server function surface | [API](https://better-auth.com/docs/concepts/api) | already | Typed `Client` methods are the Go equivalent (no HTTP round trip). |
 | Client methods/hooks, framework adapters | [Client](https://better-auth.com/docs/concepts/client) | partial | Generated TS client + typed Go API; no framework hooks or reactive stores. |
@@ -288,8 +290,8 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | Global and database hooks/middleware | [Hooks](https://better-auth.com/docs/concepts/hooks) | partial | Redacted `OnSignUp`/`OnSignIn` hooks + `RequireAuth`/`OptionalAuth`; no before/after pipeline. |
 | Type inference from auth config | [TypeScript](https://better-auth.com/docs/concepts/typescript) | partial | Typed Go API and OpenAPI-generated TS client; no `$Infer` equivalent. |
 | CLI schema generation/check | [CLI](https://better-auth.com/docs/concepts/cli) | partial | Explicit embedded migrations and `generate-check` for spec drift; no CLI. |
-| Two-factor / passkey / magic link / email OTP / phone | [2FA](https://better-auth.com/docs/plugins/2fa) · [Passkey](https://better-auth.com/docs/plugins/passkey) · [Magic link](https://better-auth.com/docs/plugins/magic-link) · [Email OTP](https://better-auth.com/docs/plugins/email-otp) · [Phone](https://better-auth.com/docs/plugins/phone-number) | missing | Explicitly listed as later-version work in Signet's README. |
-| Username / anonymous / one tap / SIWE / one-time token | [Username](https://better-auth.com/docs/plugins/username) · [Anonymous](https://better-auth.com/docs/plugins/anonymous) · [One Tap](https://better-auth.com/docs/plugins/one-tap) · [SIWE](https://better-auth.com/docs/plugins/siwe) · [OTT](https://better-auth.com/docs/plugins/one-time-token) | missing | No alternative first factors beyond email/password and OAuth. |
+| Two-factor / passkey / magic link / email OTP / phone | [2FA](https://better-auth.com/docs/plugins/2fa) · [Passkey](https://better-auth.com/docs/plugins/passkey) · [Magic link](https://better-auth.com/docs/plugins/magic-link) · [Email OTP](https://better-auth.com/docs/plugins/email-otp) · [Phone](https://better-auth.com/docs/plugins/phone-number) | partial | TOTP Second factor with Backup codes, magic link and email OTP are shipped; passkeys and phone OTP are not. |
+| Username / anonymous / one tap / SIWE / one-time token | [Username](https://better-auth.com/docs/plugins/username) · [Anonymous](https://better-auth.com/docs/plugins/anonymous) · [One Tap](https://better-auth.com/docs/plugins/one-tap) · [SIWE](https://better-auth.com/docs/plugins/siwe) · [OTT](https://better-auth.com/docs/plugins/one-time-token) | partial | Username sign-in is shipped as a `username` Account (ADR-0010); anonymous, One Tap, SIWE and one-time tokens are not. |
 | Generic OAuth provider | [Generic OAuth](https://better-auth.com/docs/plugins/generic-oauth) | partial | The `OAuthProvider` interface is the extension seam but ships no OIDC discovery/token plumbing. |
 | Admin / organization / API keys | [Admin](https://better-auth.com/docs/plugins/admin) · [Organization](https://better-auth.com/docs/plugins/organization) · [API Key](https://better-auth.com/docs/plugins/api-key) | missing | Organizations are planned in Signet's README; no roles, bans, impersonation or API keys. |
 | OAuth/OIDC provider, device flow, MCP, CIMD | [OAuth Provider](https://better-auth.com/docs/plugins/oauth-provider) · [Device](https://better-auth.com/docs/plugins/device-authorization) · [MCP](https://better-auth.com/docs/plugins/mcp) · [CIMD](https://better-auth.com/docs/plugins/cimd) | missing | Signet is a relying party only. |
@@ -303,15 +305,19 @@ Feature order follows dependencies: session primitives and user lifecycle first,
 first factors, then provider/enterprise surfaces, then defensive and operational extras. Effort is
 relative for a small Go library that already has the Store and token primitives.
 
-1. **Foundation — user lifecycle and session controls (small–medium, security-sensitive).**
+As of 2026-11-22, phases 1–3 below are **shipped** (PRs #53, #58 and #65 merged; PR #70 covers
+Phase 3). The remaining order is phase 4 → 6 → 5, since the defensive extras are smaller and
+less coupled than authorization/management.
+
+1. **Foundation — user lifecycle and session controls (shipped).**
    `ChangePassword`/`SetPassword`, `ChangeEmail`, `DeleteUser` with re-verification, and
    `freshAge` checks. These reuse existing token/session machinery and unlock later flows.
    Also add per-path rate-limit rules and proxy-aware IP keys (medium, **security-sensitive**).
-2. **Session storage and token hardening (medium–large, security-sensitive).** Secondary storage
+2. **Session storage and token hardening (shipped).** Secondary storage
    abstraction (and its revocation/consistency semantics), signed cookie cache with a compact
    format, JWKS/key rotation for JWT mode, versioned secrets, and trusted-origin/wildcard
    handling. Cookie-cache revocation lag and secondary-storage failure modes need explicit tests.
-3. **Passwordless first factors (medium each, security-sensitive).** Magic link and email OTP
+3. **Passwordless first factors (shipped).** Magic link and email OTP
    first (they reuse the existing mailer and hashed single-use tokens), then username and TOTP
    2FA. Passkey is **large** and security-sensitive: WebAuthn attestation/assertion verification
    is a new protocol surface. Account-listing/unlinking belongs with these.
