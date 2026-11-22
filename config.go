@@ -22,6 +22,9 @@ type SessionConfig = core.SessionConfig
 // prevent hashing denial of service as well as weak passwords.
 type PasswordConfig = core.PasswordConfig
 
+// PasswordlessConfig controls magic-link and email-OTP sign-in.
+type PasswordlessConfig = core.PasswordlessConfig
+
 // DefaultConfig returns a Config with secure defaults. A Store, Mailer,
 // PasswordHasher and RateLimiter must still be supplied before New will
 // succeed.
@@ -44,6 +47,10 @@ func DefaultConfig() Config {
 		Password: PasswordConfig{
 			MinLength: 8,
 			MaxLength: 128,
+		},
+		Passwordless: &PasswordlessConfig{
+			MagicLinkTTL: 5 * time.Minute,
+			OTPTTL:       5 * time.Minute,
 		},
 		PathPrefix: "/",
 		Templates:  DefaultTemplates,

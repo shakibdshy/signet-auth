@@ -9,6 +9,7 @@
     "jwt",
     "frontend-client",
     "complete-example",
+    "passwordless",
     "verification-and-reset",
     "storage",
     "mail",

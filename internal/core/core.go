@@ -51,6 +51,7 @@ type Session struct {
 // silently omitted.
 var AllTokenKinds = []TokenKind{
 	TokenVerifyEmail, TokenChangeEmail, TokenDeleteUser, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
+	TokenMagicLink, TokenEmailOTP,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -74,6 +75,12 @@ const (
 	// TokenOAuthState is an OAuth round trip's state, consumed on callback.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenOAuthState TokenKind = "oauth_state"
+	// TokenMagicLink proves a passwordless magic-link sign-in.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenMagicLink TokenKind = "magic_link"
+	// TokenEmailOTP proves a passwordless six-digit email sign-in.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenEmailOTP TokenKind = "email_otp"
 )
 
 // Token is a single-use proof for one sensitive flow.
@@ -172,6 +179,7 @@ type TemplateData struct {
 	Email     string
 	Name      string
 	URL       string
+	Code      string
 	ExpiresAt time.Time
 }
 
@@ -180,6 +188,37 @@ type EmailTemplates interface {
 	VerifyEmail(TemplateData) Message
 	ResetPassword(TemplateData) Message
 	PasswordChanged(TemplateData) Message
+}
+
+// MagicLinkTemplates optionally renders the passwordless magic-link email.
+// It is a separate interface so existing EmailTemplates implementations keep
+// compiling.
+type MagicLinkTemplates interface {
+	MagicLink(TemplateData) Message
+}
+
+// EmailOTPTemplates optionally renders the passwordless OTP email.
+type EmailOTPTemplates interface {
+	EmailOTP(TemplateData) Message
+}
+
+// PasswordlessConfig controls magic-link and email-OTP sign-in.
+type PasswordlessConfig struct {
+	MagicLinkTTL     time.Duration
+	OTPTTL           time.Duration
+	AllowSignUp      *bool
+	AllowedRedirects []string
+}
+
+// RedirectAllowed reports whether redirect is in the allowlist. An empty
+// allowlist rejects every redirect; callers supply their own fallback.
+func RedirectAllowed(redirect string, allowed []string) bool {
+	for _, candidate := range allowed {
+		if redirect == candidate {
+			return true
+		}
+	}
+	return false
 }
 
 // JWTConfig enables bearer-token mode.
@@ -238,6 +277,7 @@ type Config struct {
 	AppURL                   string
 	Templates                EmailTemplates
 	OAuth                    *OAuthConfig
+	Passwordless             *PasswordlessConfig
 	CSRFKey                  []byte
 	JWTOnly                  bool
 }
@@ -290,6 +330,36 @@ type SignInInput struct {
 type SignInResult struct {
 	User         *User
 	SessionToken string
+}
+
+// SendMagicLinkInput requests a magic-link sign-in email.
+type SendMagicLinkInput struct {
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	CallbackURL  string `json:"callback_url"`
+	RateLimitKey string `json:"-"`
+}
+
+// VerifyMagicLinkInput carries the proof from a magic-link email and,
+// optionally, a callback URL that must match the one embedded in the proof.
+type VerifyMagicLinkInput struct {
+	Token        string `json:"token"`
+	CallbackURL  string `json:"callback_url"`
+	RateLimitKey string `json:"-"`
+}
+
+// SendEmailOTPInput requests a six-digit sign-in code by email.
+type SendEmailOTPInput struct {
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	RateLimitKey string `json:"-"`
+}
+
+// VerifyEmailOTPInput carries a sign-in code and the address it was sent to.
+type VerifyEmailOTPInput struct {
+	Email        string `json:"email"`
+	Code         string `json:"code"`
+	RateLimitKey string `json:"-"`
 }
 
 // SignOutInput is the input to a sign-out.

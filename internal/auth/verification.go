@@ -20,16 +20,20 @@ const (
 // VerificationDependencies holds the collaborators for the verification and
 // reset flows.
 type VerificationDependencies struct {
-	Store     core.Store
-	Tokens    *token.Service
-	Mailer    core.Mailer
-	Templates core.EmailTemplates
-	Clock     core.Clock
-	Limiter   core.RateLimiter
-	Logger    *slog.Logger
-	AppURL    string
-	Password  core.PasswordConfig
-	Hasher    core.PasswordHasher
+	Store          core.Store
+	Tokens         *token.Service
+	Mailer         core.Mailer
+	Templates      core.EmailTemplates
+	Clock          core.Clock
+	Limiter        core.RateLimiter
+	Logger         *slog.Logger
+	AppURL         string
+	Password       core.PasswordConfig
+	Hasher         core.PasswordHasher
+	Passwordless   *core.PasswordlessConfig
+	OAuthRedirects []string
+	CreateSession  func(context.Context, string) (string, error)
+	OnSignUp       func(context.Context, *core.User)
 }
 
 // VerificationService implements email verification and password reset.

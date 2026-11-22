@@ -87,6 +87,23 @@ func ContractFor() Contract {
 					user, strField("session_token"), strField("csrf_token"),
 				}}, Status: http.StatusOK,
 			}}},
+			{Name: "send-magic-link", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SendMagicLinkInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "verify-magic-link", Anonymous: true, Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{
+					user, strField("session_token"),
+				}}, Status: http.StatusOK,
+			}}},
+			{Name: "send-otp", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SendEmailOTPInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "verify-otp", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.VerifyEmailOTPInput{}),
+				Response: ResponseSpec{Fields: []Field{
+					user, strField("session_token"),
+				}}, Status: http.StatusOK,
+			}}},
 			{Name: "signout", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignOutInput{}), Status: http.StatusNoContent,
 			}}},
@@ -145,7 +162,9 @@ func ContractFor() Contract {
 			}}},
 		},
 		OptionalFields: map[string][]string{
-			"TokenInput": {"email", "password", "refresh_token"},
+			"TokenInput":         {"email", "password", "refresh_token"},
+			"SendMagicLinkInput": {"name", "callback_url"},
+			"SendEmailOTPInput":  {"name"},
 		},
 		Errors: []ErrorSpec{
 			{core.ErrRateLimited, http.StatusTooManyRequests, "rate_limited", "too many requests"},

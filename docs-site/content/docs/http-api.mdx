@@ -20,6 +20,10 @@ from the declarative contract into the [API reference](/docs/openapi).
 | --- | --- | --- | --- | --- | --- | --- |
 | POST `/signup` | no | exempt | 201 `{"user":User}` | `email_exists` 400, `invalid_input` 400, `rate_limited` 429 | Creating a User and its credential Account. | [signup](/docs/openapi/signup_post) |
 | POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | `invalid_credentials` 401, `email_not_verified` 403, `rate_limited` 429 | Exchanging credentials for a Session; sets cookies and returns the CSRF token. | [signin](/docs/openapi/signin_post) |
+| POST `/send-magic-link` | no | exempt | 200 | `invalid_request` 400, `rate_limited` 429 | Email a single-use magic link. | [send-magic-link](/docs/openapi/send-magic-link_post) |
+| GET `/verify-magic-link` | no | exempt | 200 `{"user","session_token"}` or 302 | `invalid_token` 401, `invalid_request` 400, `rate_limited` 429 | Consume the link, set cookies and redirect to the allowlisted callback. | [verify-magic-link](/docs/openapi/verify-magic-link_get) |
+| POST `/send-otp` | no | exempt | 200 | `invalid_input` 400, `rate_limited` 429 | Email a six-digit sign-in code. | [send-otp](/docs/openapi/send-otp_post) |
+| POST `/verify-otp` | no | exempt | 200 `{"user","session_token"}` | `invalid_token` 401, `rate_limited` 429 | Consume a code, set cookies and return the Session. | [verify-otp](/docs/openapi/verify-otp_post) |
 | POST `/request-account-deletion` | yes | required | 200 | `invalid_credentials` 401, `rate_limited` 429 | Issue a deletion confirmation proof. | [request-account-deletion](/docs/openapi/request-account-deletion_post) |
 | POST `/confirm-account-deletion` | no | required | 200 | `invalid_token` 401, `rate_limited` 429 | Remove the User and all child records. | [confirm-account-deletion](/docs/openapi/confirm-account-deletion_post) |
 | POST `/change-email` | yes | required | 200 | `invalid_credentials` 401, `invalid_email` 400, `email_exists` 400, `rate_limited` 429 | Issue a proof to a new address. | [change-email](/docs/openapi/change-email_post) |

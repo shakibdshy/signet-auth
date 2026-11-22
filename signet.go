@@ -82,6 +82,12 @@ const (
 	// TokenOAuthState is an OAuth round trip's state, consumed on callback.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenOAuthState = core.TokenOAuthState
+	// TokenMagicLink proves a passwordless magic-link sign-in.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenMagicLink = core.TokenMagicLink
+	// TokenEmailOTP proves a passwordless six-digit email sign-in.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenEmailOTP = core.TokenEmailOTP
 )
 
 // Token is a single-use proof for one sensitive flow. Hash holds the stored
@@ -102,6 +108,12 @@ type TemplateData = core.TemplateData
 
 // EmailTemplates renders the transactional email Signet sends.
 type EmailTemplates = core.EmailTemplates
+
+// MagicLinkTemplates optionally renders the passwordless magic-link email.
+type MagicLinkTemplates = core.MagicLinkTemplates
+
+// EmailOTPTemplates optionally renders the passwordless OTP email.
+type EmailOTPTemplates = core.EmailOTPTemplates
 
 // DefaultTemplates is the built-in email template set.
 var DefaultTemplates = mail.DefaultTemplates
@@ -143,6 +155,18 @@ type SignInInput = core.SignInInput
 
 // SignInResult is the outcome of a successful sign-in.
 type SignInResult = core.SignInResult
+
+// SendMagicLinkInput requests a magic-link sign-in email.
+type SendMagicLinkInput = core.SendMagicLinkInput
+
+// VerifyMagicLinkInput carries a magic-link proof and, optionally, a callback URL.
+type VerifyMagicLinkInput = core.VerifyMagicLinkInput
+
+// SendEmailOTPInput requests a six-digit sign-in code by email.
+type SendEmailOTPInput = core.SendEmailOTPInput
+
+// VerifyEmailOTPInput carries a sign-in code and its email address.
+type VerifyEmailOTPInput = core.VerifyEmailOTPInput
 
 // SignOutInput is the input to a sign-out.
 type SignOutInput = core.SignOutInput
