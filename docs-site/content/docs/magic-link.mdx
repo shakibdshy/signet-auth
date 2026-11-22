@@ -1,0 +1,118 @@
+---
+title: Magic-link sign-in
+description: Send a single-use sign-in link and turn a click into a Session.
+---
+
+A magic link proves control of an email address without a password. The User opens the link in
+a browser; Signet consumes the proof, sets the session cookie and redirects to your app.
+
+## Flow
+
+```text
+SendMagicLink(email, callback_url)
+        ↓
+single-use proof + emailed link
+        ↓
+GET /verify-magic-link?token=...&callback_url=...
+        ↓
+consume proof → mark verified → create Session → redirect (or JSON)
+```
+
+## 1. Send the link
+
+```go
+err := auth.SendMagicLink(ctx, signet.SendMagicLinkInput{
+    Email:       "ada@example.com",
+    Name:        "Ada",                                  // optional
+    CallbackURL: "https://app.example.com/welcome",     // optional, must be allowlisted
+})
+```
+
+`SendMagicLinkInput` carries the email, an optional name for the email greeting, and an optional
+callback. Unknown emails are handled according to `Passwordless.AllowSignUp`:
+
+- allowed (default): a proof is issued, the email is sent, and the User is created when the
+  link is opened;
+- disabled: the call returns success, sends no mail and issues no proof.
+
+Either way the response is the same, so callers cannot enumerate registered Users.
+
+The proof is issued through `token.Service.IssueWithData`. Its embedded email, name and callback
+are covered by the stored SHA-256 digest; the raw token exists only in the email.
+
+## 2. Open the link
+
+The default template produces a URL like:
+
+```text
+https://app.example.com/auth/verify-magic-link?token=RAW_TOKEN&callback_url=https%3A%2F%2Fapp.example.com%2Fwelcome
+```
+
+In a browser, do nothing special — mount `auth.Handler()` and the GET endpoint does the work.
+From Go code, extract the raw token from the email and call:
+
+```go
+result, err := auth.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{
+    Token: rawToken,
+})
+// or, when the link carries a callback:
+result, err = auth.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{
+    Token: rawToken, CallbackURL: "https://app.example.com/welcome",
+})
+```
+
+Both return a `SignInResult` with `User` and `SessionToken`.
+
+### Callback rules
+
+The callback embedded in the proof is authoritative. A `callback_url` query parameter is
+optional and must match it exactly when present. The callback must be in
+`Passwordless.AllowedRedirects`, then `OAuth.AllowedRedirects`, then equal `AppURL` — there is
+no wildcard or same-origin shortcut. A rejected callback returns `invalid_request` (400) and
+no redirect.
+
+Without a callback, `GET /verify-magic-link` returns `{"user": ..., "session_token": ...}`
+instead of a 302. With one, it sets the cookies and redirects.
+
+## 3. What verification changes
+
+- The magic-link Token is consumed atomically; replay returns `invalid_token` (401).
+- The User's email becomes verified. An existing password and all Sessions are left intact.
+- A new Session is created with the configured idle and absolute timeouts.
+- If the email was unknown, a new User is created with no credential Account. They can set a
+  password later with `ChangePassword`.
+
+Resending a link deletes the previous magic-link Token for that User (or the email's proof
+subject), so only the newest link works. Expired links return `invalid_token` too.
+
+## HTTP reference
+
+| Request | Success | Notes |
+| --- | --- | --- |
+| `POST /send-magic-link` `{"email":"..."}` | 200 | Anonymous, CSRF-exempt. |
+| `GET /verify-magic-link?token=...` | 200 `{"user","session_token"}` | Sets session + CSRF cookies. |
+| `GET /verify-magic-link?token=...&callback_url=...` | 302 | Redirects to the allowlisted callback. |
+
+A `token` is required. See [HTTP API](/docs/http-api) and the generated
+[OpenAPI reference](/docs/openapi/verify-magic-link_get).
+
+## Customising the email
+
+The default `MagicLinkTemplates` implementation renders both HTML and text bodies. To replace
+it, implement the optional `MagicLinkTemplates` interface on your template set:
+
+```go
+type myTemplates struct{ signet.EmailTemplates }
+
+func (t myTemplates) MagicLink(data signet.TemplateData) signet.Message {
+    return signet.Message{
+        To: data.Email, Subject: "Your sign-in link",
+        TextBody: "Open this link: " + data.URL,
+    }
+}
+```
+
+Set `cfg.Templates = myTemplates{...}`. A template set that does not implement
+`MagicLinkTemplates` still gets the built-in message. See [Mail](/docs/mail).
+
+For the proof lifecycle shared with OTPs, see [Passwordless verification](/docs/passwordless-verification).

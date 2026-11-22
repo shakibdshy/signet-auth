@@ -1,0 +1,110 @@
+---
+title: Email OTP sign-in
+description: Send a six-digit sign-in code and exchange it for a Session.
+---
+
+Email OTP is a passwordless first factor built around a six-digit code. The User supplies their
+email and the code; Signet stores only a digest of `email + ":" + code`, so the raw code is
+never persisted.
+
+## Flow
+
+```text
+SendEmailOTP(email)
+        ↓
+six-digit code emailed; Digest(email + ":" + code) stored
+        ↓
+POST /verify-otp {"email": "...", "code": "123456"}
+        ↓
+consume proof → mark verified → create Session
+```
+
+## 1. Send a code
+
+```go
+err := auth.SendEmailOTP(ctx, signet.SendEmailOTPInput{
+    Email: "grace@example.com",
+    Name:  "Grace", // optional, used in the email greeting only
+})
+```
+
+`SendEmailOTPInput.Name` is not embedded in the proof, so a User created by OTP has no name.
+For unknown emails, the behaviour matches [magic links](/docs/magic-link): auto-create is
+allowed by default; when `AllowSignUp` is false the send is a silent success with no mail.
+
+The code is written directly as a Token of kind `TokenEmailOTP` with a five-minute expiry by
+default (`Passwordless.OTPTTL`). Resending deletes the previous OTP Token for the same subject,
+so a new code invalidates the old one.
+
+## 2. Verify the code
+
+```go
+result, err := auth.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{
+    Email: "grace@example.com",
+    Code:  "123456",
+})
+// result.User, result.SessionToken
+```
+
+`VerifyEmailOTPInput` requires both fields: the email is needed to rebuild the digest. A code
+without its email cannot be verified. Both verification methods return `SignInResult`.
+
+From a browser, send the same fields as JSON:
+
+```http
+POST /verify-otp
+Content-Type: application/json
+
+{"email": "grace@example.com", "code": "123456"}
+```
+
+The endpoint is anonymous and CSRF-exempt. On success it sets the session and CSRF cookies and
+returns `{"user": ..., "session_token": ...}`.
+
+## 3. Failed guesses and rate limits
+
+Verification consults the `RateLimiter` before consuming the proof, using a key built from the
+email and the client IP. Repeated wrong guesses are rejected with `rate_limited` (429) without
+burning a correct code. Attempt counts are deliberately not persisted: they live in your
+limiter, so restarting it resets them.
+
+Configure the send limit yourself with `RateLimitRules`:
+
+```go
+cfg.RateLimitRules = map[string]signet.RateLimitRule{
+    "send-otp": {Limiter: perMinute(3), KeyPrefix: "otp"},
+}
+```
+
+`RateLimitRule` has no window; the limiter you supply defines it. A `perMinute` helper is shown
+in the [step-by-step guide](/docs/passwordless).
+
+## 4. What verification changes
+
+- The OTP Token is consumed atomically. Replay and rotated codes return `invalid_token` (401);
+  a code past `OTPTTL` returns the same standard invalid-token error.
+- The email becomes verified. An existing password and Sessions are unchanged.
+- A new Session is created. The Go API returns its raw token; the HTTP API sets the cookie.
+- A brand-new email produces a User with no credential Account.
+
+## Customising the email
+
+The built-in template puts the code in `TemplateData.Code`. Implement the optional
+`EmailOTPTemplates` interface to replace it:
+
+```go
+type myTemplates struct{ signet.EmailTemplates }
+
+func (t myTemplates) EmailOTP(data signet.TemplateData) signet.Message {
+    return signet.Message{
+        To: data.Email, Subject: "Your sign-in code",
+        TextBody: "Your code is " + data.Code,
+    }
+}
+```
+
+A template set that does not implement `EmailOTPTemplates` still receives the built-in message.
+See [Mail](/docs/mail).
+
+For expiry, replay and callback behaviour shared with magic links, see
+[Passwordless verification](/docs/passwordless-verification).
