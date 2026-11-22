@@ -1956,7 +1956,13 @@
                     "csrf_token": {
                       "type": "string"
                     },
+                    "error": {
+                      "type": "string"
+                    },
                     "session_token": {
+                      "type": "string"
+                    },
+                    "two_factor_challenge": {
                       "type": "string"
                     },
                     "user": {
@@ -1964,9 +1970,7 @@
                     }
                   },
                   "required": [
-                    "user",
-                    "session_token",
-                    "csrf_token"
+                    "user"
                   ],
                   "type": "object"
                 }
@@ -3293,9 +3297,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "session_token"
-        ],
         "type": "object"
       },
       "SignUpInput": {

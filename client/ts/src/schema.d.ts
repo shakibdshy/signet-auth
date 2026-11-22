@@ -564,7 +564,7 @@ export interface components {
             username?: string;
         };
         SignOutInput: {
-            session_token: string;
+            session_token?: string;
         };
         SignUpInput: {
             email: string;
@@ -2280,8 +2280,10 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        csrf_token: string;
-                        session_token: string;
+                        csrf_token?: string;
+                        error?: string;
+                        session_token?: string;
+                        two_factor_challenge?: string;
                         user: components["schemas"]["User"];
                     };
                 };

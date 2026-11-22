@@ -23,8 +23,9 @@ type Field struct {
 // ResponseSpec describes a response body. A Ref means a single typed body,
 // Fields means a wrapper object, and neither means no body.
 type ResponseSpec struct {
-	Ref    string
-	Fields []Field
+	Ref      string
+	Fields   []Field
+	Optional []string
 }
 
 // Parameter is an HTTP input that is not part of the JSON request body.
@@ -92,9 +93,13 @@ func ContractFor() Contract {
 			}}},
 			{Name: "signin", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignInInput{}),
-				Response: ResponseSpec{Fields: []Field{
-					user, strField("session_token"), strField("csrf_token"),
-				}}, Status: http.StatusOK,
+				Response: ResponseSpec{
+					Fields: []Field{
+						user, strField("session_token"), strField("csrf_token"),
+						strField("two_factor_challenge"), strField("error"),
+					},
+					Optional: []string{"session_token", "csrf_token", "two_factor_challenge", "error"},
+				}, Status: http.StatusOK,
 			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
@@ -211,6 +216,7 @@ func ContractFor() Contract {
 			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
 			"SignUpInput":        {"username"},
 			"SignInInput":        {"username"},
+			"SignOutInput":       {"session_token"},
 			"SendMagicLinkInput": {"name", "callback_url"},
 			"SendEmailOTPInput":  {"name"},
 		},
