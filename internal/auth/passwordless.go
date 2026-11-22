@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/mail"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -166,6 +167,7 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	}
 	result.CallbackURL = data.CallbackURL
 	s.logInfo("magic_link_sign_in", "user_id", result.User.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.MagicLinkSignIn, UserID: result.User.ID, Outcome: "success"})
 	return result, nil
 }
 
@@ -330,6 +332,7 @@ func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.Verify
 		return nil, err
 	}
 	s.logInfo("email_otp_sign_in", "user_id", result.User.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.EmailOTPSignIn, UserID: result.User.ID, Outcome: "success"})
 	return result, nil
 }
 

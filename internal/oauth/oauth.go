@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
@@ -40,19 +41,20 @@ type linkPayload struct {
 
 // Service implements the OAuth start, callback and link flows.
 type Service struct {
-	cfg      *core.OAuthConfig
-	patterns []string
-	store    core.Store
-	clock    core.Clock
-	limiter  core.RateLimiter
-	logger   *slog.Logger
-	tokens   *token.Service
-	sessions *session.Service
+	cfg       *core.OAuthConfig
+	patterns  []string
+	store     core.Store
+	clock     core.Clock
+	limiter   core.RateLimiter
+	logger    *slog.Logger
+	auditSink core.AuditSink
+	tokens    *token.Service
+	sessions  *session.Service
 }
 
 // New returns an OAuth Service.
-func New(cfg *core.OAuthConfig, patterns []string, store core.Store, clock core.Clock, limiter core.RateLimiter, logger *slog.Logger, tokens *token.Service, sessions *session.Service) *Service {
-	return &Service{cfg: cfg, patterns: patterns, store: store, clock: clock, limiter: limiter, logger: logger, tokens: tokens, sessions: sessions}
+func New(cfg *core.OAuthConfig, patterns []string, store core.Store, clock core.Clock, limiter core.RateLimiter, logger *slog.Logger, tokens *token.Service, sessions *session.Service, sink core.AuditSink) *Service {
+	return &Service{cfg: cfg, patterns: patterns, store: store, clock: clock, limiter: limiter, logger: logger, tokens: tokens, sessions: sessions, auditSink: sink}
 }
 
 func (s *Service) logInfo(msg string, attrs ...any) {
@@ -211,6 +213,7 @@ func (s *Service) Callback(ctx context.Context, in core.OAuthCallbackInput) (*co
 		return nil, err
 	}
 	s.logInfo("oauth_sign_in", "user_id", user.ID, "provider", identity.Provider)
+	audit.Emit(ctx, s.auditSink, s.logger, core.AuditEvent{Name: audit.OAuthSignIn, UserID: user.ID, Outcome: "success", Metadata: map[string]string{"provider": identity.Provider}})
 	return &core.OAuthCallbackResult{User: user, SessionToken: sessionToken, Redirect: state.Redirect}, nil
 }
 

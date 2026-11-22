@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 )
 
@@ -60,5 +61,6 @@ func (s *Service) UnlinkAccount(ctx context.Context, in core.UnlinkAccountInput)
 		s.deps.FlushSessions(ctx)
 	}
 	s.logInfo("account_unlinked", "user_id", in.UserID, "provider", found.Provider)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.AccountUnlinked, UserID: in.UserID, Outcome: "success", Metadata: map[string]string{"provider": found.Provider}})
 	return nil
 }

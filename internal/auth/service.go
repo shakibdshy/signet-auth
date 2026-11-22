@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/token"
@@ -34,6 +35,7 @@ type Dependencies struct {
 	BreachChecker            core.BreachChecker
 	CaptchaVerifier          core.CaptchaVerifier
 	CaptchaEndpoints         []string
+	AuditSink                core.AuditSink
 	RequireVerifiedEmail     bool
 	SendVerificationOnSignUp bool
 	OnSignUp                 func(context.Context, *core.User)
@@ -182,6 +184,7 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 		}
 	}
 	s.logInfo("sign_up", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignUp, UserID: user.ID, Outcome: "success"})
 	s.deps.OnSignUp(ctx, redacted(user))
 	if s.deps.SendVerificationOnSignUp {
 		if err := s.deps.SendVerification(ctx, user); err != nil {
@@ -261,6 +264,7 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 		return nil, err
 	}
 	s.logInfo("sign_in_success", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success"})
 	s.deps.OnSignIn(ctx, redacted(user))
 	return &core.SignInResult{User: user, SessionToken: sessionToken}, nil
 }
@@ -281,5 +285,6 @@ func (s *Service) SignOut(ctx context.Context, in core.SignOutInput) error {
 		return err
 	}
 	s.logInfo("sign_out", "user_id", session.UserID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignOut, UserID: session.UserID, Outcome: "success"})
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
 )
@@ -91,6 +92,7 @@ type JWTDependencies struct {
 	SignIn          func(context.Context, core.SignInInput) (*core.SignInResult, error)
 	RevokeSessions  func(context.Context, string) error
 	VerifyTwoFactor func(context.Context, core.VerifyTwoFactorInput) (*core.SignInResult, error)
+	AuditSink       core.AuditSink
 }
 
 // JWTService implements Signet's optional bearer-token mode.
@@ -282,5 +284,6 @@ func (s *JWTService) handleRefreshReuse(ctx context.Context, userID string) (*co
 		_ = s.deps.Store.DeleteTokensForUser(ctx, userID, kind)
 	}
 	s.logWarn("refresh_token_reuse", "user_id", userID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.RefreshReuse, UserID: userID, Outcome: "blocked"})
 	return nil, core.ErrRefreshReuse
 }

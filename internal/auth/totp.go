@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
 )
@@ -265,6 +266,7 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 			return nil, err
 		}
 		s.logInfo("two_factor_enabled", "user_id", proof.UserID)
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.TwoFactorEnabled, UserID: proof.UserID, Outcome: "success"})
 	} else if !s.codeMatches(plainSecret, in.Code) {
 		digest := secret.Digest(in.Code)
 		idx := -1
@@ -282,6 +284,7 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 			return nil, err
 		}
 		s.logInfo("backup_code_used", "user_id", proof.UserID)
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.BackupCodeUsed, UserID: proof.UserID, Outcome: "success"})
 	}
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenTwoFactor, in.Challenge); err != nil {
 		return nil, err
@@ -316,6 +319,7 @@ func (s *Service) DisableTwoFactor(ctx context.Context, in core.DisableTwoFactor
 		return err
 	}
 	s.logInfo("two_factor_disabled", "user_id", userID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.TwoFactorDisabled, UserID: userID, Outcome: "success"})
 	return nil
 }
 

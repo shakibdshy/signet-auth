@@ -148,14 +148,14 @@ func New(cfg Config) (*Client, error) {
 		c.jwtKeys = token.VerificationKeys(jwtCfg)
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
-			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
+			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn, AuditSink: cfg.AuditSink,
 			RevokeSessions: c.sessions.RevokeAll,
 		})
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
 	if cfg.OAuth != nil {
-		c.oauth = oauth.New(cfg.OAuth, cfg.AllowedRedirectPatterns, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
+		c.oauth = oauth.New(cfg.OAuth, cfg.AllowedRedirectPatterns, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions, cfg.AuditSink)
 	}
 	var oauthRedirects []string
 	if cfg.OAuth != nil {
@@ -168,7 +168,7 @@ func New(cfg Config) (*Client, error) {
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		RedirectPatterns: cfg.AllowedRedirectPatterns,
 		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
-		FlushSessions: c.sessions.Flush, BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier,
+		FlushSessions: c.sessions.Flush, BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier, AuditSink: cfg.AuditSink,
 		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	c.auth = auth.New(auth.Dependencies{
@@ -181,7 +181,7 @@ func New(cfg Config) (*Client, error) {
 		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
 		FreshWindow: cfg.Accounts.FreshWindow, Tokens: c.tokens,
 		TOTPStore: cfg.TOTPStore, TOTPKey: cfg.TOTPKey, TOTP: cfg.TOTP, AppURL: cfg.AppURL,
-		BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier,
+		BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier, AuditSink: cfg.AuditSink,
 		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	if c.jwtService != nil {
