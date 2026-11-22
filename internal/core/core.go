@@ -723,10 +723,11 @@ type OAuthCallbackInput struct {
 
 // OAuthCallbackResult carries a signed-in User or an explicit link token.
 type OAuthCallbackResult struct {
-	User         *User
-	SessionToken string
-	LinkToken    string
-	Redirect     string
+	User             *User
+	SessionToken     string
+	LastSignInMethod string
+	LinkToken        string
+	Redirect         string
 }
 
 // LinkOAuthAccountInput carries the one-time link token and User ID.

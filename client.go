@@ -10,6 +10,7 @@ import (
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
+	"github.com/shakibdshy/signet/internal/lastmethod"
 	"github.com/shakibdshy/signet/internal/oauth"
 	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -35,17 +36,19 @@ func DocsHandler() http.Handler {
 // Client is a configured Signet instance. It is safe for concurrent use and
 // is intended to be created once at application startup.
 type Client struct {
-	cfg           Config
-	dummyVerifier string
-	jwtService    *token.JWTService
-	jwtKeys       []any
-	csrf          *csrf.Guard
-	cookies       *httpapi.Cookies
-	tokens        *token.Service
-	auth          *auth.Service
-	verification  *auth.VerificationService
-	sessions      *session.Service
-	oauth         *oauth.Service
+	cfg                   Config
+	dummyVerifier         string
+	jwtService            *token.JWTService
+	jwtKeys               []any
+	lastMethod            *lastmethod.Manager
+	lastMethodBeforeStore func(context.Context, string) bool
+	csrf                  *csrf.Guard
+	cookies               *httpapi.Cookies
+	tokens                *token.Service
+	auth                  *auth.Service
+	verification          *auth.VerificationService
+	sessions              *session.Service
+	oauth                 *oauth.Service
 }
 
 // New validates cfg and returns a ready Client. Required dependencies are
@@ -135,14 +138,31 @@ func New(cfg Config) (*Client, error) {
 	guard := csrf.New(csrfKeys, cfg.Clock, csrfCookieName, sessionCookieName,
 		cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 		strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger)
+	var lastMethodManager *lastmethod.Manager
+	if cfg.LastSignInMethod != nil {
+		if cfg.JWTOnly {
+			return nil, ErrInvalidCSRFConfig
+		}
+		if len(csrfKeys) == 0 {
+			return nil, ErrInvalidCSRFConfig
+		}
+		lastMethodManager = lastmethod.New(csrfKeys[0], cfg.LastSignInMethod.CookieName, cfg.LastSignInMethod.TTL)
+	}
 	c := &Client{
 		cfg:           cfg,
 		dummyVerifier: dummy,
 		csrf:          guard,
 		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
 			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
-		tokens:   token.New(cfg.Store, cfg.Clock),
-		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
+		tokens:     token.New(cfg.Store, cfg.Clock),
+		sessions:   session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
+		lastMethod: lastMethodManager,
+		lastMethodBeforeStore: func() func(context.Context, string) bool {
+			if cfg.LastSignInMethod == nil {
+				return nil
+			}
+			return cfg.LastSignInMethod.BeforeStore
+		}(),
 	}
 	if jwtCfg != nil {
 		c.jwtKeys = token.VerificationKeys(jwtCfg)
@@ -569,6 +589,33 @@ func (c *Client) authenticate(w http.ResponseWriter, r *http.Request, required b
 	return user, true
 }
 
+// SetLastMethodCookie writes the signed Last sign-in method cookie when enabled.
+func (c *Client) SetLastMethodCookie(w http.ResponseWriter, method string) {
+	if c.lastMethod == nil || method == "" {
+		return
+	}
+	if c.lastMethodBeforeStore != nil && !c.lastMethodBeforeStore(context.Background(), method) {
+		return
+	}
+	c.lastMethod.SetCookie(w, method)
+}
+
+// LastSignInMethod reads the signed Last sign-in method from a request.
+func (c *Client) LastSignInMethod(r *http.Request) string {
+	if c.lastMethod == nil {
+		return ""
+	}
+	return c.lastMethod.Method(r)
+}
+
+// ClearLastSignInMethod expires the Last sign-in method cookie.
+func (c *Client) ClearLastSignInMethod(w http.ResponseWriter) {
+	if c.lastMethod == nil {
+		return
+	}
+	c.lastMethod.Clear(w)
+}
+
 // Handler returns a plain http.Handler serving Signet's authentication endpoints.
 func (c *Client) Handler() http.Handler {
 	return httpapi.New(httpAdapter{Client: c}, c.cfg.PathPrefix, c.cfg.TrustedProxies).Handler()
@@ -585,7 +632,11 @@ func (a httpAdapter) ServeCSRFToken(w http.ResponseWriter, r *http.Request) { a.
 func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (string, error) {
 	return a.cookies.SetSessionAndCSRF(w, token)
 }
-func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+func (a httpAdapter) CookieName() string                      { return a.cookies.Name() }
+func (a httpAdapter) LastSignInMethod(r *http.Request) string { return a.Client.LastSignInMethod(r) }
+func (a httpAdapter) SetLastMethodCookie(w http.ResponseWriter, method string) {
+	a.Client.SetLastMethodCookie(w, method)
+}
 func (a httpAdapter) NewSessionCookie(token string, expiring bool) *http.Cookie {
 	return a.cookies.SessionCookie(token, expiring)
 }

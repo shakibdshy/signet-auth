@@ -101,6 +101,9 @@ func ContractFor() Contract {
 					Optional: []string{"session_token", "csrf_token", "two_factor_challenge", "error"},
 				}, Status: http.StatusOK,
 			}}},
+			{Name: "last-sign-in-method", Anonymous: true, Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("method")}}, Status: http.StatusOK,
+			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
 					typeField("accounts", []core.AccountInfo{}),

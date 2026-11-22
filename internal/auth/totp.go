@@ -21,6 +21,7 @@ import (
 	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
+	"github.com/shakibdshy/signet/internal/token"
 )
 
 const (
@@ -218,7 +219,7 @@ func (s *Service) EnableTwoFactor(ctx context.Context, in core.EnableTwoFactorIn
 	if err := s.deps.TOTPStore.Put(ctx, userID, &core.TOTPState{Secret: encrypted, BackupCodes: digests}); err != nil {
 		return nil, err
 	}
-	challenge, _, err := s.deps.Tokens.Issue(ctx, userID, core.TokenTwoFactor, challengeTTL)
+	challenge, _, err := s.deps.Tokens.IssueWithData(ctx, userID, core.TokenTwoFactor, challengeTTL, "password")
 	if err != nil {
 		return nil, err
 	}
@@ -289,6 +290,10 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenTwoFactor, in.Challenge); err != nil {
 		return nil, err
 	}
+	method := "password"
+	if embedded, parseErr := token.ParseData(in.Challenge); parseErr == nil && embedded != "" {
+		method = embedded
+	}
 	user, err := s.deps.Store.UserByID(ctx, proof.UserID)
 	if err != nil {
 		return nil, err
@@ -297,7 +302,7 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 	if err != nil {
 		return nil, err
 	}
-	return &core.SignInResult{User: user, SessionToken: sessionToken}, nil
+	return &core.SignInResult{User: user, SessionToken: sessionToken, LastSignInMethod: method}, nil
 }
 
 // DisableTwoFactor removes a User's enrollment after a password check.

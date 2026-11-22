@@ -216,6 +216,10 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	}
 	var user *core.User
 	var err error
+	method := "password"
+	if in.Username != "" {
+		method = "username"
+	}
 	if email != "" {
 		user, err = s.deps.Store.UserByEmail(ctx, email)
 	} else {
@@ -248,12 +252,12 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	if s.deps.TOTPStore != nil {
 		state, stateErr := s.deps.TOTPStore.Get(ctx, user.ID)
 		if stateErr == nil && state.Verified {
-			challenge, _, issueErr := s.deps.Tokens.Issue(ctx, user.ID, core.TokenTwoFactor, challengeTTL)
+			challenge, _, issueErr := s.deps.Tokens.IssueWithData(ctx, user.ID, core.TokenTwoFactor, challengeTTL, method)
 			if issueErr != nil {
 				return nil, issueErr
 			}
 			s.logInfo("two_factor_challenge_issued", "user_id", user.ID)
-			return &core.SignInResult{User: user, TwoFactorChallenge: challenge}, nil
+			return &core.SignInResult{User: user, TwoFactorChallenge: challenge, LastSignInMethod: method}, nil
 		}
 		if stateErr != nil && !errors.Is(stateErr, core.ErrNotFound) {
 			return nil, stateErr
@@ -266,7 +270,7 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	s.logInfo("sign_in_success", "user_id", user.ID)
 	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success"})
 	s.deps.OnSignIn(ctx, redacted(user))
-	return &core.SignInResult{User: user, SessionToken: sessionToken}, nil
+	return &core.SignInResult{User: user, SessionToken: sessionToken, LastSignInMethod: method}, nil
 }
 
 // SignOut revokes the Session identified by a Session token.

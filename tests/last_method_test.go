@@ -1,0 +1,133 @@
+package tests
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet/internal/testutil"
+)
+
+func lastMethodClient(t *testing.T, configure func(*signet.Config)) *signet.Client {
+	t.Helper()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
+	if configure != nil {
+		configure(&cfg)
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return client
+}
+
+func signInHTTP(t *testing.T, client *signet.Client, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/signin", strings.NewReader(body))
+	client.Handler().ServeHTTP(rr, req)
+	return rr
+}
+
+func cookieValue(rr *httptest.ResponseRecorder, name string) *http.Cookie {
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == name {
+			return cookie
+		}
+	}
+	return nil
+}
+
+func TestLastMethodSetByHTTPSignIn(t *testing.T) {
+	client := lastMethodClient(t, nil)
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	rr := signInHTTP(t, client, `{"email":"user@example.com","password":"correct horse"}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+	cookie := cookieValue(rr, "signet_last_method")
+	if cookie == nil || !cookie.HttpOnly || cookie.Value == "" {
+		t.Fatalf("last-method cookie = %+v", cookie)
+	}
+	read := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/last-sign-in-method", nil)
+	req.AddCookie(cookie)
+	client.Handler().ServeHTTP(read, req)
+	if read.Code != http.StatusOK || !strings.Contains(read.Body.String(), `"method":"password"`) {
+		t.Fatalf("read status = %d body = %s", read.Code, read.Body.String())
+	}
+}
+
+func TestLastMethodGoResultAndConsent(t *testing.T) {
+	client := lastMethodClient(t, func(cfg *signet.Config) {
+		cfg.LastSignInMethod.BeforeStore = func(context.Context, string) bool { return false }
+	})
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	result, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil || result.LastSignInMethod != "password" {
+		t.Fatalf("result = %+v, err = %v", result, err)
+	}
+	rr := signInHTTP(t, client, `{"email":"user@example.com","password":"correct horse"}`)
+	if cookie := cookieValue(rr, "signet_last_method"); cookie != nil {
+		t.Fatalf("consent should skip the cookie: %+v", cookie)
+	}
+}
+
+func TestLastMethodRejectsTamperedCookie(t *testing.T) {
+	client := lastMethodClient(t, nil)
+	read := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/last-sign-in-method", nil)
+	req.AddCookie(&http.Cookie{Name: "signet_last_method", Value: "tampered.value"})
+	client.Handler().ServeHTTP(read, req)
+	if read.Code != http.StatusOK || !strings.Contains(read.Body.String(), `"method":""`) {
+		t.Fatalf("status = %d body = %s", read.Code, read.Body.String())
+	}
+}
+
+func TestLastMethodClear(t *testing.T) {
+	client := lastMethodClient(t, nil)
+	rr := httptest.NewRecorder()
+	client.ClearLastSignInMethod(rr)
+	cookie := cookieValue(rr, "signet_last_method")
+	if cookie == nil || cookie.MaxAge >= 0 {
+		t.Fatalf("clear cookie = %+v", cookie)
+	}
+}
+
+func TestLastMethodExpires(t *testing.T) {
+	client := lastMethodClient(t, func(cfg *signet.Config) {
+		cfg.LastSignInMethod.TTL = time.Minute
+	})
+	rr := httptest.NewRecorder()
+	client.SetLastMethodCookie(rr, "password")
+	cookie := cookieValue(rr, "signet_last_method")
+	if cookie == nil || cookie.MaxAge != 60 {
+		t.Fatalf("cookie = %+v", cookie)
+	}
+}
+
+func TestLastMethodRequiresCSRFKeys(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.JWTOnly = true
+	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
+	if _, err := signet.New(cfg); err == nil {
+		t.Fatal("JWT-only configs should not enable a browser cookie")
+	}
+}
