@@ -36,6 +36,21 @@ type Account struct {
 }
 
 // Session is one authenticated visit by a User.
+// CachedSession is a short-lived copy of a resolved Session.
+type CachedSession struct {
+	User              *User
+	IdleExpiresAt     time.Time
+	AbsoluteExpiresAt time.Time
+}
+
+// SessionCache optionally short-circuits a Session lookup. The Store remains
+// authoritative: a cache miss or error falls back to it.
+type SessionCache interface {
+	Get(context.Context, string) (*CachedSession, error)
+	Put(context.Context, string, *CachedSession, time.Duration) error
+	Flush(context.Context) error
+}
+
 type Session struct {
 	ID                string     `json:"id"`
 	UserID            string     `json:"user_id"`
@@ -268,6 +283,7 @@ type Config struct {
 	OnSignIn                 func(context.Context, *User)
 	Cookie                   CookieConfig
 	Session                  SessionConfig
+	SessionCache             SessionCache
 	Password                 PasswordConfig
 	PathPrefix               string
 	InsecureAllowHTTPCookies bool
@@ -298,6 +314,8 @@ type CookieConfig struct {
 type SessionConfig struct {
 	IdleTimeout     time.Duration
 	AbsoluteTimeout time.Duration
+	// CacheTTL enables the optional Session cache. Zero disables it.
+	CacheTTL time.Duration
 	// FreshAge is the window since authentication for freshness checks.
 	// Zero disables freshness enforcement.
 	FreshAge time.Duration

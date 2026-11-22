@@ -127,7 +127,7 @@ func New(cfg Config) (*Client, error) {
 		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
 			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
 		tokens:   token.New(cfg.Store, cfg.Clock),
-		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session),
+		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache),
 	}
 	if jwtCfg != nil {
 		c.jwtService = token.NewJWT(token.JWTDependencies{

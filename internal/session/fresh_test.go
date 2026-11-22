@@ -20,7 +20,7 @@ func TestIsFreshUsesCreatedAtNotLastSeen(t *testing.T) {
 		ID: "id", TokenHash: secret.Digest(raw),
 		CreatedAt: now.Add(-time.Hour), LastSeenAt: now,
 	}
-	svc := session.New(store, clock, core.SessionConfig{FreshAge: 5 * time.Minute})
+	svc := session.New(store, clock, core.SessionConfig{FreshAge: 5 * time.Minute}, nil)
 	fresh, err := svc.IsFresh(context.Background(), raw)
 	if err != nil || fresh {
 		t.Fatalf("fresh = %v, err = %v; want false", fresh, err)
