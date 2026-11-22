@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"log/slog"
+	"reflect"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -35,9 +36,31 @@ func ValidateJWTConfig(cfg *core.JWTConfig) error {
 	if !ok {
 		return core.ErrInvalidJWTAlgorithm
 	}
-	if !algorithm.validKey(cfg.Key) {
-		return core.ErrInvalidJWTKey
+	keys := cfg.Keys
+	if len(keys) > 0 && cfg.Key != nil {
+		return core.ErrInvalidKeyRing
 	}
+	if len(keys) == 0 {
+		if cfg.Key == nil {
+			return core.ErrInvalidKeyRing
+		}
+		keys = []any{cfg.Key}
+	}
+	for i, key := range keys {
+		if !algorithm.validKey(key) {
+			if len(cfg.Keys) > 0 {
+				return core.ErrInvalidKeyRing
+			}
+			return core.ErrInvalidJWTKey
+		}
+		for _, earlier := range keys[:i] {
+			if reflect.DeepEqual(earlier, key) {
+				return core.ErrInvalidKeyRing
+			}
+		}
+	}
+	cfg.Key = keys[0]
+	cfg.VerifyKeys = keys
 	if cfg.AccessTTL == 0 {
 		cfg.AccessTTL = defaultAccessTTL
 	}
@@ -108,14 +131,28 @@ func (s *JWTService) VerifyAccessToken(ctx context.Context, raw string) (*core.U
 	if s.deps.Config == nil {
 		return nil, core.ErrJWTDisabled
 	}
-	claims := &jwt.RegisteredClaims{}
-	parsed, err := jwt.ParseWithClaims(raw, claims, func(token *jwt.Token) (any, error) {
-		if token.Method.Alg() != s.deps.Config.Algorithm {
-			return nil, core.ErrInvalidJWTAlgorithm
+	keys := s.deps.Config.VerifyKeys
+	if len(keys) == 0 {
+		keys = []any{s.deps.Config.Key}
+	}
+	var claims *jwt.RegisteredClaims
+	var parsed *jwt.Token
+	var err error
+	for _, key := range keys {
+		candidate := &jwt.RegisteredClaims{}
+		token, parseErr := jwt.ParseWithClaims(raw, candidate, func(token *jwt.Token) (any, error) {
+			if token.Method.Alg() != s.deps.Config.Algorithm {
+				return nil, core.ErrInvalidJWTAlgorithm
+			}
+			return key, nil
+		}, jwt.WithValidMethods([]string{s.deps.Config.Algorithm}))
+		if parseErr == nil && token.Valid {
+			claims, parsed, err = candidate, token, nil
+			break
 		}
-		return s.deps.Config.Key, nil
-	}, jwt.WithValidMethods([]string{s.deps.Config.Algorithm}))
-	if err != nil || !parsed.Valid {
+		err = parseErr
+	}
+	if claims == nil || parsed == nil || err != nil {
 		return nil, core.ErrTokenInvalid
 	}
 	if s.deps.Config.Issuer != "" && claims.Issuer != s.deps.Config.Issuer {

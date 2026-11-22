@@ -240,6 +240,8 @@ func RedirectAllowed(redirect string, allowed []string) bool {
 // JWTConfig enables bearer-token mode.
 type JWTConfig struct {
 	Key        any
+	Keys       []any
+	VerifyKeys []any // resolved by New from Keys; callers normally leave this empty
 	Algorithm  string
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration
@@ -296,6 +298,7 @@ type Config struct {
 	OAuth                    *OAuthConfig
 	Passwordless             *PasswordlessConfig
 	CSRFKey                  []byte
+	CSRFKeys                 [][]byte
 	JWTOnly                  bool
 }
 
@@ -561,6 +564,8 @@ var (
 	ErrInvalidJWTAlgorithm = errors.New("signet: invalid jwt algorithm")
 	// ErrInvalidJWTKey reports an invalid JWT key.
 	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
+	// ErrInvalidKeyRing reports an empty, mixed or duplicate key ring.
+	ErrInvalidKeyRing = errors.New("signet: invalid key ring")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

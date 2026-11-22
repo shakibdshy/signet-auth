@@ -1,6 +1,7 @@
 package signet
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -94,8 +95,24 @@ func New(cfg Config) (*Client, error) {
 			return nil, ErrInvalidOAuthConfig
 		}
 	}
-	if len(cfg.CSRFKey) != 32 && !cfg.JWTOnly {
-		return nil, ErrInvalidCSRFConfig
+	csrfKeys := cfg.CSRFKeys
+	if len(csrfKeys) == 0 && len(cfg.CSRFKey) > 0 {
+		csrfKeys = [][]byte{cfg.CSRFKey}
+	}
+	if !cfg.JWTOnly {
+		if len(csrfKeys) == 0 {
+			return nil, ErrInvalidCSRFConfig
+		}
+		for i, key := range csrfKeys {
+			if len(key) != 32 {
+				return nil, ErrInvalidCSRFConfig
+			}
+			for _, earlier := range csrfKeys[:i] {
+				if bytes.Equal(earlier, key) {
+					return nil, ErrInvalidKeyRing
+				}
+			}
+		}
 	}
 	var jwtCfg *JWTConfig
 	if cfg.JWT != nil {
@@ -117,7 +134,7 @@ func New(cfg Config) (*Client, error) {
 		sessionCookieName = "__Host-" + sessionCookieName
 		csrfCookieName = "__Host-" + csrfCookieName
 	}
-	guard := csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
+	guard := csrf.New(csrfKeys, cfg.Clock, csrfCookieName, sessionCookieName,
 		cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 		strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger)
 	c := &Client{
