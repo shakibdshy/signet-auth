@@ -140,17 +140,7 @@ auth.ClearLastSignInMethod(w)                        // expire it
 `Client.LastSignInMethod` takes the request so it can read the cookie; the HTTP adapter passes the
 request context through for you.
 
-### 5. Read it from the frontend
-
-```ts
-import { createSignetClient } from '@shakibdshy/signet-client';
-
-const auth = createSignetClient({ baseURL: 'https://api.example.com/auth' });
-const { method } = await auth.lastSignInMethod();
-```
-
-The `baseURL` must include the backend `PathPrefix`; otherwise the generated client calls
-`/last-sign-in-method` instead of `/auth/last-sign-in-method`.
+For frontend code, see [Frontend client](/docs/frontend-client#last-sign-in-method).
 
 ## Out of scope
 
