@@ -165,6 +165,10 @@ export function createSignetClient(options: SignetClientOptions) {
 		async csrfToken(): Promise<SuccessBody<"/csrf-token", "get", 200>> {
 			return unwrap(await api.GET("/csrf-token"));
 		},
+
+		async lastSignInMethod(): Promise<SuccessBody<"/last-sign-in-method", "get", 200>> {
+			return unwrap(await api.GET("/last-sign-in-method"));
+		},
 	};
 }
 

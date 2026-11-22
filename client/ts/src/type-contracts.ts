@@ -13,6 +13,7 @@ void client.listSessions();
 void client.revokeAllSessions();
 void client.revokeSession();
 void client.csrfToken();
+void client.lastSignInMethod();
 
 // @ts-expect-error password is required by the published contract
 void client.signUp({ email: "user@example.com", name: "Ada" });
