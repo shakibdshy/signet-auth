@@ -14,10 +14,10 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | "OTP is a Token with a new kind; six numeric digits; digest-only storage" | `TestEmailOTPSignsInExistingUser` |
 | "a User with zero Accounts is valid" | `TestMagicLinkAutoCreatesVerifiedUser` |
 | "one shared redirect-allowlist helper" | `TestMagicLinkRejectsOffOriginCallback`, existing OAuth callback tests |
-| "optional template interfaces, no breaking change" | compile-time: custom `EmailTemplates` still satisfies the interface; `DefaultTemplates` implements both extensions |
+| "optional template interfaces, no breaking change" | `TestDefaultPasswordlessTemplatesRenderBothBodies`; compile-time: custom `EmailTemplates` still satisfies the interface |
 | "verification issues a Session immediately" | `TestMagicLinkHTTPFlowSetsCookie`, `TestEmailOTPHTTPFlowSetsCookie` |
 | "OTP TTL 300 seconds; magic-link TTL 300 seconds" | `TestEmailOTPExpiresWithClock`, `TestMagicLinkExpiresWithClock`, `TestPasswordlessDefaultsHoldForHandBuiltConfig` |
-| "3/min and 5/min are documented recommended rules" | documented in `passwordless.mdx`; no built-in window enforcement |
+| "3/min and 5/min are documented recommended rules" | `TestPasswordlessSendEndpointsAreRateLimited` asserts limiter consultation; exact windows documented in `passwordless.mdx` |
 | "a proof sets `EmailVerified = true`" | `TestMagicLinkAutoCreatesVerifiedUser`, `TestEmailOTPAutoCreatesVerifiedUser` |
 | "no password or Session revocation for existing users" | `TestMagicLinkSignsInExistingUser` (credential sign-in still available) |
 | "one `PasswordlessConfig` pointer on `Config`" | `TestPasswordlessDefaultsHoldForHandBuiltConfig` |
@@ -37,12 +37,12 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | Expired proofs are rejected | `TestMagicLinkExpiresWithClock`, `TestEmailOTPExpiresWithClock` |
 | Off-origin redirects are rejected | `TestMagicLinkRejectsOffOriginCallback`, `TestMagicLinkRejectsUnlistedSameOriginCallback`, `TestMagicLinkRejectsMismatchedCallbackAtVerification` |
 | Unknown emails do not disclose registration or enable mail relay | `TestMagicLinkSendIsSilentWhenSignUpDisabled`, `TestEmailOTPSendIsSilentWhenSignUpDisabled` |
-| Standard sentinel errors reach callers | `TestPasswordlessErrorsUseStandardSentinels` |
+| Standard and factor-specific sentinel errors reach callers | `TestPasswordlessErrorsUseStandardSentinels`, `TestConsumedTokenStillMatchesInvalidToken`, `TestIssueWithDataRoundTrip` (internal/token) |
 | Wrong email and already-used OTP have distinct errors | `TestEmailOTPWrongEmailReturnsInvalidCode`, `TestEmailOTPConsumedCodeReportsAlreadyUsed`, `TestEmailOTPErrorWireCodes` |
 | Malformed and already-used magic links have distinct errors | `TestMagicLinkReplayReportsAlreadyUsed`, `TestMagicLinkMalformedOrExpiredReportsInvalidLink`, `TestMagicLinkErrorWireCodes` |
 | All four endpoints consult the limiter | `TestPasswordlessSendEndpointsAreRateLimited`, `TestPasswordlessVerifyEndpointsAreRateLimited` |
 | No secrets in logs | `TestPasswordlessFlowsDoNotLogSecrets` |
-| Anti-enumeration paths do comparable work | limitation: unknown-and-disabled path generates and digests a proof but does not render a template; transport time still differs without queued delivery |
+| Anti-enumeration paths do comparable work | `TestMagicLinkSendIsSilentWhenSignUpDisabled`, `TestEmailOTPSendIsSilentWhenSignUpDisabled`; unknown path generates, digests and renders without sending. Limitation: transport time still differs without queued delivery |
 
 ## Security mechanisms → effect tests
 
@@ -60,7 +60,7 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 ## Cross-cutting sweep
 
 - [x] every rate-limited endpoint has a 429 test
-- [x] every new exported sentinel has an errors.Is test (no new sentinels; reused two)
+- [x] every new exported sentinel has an errors.Is test (`TestPasswordlessErrorsUseStandardSentinels`, `TestMagicLinkReplayReportsAlreadyUsed`, `TestEmailOTPConsumedCodeReportsAlreadyUsed`, `TestConsumedTokenStillMatchesInvalidToken`)
 - [x] every expiry branch is tested with the injected Clock
 - [x] no token, password, link or verifier appears in logs
 - [x] anti-enumeration paths do comparable work, or the gap is explained above

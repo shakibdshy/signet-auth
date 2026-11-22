@@ -609,6 +609,22 @@ func TestMagicLinkRejectsOffOriginCallback(t *testing.T) {
 	}
 }
 
+func TestMagicLinkHTTPRedirectsWithEmbeddedCallbackOnly(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	callback := "https://app.example.com/welcome"
+	if err := client.SendMagicLink(ctx, signet.SendMagicLinkInput{Email: "user@example.com", CallbackURL: callback}); err != nil {
+		t.Fatalf("SendMagicLink: %v", err)
+	}
+	raw := magicLinkTokenFromMail(t, mailer)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/verify-magic-link?token="+url.QueryEscape(raw), nil)
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound || rr.Header().Get("Location") != callback {
+		t.Fatalf("status = %d location = %q body = %s", rr.Code, rr.Header().Get("Location"), rr.Body.String())
+	}
+}
+
 func TestMagicLinkRejectsMismatchedCallbackAtVerification(t *testing.T) {
 	client, _, mailer := passwordlessClient(t)
 	ctx := context.Background()
@@ -719,6 +735,9 @@ func TestMagicLinkHTTPFlowSetsCookie(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `"session_token"`) || !strings.Contains(rr.Body.String(), `"user"`) {
+		t.Fatalf("session JSON not returned: %s", rr.Body.String())
 	}
 	var found bool
 	for _, cookie := range rr.Result().Cookies() {

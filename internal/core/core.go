@@ -331,6 +331,9 @@ type SignInInput struct {
 type SignInResult struct {
 	User         *User
 	SessionToken string
+	// CallbackURL is the allowlisted callback embedded in a magic-link proof.
+	// It is transport-only and never serialised.
+	CallbackURL string `json:"-"`
 }
 
 // SendMagicLinkInput requests a magic-link sign-in email.

@@ -238,8 +238,14 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
-	if in.CallbackURL != "" {
-		http.Redirect(w, r, in.CallbackURL, http.StatusFound)
+	callback := in.CallbackURL
+	if callback == "" {
+		// The emailed link carries the callback inside its proof; the query
+		// parameter is optional and, when present, must match the embedded one.
+		callback = result.CallbackURL
+	}
+	if callback != "" {
+		http.Redirect(w, r, callback, http.StatusFound)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

@@ -26,7 +26,7 @@ _Avoid_: bearer token, session secret
 
 **Token**:
 A single-use proof for one sensitive flow: email verification, email change, password reset, email change confirmation, account deletion, OAuth account linking, refresh, state, email OTP sign-in or magic-link sign-in. Only its digest is stored.
-_Avoid_: proof, verification value
+_Avoid_: verification value, one-time secret
 
 **Email OTP**:
 A six-digit one-time code delivered to a User's email as a single-use proof of that address.

@@ -75,6 +75,14 @@ func (s *VerificationService) SendMagicLink(ctx context.Context, in core.SendMag
 		// Equalize work with the registered path without issuing or sending.
 		raw := secret.NewToken()
 		_ = secret.Digest(raw)
+		templateData := core.TemplateData{
+			Email: email, Name: in.Name,
+			URL: s.emailLink("/verify-magic-link", raw), ExpiresAt: s.deps.Clock.Now().Add(s.magicLinkTTL()),
+		}
+		_ = mail.MagicLinkMessage(templateData)
+		if custom, ok := s.deps.Templates.(core.MagicLinkTemplates); ok {
+			_ = custom.MagicLink(templateData)
+		}
 		return nil
 	}
 	if in.CallbackURL != "" && !s.redirectAllowed(in.CallbackURL) {
@@ -152,21 +160,26 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	if err != nil {
 		return nil, err
 	}
+	result.CallbackURL = data.CallbackURL
 	s.logInfo("magic_link_sign_in", "user_id", result.User.ID)
 	return result, nil
 }
 
-// translateMagicLinkError turns Token-level failures into link-level errors
-// that tell the User whether to request a new link.
-func translateMagicLinkError(err error) error {
+// translateProofError maps Token-level failures onto the domain error pair a
+// factor exposes to its caller: an unusable proof, and an already-used one.
+func translateProofError(err, invalid, alreadyUsed error) error {
 	switch {
 	case errors.Is(err, core.ErrTokenConsumed):
-		return core.ErrMagicLinkAlreadyUsed
+		return alreadyUsed
 	case errors.Is(err, core.ErrTokenInvalid), errors.Is(err, core.ErrTokenExpired):
-		return core.ErrInvalidMagicLink
+		return invalid
 	default:
 		return err
 	}
+}
+
+func translateMagicLinkError(err error) error {
+	return translateProofError(err, core.ErrInvalidMagicLink, core.ErrMagicLinkAlreadyUsed)
 }
 
 // finishPasswordlessSignIn resolves or creates the User after a proof has been
@@ -243,6 +256,11 @@ func (s *VerificationService) SendEmailOTP(ctx context.Context, in core.SendEmai
 	if !known && !s.signUpAllowed() {
 		// Equalize work without issuing or sending a proof.
 		_ = secret.Digest(email + ":" + code)
+		templateData := core.TemplateData{Email: email, Name: in.Name, Code: code, ExpiresAt: expiresAt}
+		_ = mail.EmailOTPMessage(templateData)
+		if custom, ok := s.deps.Templates.(core.EmailOTPTemplates); ok {
+			_ = custom.EmailOTP(templateData)
+		}
 		return nil
 	}
 	subject := s.proofSubject(email)
@@ -301,14 +319,7 @@ func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.Verify
 	}
 	proof := email + ":" + in.Code
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenEmailOTP, proof); err != nil {
-		switch {
-		case errors.Is(err, core.ErrTokenConsumed):
-			return nil, core.ErrOTPAlreadyUsed
-		case errors.Is(err, core.ErrTokenInvalid), errors.Is(err, core.ErrTokenExpired):
-			return nil, core.ErrInvalidOTP
-		default:
-			return nil, err
-		}
+		return nil, translateProofError(err, core.ErrInvalidOTP, core.ErrOTPAlreadyUsed)
 	}
 	result, err := s.finishPasswordlessSignIn(ctx, email, "")
 	if err != nil {
