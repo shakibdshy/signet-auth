@@ -392,6 +392,67 @@ func TestEmailOTPErrorWireCodes(t *testing.T) {
 	}
 }
 
+func TestMagicLinkReplayReportsAlreadyUsed(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendMagicLink(ctx, signet.SendMagicLinkInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendMagicLink: %v", err)
+	}
+	raw := magicLinkTokenFromMail(t, mailer)
+	if _, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: raw}); err != nil {
+		t.Fatalf("first VerifyMagicLink: %v", err)
+	}
+	_, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: raw})
+	if !errors.Is(err, signet.ErrMagicLinkAlreadyUsed) {
+		t.Fatalf("error = %v, want ErrMagicLinkAlreadyUsed", err)
+	}
+}
+
+func TestMagicLinkMalformedOrExpiredReportsInvalidLink(t *testing.T) {
+	client, _, _ := passwordlessClient(t)
+	ctx := context.Background()
+	if _, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: "garbage"}); !errors.Is(err, signet.ErrInvalidMagicLink) {
+		t.Fatalf("malformed error = %v, want ErrInvalidMagicLink", err)
+	}
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	expiring, _, expiringMailer := passwordlessClientWithConfig(t, func(cfg *signet.Config) { cfg.Clock = clock })
+	if err := expiring.SendMagicLink(ctx, signet.SendMagicLinkInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendMagicLink: %v", err)
+	}
+	raw := magicLinkTokenFromMail(t, expiringMailer)
+	clock.At = clock.At.Add(6 * time.Minute)
+	if _, err := expiring.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: raw}); !errors.Is(err, signet.ErrInvalidMagicLink) {
+		t.Fatalf("expired error = %v, want ErrInvalidMagicLink", err)
+	}
+}
+
+func TestMagicLinkErrorWireCodes(t *testing.T) {
+	client, _, mailer := passwordlessClient(t)
+	ctx := context.Background()
+	if err := client.SendMagicLink(ctx, signet.SendMagicLinkInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendMagicLink: %v", err)
+	}
+	raw := magicLinkTokenFromMail(t, mailer)
+	handler := client.Handler()
+	get := func(token string) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/verify-magic-link?token="+url.QueryEscape(token), nil)
+		handler.ServeHTTP(rr, req)
+		return rr
+	}
+	malformed := get("garbage")
+	if malformed.Code != http.StatusUnauthorized || !strings.Contains(malformed.Body.String(), `"error":"invalid_link"`) {
+		t.Fatalf("malformed: status = %d body = %s", malformed.Code, malformed.Body.String())
+	}
+	if _, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: raw}); err != nil {
+		t.Fatalf("VerifyMagicLink: %v", err)
+	}
+	replay := get(raw)
+	if replay.Code != http.StatusUnauthorized || !strings.Contains(replay.Body.String(), `"error":"link_already_used"`) {
+		t.Fatalf("replay: status = %d body = %s", replay.Code, replay.Body.String())
+	}
+}
+
 func TestPasswordlessConfigValidationRejectsNegativeTTL(t *testing.T) {
 	cfg := testutil.NewConfig()
 	cfg.Store = testutil.NewStore()
@@ -406,7 +467,7 @@ func TestPasswordlessConfigValidationRejectsNegativeTTL(t *testing.T) {
 func TestPasswordlessErrorsUseStandardSentinels(t *testing.T) {
 	client, _, _ := passwordlessClient(t)
 	ctx := context.Background()
-	if _, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: "garbage"}); !errors.Is(err, signet.ErrTokenInvalid) {
+	if _, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{Token: "garbage"}); !errors.Is(err, signet.ErrInvalidMagicLink) {
 		t.Fatalf("magic link error = %v", err)
 	}
 	if _, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{Email: "user@example.com", Code: "abc"}); !errors.Is(err, signet.ErrInvalidOTP) {

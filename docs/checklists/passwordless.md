@@ -39,6 +39,7 @@ All tests named below live in `tests/passwordless_test.go` at the public `Client
 | Unknown emails do not disclose registration or enable mail relay | `TestMagicLinkSendIsSilentWhenSignUpDisabled`, `TestEmailOTPSendIsSilentWhenSignUpDisabled` |
 | Standard sentinel errors reach callers | `TestPasswordlessErrorsUseStandardSentinels` |
 | Wrong email and already-used OTP have distinct errors | `TestEmailOTPWrongEmailReturnsInvalidCode`, `TestEmailOTPConsumedCodeReportsAlreadyUsed`, `TestEmailOTPErrorWireCodes` |
+| Malformed and already-used magic links have distinct errors | `TestMagicLinkReplayReportsAlreadyUsed`, `TestMagicLinkMalformedOrExpiredReportsInvalidLink`, `TestMagicLinkErrorWireCodes` |
 | All four endpoints consult the limiter | `TestPasswordlessSendEndpointsAreRateLimited`, `TestPasswordlessVerifyEndpointsAreRateLimited` |
 | No secrets in logs | `TestPasswordlessFlowsDoNotLogSecrets` |
 | Anti-enumeration paths do comparable work | limitation: unknown-and-disabled path generates and digests a proof but does not render a template; transport time still differs without queued delivery |

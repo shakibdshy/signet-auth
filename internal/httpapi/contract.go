@@ -187,6 +187,8 @@ func ContractFor() Contract {
 			{core.ErrRateLimited, http.StatusTooManyRequests, "rate_limited", "too many requests"},
 			{core.ErrOTPAlreadyUsed, http.StatusUnauthorized, "code_already_used", "this code has already been used; request a new one"},
 			{core.ErrInvalidOTP, http.StatusUnauthorized, "invalid_code", "invalid or expired code"},
+			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
+			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
 			{core.ErrTokenInvalid, http.StatusUnauthorized, "invalid_token", "invalid token"},
 			{core.ErrTokenExpired, http.StatusUnauthorized, "invalid_token", "invalid token"},
 			{core.ErrRefreshReuse, http.StatusUnauthorized, "invalid_token", "invalid token"},

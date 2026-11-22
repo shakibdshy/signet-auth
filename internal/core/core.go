@@ -508,6 +508,10 @@ var (
 	ErrInvalidOTP = errors.New("signet: invalid or expired code")
 	// ErrOTPAlreadyUsed reports an email OTP that was already consumed.
 	ErrOTPAlreadyUsed = errors.New("signet: code already used")
+	// ErrInvalidMagicLink reports a missing, malformed, unknown or expired magic link.
+	ErrInvalidMagicLink = errors.New("signet: invalid or expired magic link")
+	// ErrMagicLinkAlreadyUsed reports a magic link that was already consumed.
+	ErrMagicLinkAlreadyUsed = errors.New("signet: magic link already used")
 	// ErrInvalidRateLimitRule reports a rule for an unknown endpoint name.
 	ErrInvalidRateLimitRule = errors.New("signet: invalid rate limit rule")
 	// ErrSessionNotFresh reports a Session outside the freshness window.

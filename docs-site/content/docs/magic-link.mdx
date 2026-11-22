@@ -83,7 +83,9 @@ instead of a 302. With one, it sets the cookies and redirects.
   password later with `ChangePassword`.
 
 Resending a link deletes the previous magic-link Token for that User (or the email's proof
-subject), so only the newest link works. Expired links return `invalid_token` too.
+subject), so only the newest link works. An expired, malformed or rotated link returns
+`ErrInvalidMagicLink` / `invalid_link` (401). Replaying an already-used link returns
+`ErrMagicLinkAlreadyUsed` / `link_already_used` (401), so the User knows to request a new one.
 
 ## HTTP reference
 

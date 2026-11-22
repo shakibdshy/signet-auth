@@ -53,6 +53,8 @@ sign in first and send the session cookie and CSRF token.
 | ErrTokenConsumed | 401 invalid_token | A Token was already used. Wraps `ErrTokenInvalid`, so existing `errors.Is` checks keep working. |
 | ErrInvalidOTP | 401 invalid_code | Missing, malformed, unknown, wrong-email or expired email OTP. |
 | ErrOTPAlreadyUsed | 401 code_already_used | The email OTP was consumed; request a new code. |
+| ErrInvalidMagicLink | 401 invalid_link | Missing, malformed, unknown or expired magic link. |
+| ErrMagicLinkAlreadyUsed | 401 link_already_used | The magic link was consumed; request a new one. |
 | ErrTokenExpired | 401 invalid_token | Token past its expiry; request a fresh one. |
 | ErrRefreshReuse | 401 invalid_token | Refresh replay. All Sessions and Tokens for that User were revoked; sign in again. |
 

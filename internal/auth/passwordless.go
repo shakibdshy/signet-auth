@@ -122,7 +122,7 @@ func (s *VerificationService) SendMagicLink(ctx context.Context, in core.SendMag
 // is accepted only when it matches.
 func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.VerifyMagicLinkInput) (*core.SignInResult, error) {
 	if in.Token == "" {
-		return nil, core.ErrTokenInvalid
+		return nil, core.ErrInvalidMagicLink
 	}
 	key := in.RateLimitKey
 	if key == "" {
@@ -133,11 +133,11 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	}
 	rawData, err := token.ParseData(in.Token)
 	if err != nil {
-		return nil, core.ErrTokenInvalid
+		return nil, core.ErrInvalidMagicLink
 	}
 	var data magicLinkData
 	if err := json.Unmarshal([]byte(rawData), &data); err != nil || data.Email == "" {
-		return nil, core.ErrTokenInvalid
+		return nil, core.ErrInvalidMagicLink
 	}
 	if in.CallbackURL != "" && in.CallbackURL != data.CallbackURL {
 		return nil, core.ErrOAuthRedirectNotAllowed
@@ -146,7 +146,7 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 		return nil, core.ErrOAuthRedirectNotAllowed
 	}
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenMagicLink, in.Token); err != nil {
-		return nil, err
+		return nil, translateMagicLinkError(err)
 	}
 	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name)
 	if err != nil {
@@ -154,6 +154,19 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	}
 	s.logInfo("magic_link_sign_in", "user_id", result.User.ID)
 	return result, nil
+}
+
+// translateMagicLinkError turns Token-level failures into link-level errors
+// that tell the User whether to request a new link.
+func translateMagicLinkError(err error) error {
+	switch {
+	case errors.Is(err, core.ErrTokenConsumed):
+		return core.ErrMagicLinkAlreadyUsed
+	case errors.Is(err, core.ErrTokenInvalid), errors.Is(err, core.ErrTokenExpired):
+		return core.ErrInvalidMagicLink
+	default:
+		return err
+	}
 }
 
 // finishPasswordlessSignIn resolves or creates the User after a proof has been

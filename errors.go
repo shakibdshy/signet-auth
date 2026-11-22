@@ -25,6 +25,10 @@ var (
 	ErrInvalidOTP = core.ErrInvalidOTP
 	// ErrOTPAlreadyUsed reports an email OTP that was already consumed.
 	ErrOTPAlreadyUsed = core.ErrOTPAlreadyUsed
+	// ErrInvalidMagicLink reports a missing, malformed, unknown or expired magic link.
+	ErrInvalidMagicLink = core.ErrInvalidMagicLink
+	// ErrMagicLinkAlreadyUsed reports a magic link that was already consumed.
+	ErrMagicLinkAlreadyUsed = core.ErrMagicLinkAlreadyUsed
 	// ErrMissingStore reports that Config.Store was not supplied.
 	ErrMissingStore = core.ErrMissingStore
 	// ErrMissingMailer reports that Config.Mailer was not supplied.

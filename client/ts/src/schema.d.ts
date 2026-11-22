@@ -385,7 +385,7 @@ export interface components {
     schemas: {
         ApiError: {
             /** @enum {string} */
-            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_request" | "invalid_token" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "unauthorized";
+            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "unauthorized";
             message: string;
         };
         ChangeEmailInput: {
