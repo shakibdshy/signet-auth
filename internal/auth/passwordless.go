@@ -36,10 +36,14 @@ func (s *VerificationService) redirectAllowed(redirect string) bool {
 	if redirect == "" {
 		return false
 	}
-	if s.deps.Passwordless != nil && core.RedirectAllowed(redirect, s.deps.Passwordless.AllowedRedirects) {
+	var passwordlessRedirects []string
+	if s.deps.Passwordless != nil {
+		passwordlessRedirects = s.deps.Passwordless.AllowedRedirects
+	}
+	if core.RedirectPermitted(redirect, passwordlessRedirects, s.deps.RedirectPatterns) {
 		return true
 	}
-	if core.RedirectAllowed(redirect, s.deps.OAuthRedirects) {
+	if core.RedirectPermitted(redirect, s.deps.OAuthRedirects, s.deps.RedirectPatterns) {
 		return true
 	}
 	return core.RedirectAllowed(redirect, []string{strings.TrimRight(s.deps.AppURL, "/")})

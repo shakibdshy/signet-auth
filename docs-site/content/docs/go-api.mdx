@@ -15,6 +15,7 @@ only `github.com/shakibdshy/signet`.
 | `New(cfg Config) (*Client, error)` | Validates config, applies defaults and builds a ready Client. |
 | `DefaultConfig() Config` | Secure baseline configuration. |
 | `DocsHandler() http.Handler` | Optional OpenAPI JSON + Scalar viewer; mount it yourself. |
+| `JWKSHandler() http.Handler` | Optional JWKS document for asymmetric JWT keys; not mounted by `Handler()`. |
 | `UserFromContext(ctx context.Context) (*User, bool)` | Reads the authenticated User set by `RequireAuth`/`OptionalAuth`. |
 
 ## Client methods

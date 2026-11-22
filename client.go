@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/oauth"
@@ -36,6 +37,7 @@ type Client struct {
 	cfg           Config
 	dummyVerifier string
 	jwtService    *token.JWTService
+	jwtKeys       []any
 	csrf          *csrf.Guard
 	cookies       *httpapi.Cookies
 	tokens        *token.Service
@@ -62,6 +64,9 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	if err := core.ValidateRedirectPatterns(cfg.AllowedRedirectPatterns); err != nil {
+		return nil, err
+	}
 	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
 		return nil, ErrInvalidPasswordlessConfig
 	}
@@ -94,8 +99,14 @@ func New(cfg Config) (*Client, error) {
 			return nil, ErrInvalidOAuthConfig
 		}
 	}
-	if len(cfg.CSRFKey) != 32 && !cfg.JWTOnly {
-		return nil, ErrInvalidCSRFConfig
+	csrfKeys := cfg.CSRFKeys
+	if len(csrfKeys) == 0 && len(cfg.CSRFKey) > 0 {
+		csrfKeys = [][]byte{cfg.CSRFKey}
+	}
+	if !cfg.JWTOnly {
+		if err := csrf.ValidateKeys(csrfKeys); err != nil {
+			return nil, err
+		}
 	}
 	var jwtCfg *JWTConfig
 	if cfg.JWT != nil {
@@ -117,7 +128,7 @@ func New(cfg Config) (*Client, error) {
 		sessionCookieName = "__Host-" + sessionCookieName
 		csrfCookieName = "__Host-" + csrfCookieName
 	}
-	guard := csrf.New(cfg.CSRFKey, cfg.Clock, csrfCookieName, sessionCookieName,
+	guard := csrf.New(csrfKeys, cfg.Clock, csrfCookieName, sessionCookieName,
 		cfg.Cookie.Path, cfg.Cookie.Domain, cfg.Cookie.Secure, cfg.Cookie.SameSite,
 		strings.TrimRight(cfg.PathPrefix, "/"), exempt, cfg.InsecureDisableCSRF, cfg.Logger)
 	c := &Client{
@@ -127,18 +138,20 @@ func New(cfg Config) (*Client, error) {
 		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
 			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
 		tokens:   token.New(cfg.Store, cfg.Clock),
-		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session),
+		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
 	}
 	if jwtCfg != nil {
+		c.jwtKeys = token.VerificationKeys(jwtCfg)
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
 			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
+			RevokeSessions: c.sessions.RevokeAll,
 		})
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
 	if cfg.OAuth != nil {
-		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
+		c.oauth = oauth.New(cfg.OAuth, cfg.AllowedRedirectPatterns, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
 	}
 	var oauthRedirects []string
 	if cfg.OAuth != nil {
@@ -149,7 +162,9 @@ func New(cfg Config) (*Client, error) {
 		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
 		AppURL: cfg.AppURL, PathPrefix: cfg.PathPrefix, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
-		CreateSession: c.createSession,
+		RedirectPatterns: cfg.AllowedRedirectPatterns,
+		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
+		FlushSessions: c.sessions.Flush,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
@@ -157,7 +172,7 @@ func New(cfg Config) (*Client, error) {
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
-		DummyVerifier: dummy,
+		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
 	})
 	return c, nil
 }
@@ -390,6 +405,12 @@ func (c *Client) VerifyAccessToken(ctx context.Context, raw string) (*User, erro
 		return nil, ErrJWTDisabled
 	}
 	return c.jwtService.VerifyAccessToken(ctx, raw)
+}
+
+// JWKSHandler returns an opt-in handler publishing the public half of the
+// configured asymmetric JWT keys. It is not mounted by Handler().
+func (c *Client) JWKSHandler() http.Handler {
+	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
 // ListSessions returns the Sessions belonging to a User.

@@ -4,6 +4,7 @@ package session
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -11,14 +12,36 @@ import (
 
 // Service manages Sessions against a Store.
 type Service struct {
-	store core.Store
-	clock core.Clock
-	cfg   core.SessionConfig
+	store  core.Store
+	clock  core.Clock
+	cfg    core.SessionConfig
+	cache  core.SessionCache
+	logger *slog.Logger
 }
 
-// New returns a session Service.
-func New(store core.Store, clock core.Clock, cfg core.SessionConfig) *Service {
-	return &Service{store: store, clock: clock, cfg: cfg}
+// New returns a session Service. cache may be nil to disable caching.
+func New(store core.Store, clock core.Clock, cfg core.SessionConfig, cache core.SessionCache, logger *slog.Logger) *Service {
+	return &Service{store: store, clock: clock, cfg: cfg, cache: cache, logger: logger}
+}
+
+func (s *Service) warn(event string, err error) {
+	if s.logger != nil {
+		s.logger.Warn(event, "error", err)
+	}
+}
+
+func (s *Service) flush(ctx context.Context) {
+	if s.cache == nil {
+		return
+	}
+	if err := s.cache.Flush(ctx); err != nil {
+		s.warn("session_cache_flush_failed", err)
+	}
+}
+
+// Flush invalidates every cached Session. It is a no-op without a cache.
+func (s *Service) Flush(ctx context.Context) {
+	s.flush(ctx)
 }
 
 // Create issues a new opaque Session token and stores only its digest.
@@ -46,13 +69,31 @@ func (s *Service) Resolve(ctx context.Context, raw string) (*core.User, error) {
 	if raw == "" {
 		return nil, core.ErrNotFound
 	}
-	session, err := s.store.SessionByHash(ctx, secret.Digest(raw))
+	now := s.clock.Now()
+	digest := secret.Digest(raw)
+	if s.cache != nil && s.cfg.CacheTTL > 0 {
+		cached, err := s.cache.Get(ctx, digest)
+		if err != nil {
+			s.warn("session_cache_get_failed", err)
+		}
+		if err == nil && cached != nil && cached.User != nil && !cached.User.Disabled &&
+			now.Before(cached.IdleExpiresAt) && now.Before(cached.AbsoluteExpiresAt) {
+			// Preserve sliding idle expiry: a cache hit still touches the Session.
+			cached.IdleExpiresAt = now.Add(s.cfg.IdleTimeout)
+			_ = s.store.TouchSession(ctx, cached.ID, cached.IdleExpiresAt)
+			if err := s.cache.Put(ctx, digest, cached, s.cfg.CacheTTL); err != nil {
+				s.warn("session_cache_put_failed", err)
+			}
+			return cached.User, nil
+		}
+	}
+	session, err := s.store.SessionByHash(ctx, digest)
 	if err != nil || session.RevokedAt != nil {
 		return nil, core.ErrNotFound
 	}
-	now := s.clock.Now()
 	if !now.Before(session.IdleExpiresAt) || !now.Before(session.AbsoluteExpiresAt) {
 		_ = s.store.DeleteSession(ctx, session.ID)
+		s.flush(ctx)
 		return nil, core.ErrNotFound
 	}
 	user, err := s.store.UserByID(ctx, session.UserID)
@@ -60,6 +101,23 @@ func (s *Service) Resolve(ctx context.Context, raw string) (*core.User, error) {
 		return nil, core.ErrNotFound
 	}
 	_ = s.store.TouchSession(ctx, session.ID, now.Add(s.cfg.IdleTimeout))
+	if s.cache != nil && s.cfg.CacheTTL > 0 {
+		ttl := s.cfg.CacheTTL
+		if remaining := session.IdleExpiresAt.Sub(now); remaining < ttl {
+			ttl = remaining
+		}
+		if remaining := session.AbsoluteExpiresAt.Sub(now); remaining < ttl {
+			ttl = remaining
+		}
+		if ttl > 0 {
+			if err := s.cache.Put(ctx, digest, &core.CachedSession{
+				ID: session.ID, User: user, IdleExpiresAt: session.IdleExpiresAt,
+				AbsoluteExpiresAt: session.AbsoluteExpiresAt,
+			}, ttl); err != nil {
+				s.warn("session_cache_put_failed", err)
+			}
+		}
+	}
 	return user, nil
 }
 
@@ -68,12 +126,17 @@ func (s *Service) Revoke(ctx context.Context, id string) error {
 	if err := s.store.DeleteSession(ctx, id); err != nil && !errors.Is(err, core.ErrNotFound) {
 		return err
 	}
+	s.flush(ctx)
 	return nil
 }
 
 // RevokeAll revokes every Session of a User.
 func (s *Service) RevokeAll(ctx context.Context, userID string) error {
-	return s.store.DeleteSessionsForUser(ctx, userID)
+	if err := s.store.DeleteSessionsForUser(ctx, userID); err != nil {
+		return err
+	}
+	s.flush(ctx)
+	return nil
 }
 
 // List returns the safe fields of a User's Sessions.

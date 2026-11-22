@@ -57,6 +57,17 @@ but unlisted path is rejected. Unknown emails produce a silent success with no m
 proof when `AllowSignUp` is false, and failed OTP guesses are throttled through the
 `RateLimiter` keyed by email and client IP.
 
+## Key rotation and redirect patterns
+
+Signing keys can be supplied as an ordered ring for both CSRF and JWT: the first key signs and
+all keys verify, so rotation does not invalidate live proofs. Rings are additive — the legacy
+single-key fields still work. JWKS publication is a separate opt-in handler and exposes only
+public, asymmetric keys.
+
+Redirect allowlists accept optional https wildcard patterns such as `https://*.example.com`.
+Exact matches still win, the AppURL fallback is unchanged, and CSRF same-origin checks are never
+widened by a pattern. An invalid pattern is rejected when the Client is built.
+
 ## OAuth
 
 Authorization Code with PKCE S256; the state is AES-GCM sealed with a 32-byte `StateKey`,

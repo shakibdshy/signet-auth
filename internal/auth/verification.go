@@ -20,20 +20,23 @@ const (
 // VerificationDependencies holds the collaborators for the verification and
 // reset flows.
 type VerificationDependencies struct {
-	Store          core.Store
-	Tokens         *token.Service
-	Mailer         core.Mailer
-	Templates      core.EmailTemplates
-	Clock          core.Clock
-	Limiter        core.RateLimiter
-	Logger         *slog.Logger
-	AppURL         string
-	PathPrefix     string
-	Password       core.PasswordConfig
-	Hasher         core.PasswordHasher
-	Passwordless   *core.PasswordlessConfig
-	OAuthRedirects []string
-	CreateSession  func(context.Context, string) (string, error)
+	Store            core.Store
+	Tokens           *token.Service
+	Mailer           core.Mailer
+	Templates        core.EmailTemplates
+	Clock            core.Clock
+	Limiter          core.RateLimiter
+	Logger           *slog.Logger
+	AppURL           string
+	PathPrefix       string
+	Password         core.PasswordConfig
+	Hasher           core.PasswordHasher
+	Passwordless     *core.PasswordlessConfig
+	OAuthRedirects   []string
+	RedirectPatterns []string
+	CreateSession    func(context.Context, string) (string, error)
+	RevokeSessions   func(context.Context, string) error
+	FlushSessions    func(context.Context)
 }
 
 // VerificationService implements email verification, password reset and
@@ -218,7 +221,7 @@ func (s *VerificationService) DeleteUser(ctx context.Context, in core.ConfirmDel
 	if err != nil {
 		return err
 	}
-	if err := s.deps.Store.DeleteSessionsForUser(ctx, proof.UserID); err != nil {
+	if err := s.deps.RevokeSessions(ctx, proof.UserID); err != nil {
 		return err
 	}
 	for _, kind := range core.AllTokenKinds {
@@ -335,6 +338,9 @@ func (s *VerificationService) VerifyEmailChange(ctx context.Context, in core.Ver
 	if err := s.deps.Store.UpdateUser(ctx, user); err != nil {
 		return err
 	}
+	if s.deps.FlushSessions != nil {
+		s.deps.FlushSessions(ctx)
+	}
 	s.logInfo("email_changed", "user_id", user.ID)
 	return nil
 }
@@ -399,7 +405,7 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 			return err
 		}
 	}
-	if err := s.deps.Store.DeleteSessionsForUser(ctx, user.ID); err != nil {
+	if err := s.deps.RevokeSessions(ctx, user.ID); err != nil {
 		return err
 	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)
@@ -454,7 +460,7 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 	if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, core.TokenResetPassword); err != nil {
 		return err
 	}
-	if err := s.deps.Store.DeleteSessionsForUser(ctx, user.ID); err != nil {
+	if err := s.deps.RevokeSessions(ctx, user.ID); err != nil {
 		return err
 	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)

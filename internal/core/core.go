@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -33,6 +35,22 @@ type Account struct {
 	EmailVerified  bool      `json:"email_verified"`
 	PasswordHash   string    `json:"password_hash"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+// CachedSession is a short-lived copy of a resolved Session.
+type CachedSession struct {
+	ID                string
+	User              *User
+	IdleExpiresAt     time.Time
+	AbsoluteExpiresAt time.Time
+}
+
+// SessionCache optionally short-circuits a Session lookup. The Store remains
+// authoritative: a cache miss or error falls back to it.
+type SessionCache interface {
+	Get(context.Context, string) (*CachedSession, error)
+	Put(context.Context, string, *CachedSession, time.Duration) error
+	Flush(context.Context) error
 }
 
 // Session is one authenticated visit by a User.
@@ -214,17 +232,77 @@ type PasswordlessConfig struct {
 // RedirectAllowed reports whether redirect is in the allowlist. An empty
 // allowlist rejects every redirect; callers supply their own fallback.
 func RedirectAllowed(redirect string, allowed []string) bool {
-	for _, candidate := range allowed {
+	return RedirectPermitted(redirect, allowed, nil)
+}
+
+// RedirectPermitted reports whether redirect matches an exact entry or a
+// configured pattern. Exact matches are checked first.
+func RedirectPermitted(redirect string, exact, patterns []string) bool {
+	for _, candidate := range exact {
 		if redirect == candidate {
+			return true
+		}
+	}
+	for _, pattern := range patterns {
+		if matchRedirectPattern(redirect, pattern) {
 			return true
 		}
 	}
 	return false
 }
 
+func matchRedirectPattern(redirect, pattern string) bool {
+	parsedPattern, err := url.Parse(pattern)
+	if err != nil {
+		return false
+	}
+	parsedRedirect, err := url.Parse(redirect)
+	if err != nil || parsedRedirect.Scheme != parsedPattern.Scheme {
+		return false
+	}
+	patternHost := parsedPattern.Hostname()
+	redirectHost := parsedRedirect.Hostname()
+	if !strings.HasPrefix(patternHost, "*.") {
+		return redirect == pattern
+	}
+	suffix := patternHost[1:]
+	if strings.Contains(redirectHost, "*") || !strings.HasSuffix(redirectHost, suffix) {
+		return false
+	}
+	base := strings.TrimPrefix(suffix, ".")
+	return redirectHost != base && strings.Count(redirectHost, ".") > strings.Count(base, ".")
+}
+
+// ValidateRedirectPatterns checks that every pattern is an https URL with a
+// wildcard only as the leftmost host label and at least two host labels.
+func ValidateRedirectPatterns(patterns []string) error {
+	for _, pattern := range patterns {
+		parsed, err := url.Parse(pattern)
+		if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" ||
+			parsed.Fragment != "" || parsed.Port() != "" || (parsed.Path != "" && parsed.Path != "/") {
+			return ErrInvalidRedirectPattern
+		}
+		host := parsed.Hostname()
+		if !strings.HasPrefix(host, "*.") {
+			return ErrInvalidRedirectPattern
+		}
+		labels := strings.Split(strings.TrimPrefix(host, "*."), ".")
+		if len(labels) < 2 {
+			return ErrInvalidRedirectPattern
+		}
+		for _, label := range labels {
+			if label == "" || strings.Contains(label, "*") {
+				return ErrInvalidRedirectPattern
+			}
+		}
+	}
+	return nil
+}
+
 // JWTConfig enables bearer-token mode.
 type JWTConfig struct {
 	Key        any
+	Keys       []any
 	Algorithm  string
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration
@@ -268,6 +346,7 @@ type Config struct {
 	OnSignIn                 func(context.Context, *User)
 	Cookie                   CookieConfig
 	Session                  SessionConfig
+	SessionCache             SessionCache
 	Password                 PasswordConfig
 	PathPrefix               string
 	InsecureAllowHTTPCookies bool
@@ -279,7 +358,9 @@ type Config struct {
 	Templates                EmailTemplates
 	OAuth                    *OAuthConfig
 	Passwordless             *PasswordlessConfig
+	AllowedRedirectPatterns  []string
 	CSRFKey                  []byte
+	CSRFKeys                 [][]byte
 	JWTOnly                  bool
 }
 
@@ -298,6 +379,8 @@ type CookieConfig struct {
 type SessionConfig struct {
 	IdleTimeout     time.Duration
 	AbsoluteTimeout time.Duration
+	// CacheTTL enables the optional Session cache. Zero disables it.
+	CacheTTL time.Duration
 	// FreshAge is the window since authentication for freshness checks.
 	// Zero disables freshness enforcement.
 	FreshAge time.Duration
@@ -543,6 +626,10 @@ var (
 	ErrInvalidJWTAlgorithm = errors.New("signet: invalid jwt algorithm")
 	// ErrInvalidJWTKey reports an invalid JWT key.
 	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
+	// ErrInvalidKeyRing reports an empty, mixed or duplicate key ring.
+	ErrInvalidKeyRing = errors.New("signet: invalid key ring")
+	// ErrInvalidRedirectPattern reports a malformed redirect pattern.
+	ErrInvalidRedirectPattern = errors.New("signet: invalid redirect pattern")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

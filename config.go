@@ -18,6 +18,12 @@ type CookieConfig = core.CookieConfig
 // SessionConfig controls the lifetime of a Session.
 type SessionConfig = core.SessionConfig
 
+// SessionCache optionally short-circuits a Session lookup. The Store remains authoritative.
+type SessionCache = core.SessionCache
+
+// CachedSession is a short-lived copy of a resolved Session.
+type CachedSession = core.CachedSession
+
 // PasswordConfig bounds the length of accepted passwords. The bounds exist to
 // prevent hashing denial of service as well as weak passwords.
 type PasswordConfig = core.PasswordConfig

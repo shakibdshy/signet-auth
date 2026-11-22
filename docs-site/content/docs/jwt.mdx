@@ -28,3 +28,28 @@ Calling an exchange or verification method without `Config.JWT` returns `ErrJWTD
 
 Set `JWTOnly` for API-only applications: no session cookies are issued and no
 CSRF key is required.
+
+## Key rotation and JWKS
+
+For rotation, set `Keys` instead of the legacy single `Key`. The first key signs and every key
+verifies, so a deployment can prepend a new key and keep the old one until live tokens expire.
+All keys must match `Algorithm`; a mixed or duplicate ring is rejected with
+`ErrInvalidKeyRing`.
+
+```go
+cfg.JWT = &signet.JWTConfig{
+    Algorithm: "RS256",
+    Keys:      []any{newRSAKey, oldRSAKey},
+    Issuer:    "signet",
+}
+```
+
+`Client.JWKSHandler()` is opt-in — mount it deliberately if clients need key discovery:
+
+```go
+mux.Handle("/jwks.json", auth.JWKSHandler())
+```
+
+It publishes only the public half of asymmetric keys with a stable `kid`, `alg` and `use`.
+Symmetric HS256 keys are never published; with only HS256 configured the document has an empty
+`keys` array. The handler is not part of `Client.Handler()`.

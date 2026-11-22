@@ -2,6 +2,7 @@
 package csrf
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -19,12 +20,30 @@ import (
 
 const ttl = 12 * time.Hour
 
+// ValidateKeys checks that a CSRF key ring is non-empty, 32-byte and unique.
+func ValidateKeys(keys [][]byte) error {
+	if len(keys) == 0 {
+		return core.ErrInvalidCSRFConfig
+	}
+	for i, key := range keys {
+		if len(key) != 32 {
+			return core.ErrInvalidCSRFConfig
+		}
+		for _, earlier := range keys[:i] {
+			if bytes.Equal(earlier, key) {
+				return core.ErrInvalidKeyRing
+			}
+		}
+	}
+	return nil
+}
+
 // Header is the header clients must use for the CSRF token.
 const Header = "X-CSRF-Token"
 
 // Guard holds the CSRF module's state and policy.
 type Guard struct {
-	key      []byte
+	keys     [][]byte
 	clock    core.Clock
 	cookie   string
 	session  string
@@ -39,9 +58,9 @@ type Guard struct {
 }
 
 // New constructs a Guard from resolved configuration.
-func New(key []byte, clock core.Clock, cookieName, sessionCookieName, path, domain string, secure bool, sameSite http.SameSite, prefix string, exempt map[string]bool, disabled bool, logger *slog.Logger) *Guard {
+func New(keys [][]byte, clock core.Clock, cookieName, sessionCookieName, path, domain string, secure bool, sameSite http.SameSite, prefix string, exempt map[string]bool, disabled bool, logger *slog.Logger) *Guard {
 	return &Guard{
-		key: key, clock: clock, cookie: cookieName, session: sessionCookieName,
+		keys: keys, clock: clock, cookie: cookieName, session: sessionCookieName,
 		path: path, domain: domain, secure: secure, sameSite: sameSite,
 		prefix: prefix, exempt: exempt, disabled: disabled, logger: logger,
 	}
@@ -55,7 +74,7 @@ func (g *Guard) Issue() (string, error) {
 	}
 	payload := base64.RawURLEncoding.EncodeToString(nonce) + "." +
 		strconv.FormatInt(g.clock.Now().Add(ttl).Unix(), 10)
-	mac := hmac.New(sha256.New, g.key)
+	mac := hmac.New(sha256.New, g.keys[0])
 	_, _ = mac.Write([]byte(payload))
 	return payload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
 }
@@ -70,10 +89,16 @@ func (g *Guard) Valid(token string) bool {
 	if err != nil || !g.clock.Now().Before(time.Unix(expires, 0)) {
 		return false
 	}
-	mac := hmac.New(sha256.New, g.key)
-	_, _ = mac.Write([]byte(parts[0] + "." + parts[1]))
-	expected := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-	return hmac.Equal([]byte(parts[2]), []byte(expected))
+	payload := parts[0] + "." + parts[1]
+	for _, key := range g.keys {
+		mac := hmac.New(sha256.New, key)
+		_, _ = mac.Write([]byte(payload))
+		expected := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+		if hmac.Equal([]byte(parts[2]), []byte(expected)) {
+			return true
+		}
+	}
+	return false
 }
 
 // SetCookie writes the readable CSRF cookie. HttpOnly is deliberately false so
