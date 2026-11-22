@@ -383,6 +383,23 @@ func TestPasswordlessFlowsDoNotLogSecrets(t *testing.T) {
 	}
 }
 
+func TestMagicLinkEmailUsesConfiguredPathPrefix(t *testing.T) {
+	client, _, mailer := passwordlessClientWithConfig(t, func(cfg *signet.Config) {
+		cfg.PathPrefix = "/auth"
+	})
+	if err := client.SendMagicLink(context.Background(), signet.SendMagicLinkInput{Email: "user@example.com"}); err != nil {
+		t.Fatalf("SendMagicLink: %v", err)
+	}
+	if len(mailer.Messages) == 0 {
+		t.Fatal("no magic-link email captured")
+	}
+	body := mailer.Messages[0].TextBody
+	if !strings.Contains(body, "http://localhost:8080/auth/verify-magic-link?token=") &&
+		!strings.Contains(body, "https://app.example.com/auth/verify-magic-link?token=") {
+		t.Fatalf("email link does not include the configured path prefix: %q", body)
+	}
+}
+
 func TestMagicLinkSignsInExistingUser(t *testing.T) {
 	client, _, mailer := passwordlessClient(t)
 	ctx := context.Background()

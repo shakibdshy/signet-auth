@@ -28,6 +28,7 @@ type VerificationDependencies struct {
 	Limiter        core.RateLimiter
 	Logger         *slog.Logger
 	AppURL         string
+	PathPrefix     string
 	Password       core.PasswordConfig
 	Hasher         core.PasswordHasher
 	Passwordless   *core.PasswordlessConfig
@@ -53,7 +54,7 @@ func (s *VerificationService) logWarn(msg string, attrs ...any) {
 }
 
 func (s *VerificationService) emailLink(path, raw string) string {
-	return strings.TrimRight(s.deps.AppURL, "/") + path + "?token=" + raw
+	return strings.TrimRight(s.deps.AppURL, "/") + strings.TrimRight(s.deps.PathPrefix, "/") + path + "?token=" + raw
 }
 
 // SendVerification sends a verification email. It succeeds for unknown emails

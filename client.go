@@ -147,7 +147,7 @@ func New(cfg Config) (*Client, error) {
 	c.verification = auth.NewVerification(auth.VerificationDependencies{
 		Store: cfg.Store, Tokens: c.tokens, Mailer: cfg.Mailer, Templates: cfg.Templates,
 		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
-		AppURL: cfg.AppURL, Password: cfg.Password, Hasher: cfg.PasswordHasher,
+		AppURL: cfg.AppURL, PathPrefix: cfg.PathPrefix, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		CreateSession: c.createSession,
 	})
