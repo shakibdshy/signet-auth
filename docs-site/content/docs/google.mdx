@@ -1,0 +1,46 @@
+---
+title: Google sign-in
+description: Configure the Google OAuth provider adapter.
+---
+
+The `oauth/google` adapter implements Signet's public `OAuthProvider` interface. It uses PKCE,
+requests `openid email profile`, and reads the verified identity from Google's userinfo endpoint.
+
+```go
+import (
+    "github.com/shakibdshy/signet"
+    "github.com/shakibdshy/signet/oauth/google"
+)
+
+cfg.OAuth = &signet.OAuthConfig{
+    Providers: []signet.OAuthProvider{
+        google.Provider{
+            ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+            ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+        },
+    },
+    RedirectBaseURL:  "https://api.example.com",
+    AllowedRedirects: []string{"https://app.example.com/dashboard"},
+    StateKey:         stateKey, // exactly 32 random bytes
+}
+```
+
+Register `https://api.example.com/auth/oauth/callback` as an authorized redirect URI with Google
+(adjust for your `PathPrefix`).
+
+## Identity details
+
+- Provider name stored on the Account: `google`.
+- Provider user ID: Google's stable `sub` claim.
+- Email and verification flag come from `https://www.googleapis.com/oauth2/v3/userinfo`.
+
+Signet auto-links a provider identity only when the email is verified. An unverified identity
+yields a single-use link Token for explicit linking through `LinkOAuthAccount`.
+
+## Endpoints
+
+`AuthEndpoint`, `TokenURL` and `UserInfoURL` fields override the defaults. They exist for tests;
+leave them empty in production so Google's real endpoints are used.
+
+See [OAuth sign-in](/docs/oauth) for the shared `/oauth/start` and `/oauth/callback` flow, state
+encryption and redirect rules.
