@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/mail"
 	"github.com/shakibdshy/signet/internal/secret"
@@ -160,12 +161,13 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenMagicLink, in.Token); err != nil {
 		return nil, translateMagicLinkError(err)
 	}
-	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name)
+	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name, "magic-link")
 	if err != nil {
 		return nil, err
 	}
 	result.CallbackURL = data.CallbackURL
 	s.logInfo("magic_link_sign_in", "user_id", result.User.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.MagicLinkSignIn, UserID: result.User.ID, Outcome: "success"})
 	return result, nil
 }
 
@@ -188,7 +190,7 @@ func translateMagicLinkError(err error) error {
 
 // finishPasswordlessSignIn resolves or creates the User after a proof has been
 // consumed, marks the email verified and creates a Session.
-func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, email, name string) (*core.SignInResult, error) {
+func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, email, name, method string) (*core.SignInResult, error) {
 	user, err := s.deps.Store.UserByEmail(ctx, email)
 	if err != nil && !errors.Is(err, core.ErrNotFound) {
 		return nil, err
@@ -221,7 +223,7 @@ func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, emai
 	if err != nil {
 		return nil, err
 	}
-	return &core.SignInResult{User: user, SessionToken: sessionToken}, nil
+	return &core.SignInResult{User: user, SessionToken: sessionToken, LastSignInMethod: method}, nil
 }
 
 // newOTP returns a uniformly distributed six-digit numeric code.
@@ -325,11 +327,12 @@ func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.Verify
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenEmailOTP, proof); err != nil {
 		return nil, translateProofError(err, core.ErrInvalidOTP, core.ErrOTPAlreadyUsed)
 	}
-	result, err := s.finishPasswordlessSignIn(ctx, email, "")
+	result, err := s.finishPasswordlessSignIn(ctx, email, "", "email-otp")
 	if err != nil {
 		return nil, err
 	}
 	s.logInfo("email_otp_sign_in", "user_id", result.User.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.EmailOTPSignIn, UserID: result.User.ID, Outcome: "success"})
 	return result, nil
 }
 

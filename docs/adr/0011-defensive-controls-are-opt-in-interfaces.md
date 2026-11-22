@@ -1,0 +1,5 @@
+# Defensive controls are opt-in interfaces with no core infrastructure
+
+Breach checks, Captcha checks, Audit events and Last sign-in method are exposed through small optional interfaces and callbacks. The library ships no HTTP client for breach services, no captcha provider SDKs, no audit database or query API, and no database column for Last sign-in method. Existing `slog` event points feed the optional Audit sink; a failure in any optional control is logged and never changes authentication outcomes except an explicit denial by that control.
+
+We considered bundling provider clients and a queryable audit store, as framework-oriented libraries do. That would add dependencies, schema and storage policy to every adopter, including those who enable none of these controls. It would also make Signet own retention and privacy decisions it cannot make for its adopters. The cost is that an application wanting these controls implements one adapter per service, but the default path stays small, dependency-free and storage-agnostic.

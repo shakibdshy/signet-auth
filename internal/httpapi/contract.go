@@ -101,6 +101,9 @@ func ContractFor() Contract {
 					Optional: []string{"session_token", "csrf_token", "two_factor_challenge", "error"},
 				}, Status: http.StatusOK,
 			}}},
+			{Name: "last-sign-in-method", Anonymous: true, Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("method")}}, Status: http.StatusOK,
+			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
 					typeField("accounts", []core.AccountInfo{}),
@@ -226,6 +229,10 @@ func ContractFor() Contract {
 			{core.ErrInvalidOTP, http.StatusUnauthorized, "invalid_code", "invalid or expired code"},
 			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
 			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
+			{core.ErrPasswordCompromised, http.StatusBadRequest, "password_compromised", "password has been compromised"},
+			{core.ErrCaptchaRequired, http.StatusBadRequest, "invalid_input", "captcha token required"},
+			{core.ErrCaptchaInvalid, http.StatusBadRequest, "invalid_input", "captcha verification failed"},
+			{core.ErrCaptchaUnavailable, http.StatusServiceUnavailable, "captcha_unavailable", "captcha provider unavailable"},
 			{core.ErrInvalidUsername, http.StatusBadRequest, "invalid_input", "invalid username"},
 			{core.ErrUsernameTaken, http.StatusBadRequest, "username_taken", "username already taken"},
 			{core.ErrLastAccount, http.StatusBadRequest, "last_account", "cannot unlink the last account"},

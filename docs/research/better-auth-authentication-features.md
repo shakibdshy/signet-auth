@@ -296,8 +296,8 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | Admin / organization / API keys | [Admin](https://better-auth.com/docs/plugins/admin) · [Organization](https://better-auth.com/docs/plugins/organization) · [API Key](https://better-auth.com/docs/plugins/api-key) | missing | Organizations are planned in Signet's README; no roles, bans, impersonation or API keys. |
 | OAuth/OIDC provider, device flow, MCP, CIMD | [OAuth Provider](https://better-auth.com/docs/plugins/oauth-provider) · [Device](https://better-auth.com/docs/plugins/device-authorization) · [MCP](https://better-auth.com/docs/plugins/mcp) · [CIMD](https://better-auth.com/docs/plugins/cimd) | missing | Signet is a relying party only. |
 | SAML/OIDC SSO and SCIM | [SSO](https://better-auth.com/docs/plugins/sso) · [SCIM](https://better-auth.com/docs/plugins/scim) | missing | No enterprise federation or directory provisioning. |
-| Captcha / Have I Been Pwned / Sentinel | [Captcha](https://better-auth.com/docs/plugins/captcha) · [HIBP](https://better-auth.com/docs/plugins/have-i-been-pwned) · [Sentinel](https://better-auth.com/docs/infrastructure/plugins/sentinel) | missing | Signet's defense-in-depth is limited to hashing, CSRF, rate-limit interfaces and token hygiene. |
-| Audit logs / i18n / last login method | [Audit Logs](https://better-auth.com/docs/infrastructure/plugins/audit-logs) · [i18n](https://better-auth.com/docs/plugins/i18n) · [Last Login](https://better-auth.com/docs/plugins/last-login-method) | partial | Structured `slog` events and overridable email templates exist, but no queryable audit log, error localization or login-method tracking. |
+| Captcha / Have I Been Pwned / Sentinel | [Captcha](https://better-auth.com/docs/plugins/captcha) · [HIBP](https://better-auth.com/docs/plugins/have-i-been-pwned) · [Sentinel](https://better-auth.com/docs/infrastructure/plugins/sentinel) | partial | Opt-in Breach and Captcha checks are shipped; Sentinel-style anomaly detection is out of scope. |
+| Audit logs / i18n / last login method | [Audit Logs](https://better-auth.com/docs/infrastructure/plugins/audit-logs) · [i18n](https://better-auth.com/docs/plugins/i18n) · [Last Login](https://better-auth.com/docs/plugins/last-login-method) | partial | An opt-in Audit sink and a signed Last sign-in method cookie are shipped; i18n is fully out of scope and Signet has no queryable audit log. |
 
 ## 7. Likely implementation order for Signet
 
@@ -327,8 +327,7 @@ less coupled than authorization/management.
 5. **Authorization and management (large).** Admin roles/bans/impersonation, organizations and API
    keys. Impersonation is **security-sensitive**; organizations and API keys are mostly additive
    schema work but expand the public API substantially.
-6. **Defensive and operational extras (small–medium).** HIBP and captcha are small integrations
-   behind interfaces; audit-log persistence, i18n and last-login-method are additive. Sentinel's
+6. **Defensive and operational extras (shipped except anomaly detection).** Breach checks, captcha checks, an Audit sink and Last sign-in method are opt-in interfaces. i18n is fully out of scope. Sentinel's
    device fingerprinting and impossible-travel detection are **large** and depend on external
    services, so they should be last and optional.
 

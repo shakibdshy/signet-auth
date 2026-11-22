@@ -76,6 +76,22 @@ _Avoid_: recovery code, backup passcode
 A short-lived, single-use proof issued after a valid first factor and exchanged for a Session together with a Second factor.
 _Avoid_: 2FA token, challenge token
 
+**Breach check**:
+A check that a proposed password has not appeared in a known password breach.
+_Avoid_: HIBP check, password screening
+
+**Captcha check**:
+A check that a request came from a person rather than an automated client.
+_Avoid_: bot check, challenge
+
+**Audit event**:
+A structured record of a security-relevant action and its outcome.
+_Avoid_: log entry, audit log
+
+**Last sign-in method**:
+The method used in a User's most recent successful sign-in.
+_Avoid_: last login method
+
 **Access token**:
 A short-lived bearer credential presented to an API on each request.
 _Avoid_: session token

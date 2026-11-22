@@ -138,6 +138,28 @@ const result = await auth.verifyOtp({ email: 'grace@example.com', code: '123456'
 A normal clicked link navigates to `GET /verify-magic-link`, which sets cookies and redirects;
 call `verifyMagicLink()` only when your frontend handles that route itself.
 
+## Last sign-in method
+
+When the backend enables [Last sign-in method](/docs/defensive-controls), the client can read the
+signed cookie through the typed endpoint. Create the client with the backend `PathPrefix` included
+in `baseURL`:
+
+```ts
+import { createSignetClient } from '@shakibdshy/signet-client';
+
+const auth = createSignetClient({ baseURL: 'https://api.example.com/auth' });
+const { method } = await auth.lastSignInMethod();
+// "password" | "username" | "magic-link" | "email-otp" | a provider name | ""
+```
+
+<Callout title="Common mistake">
+Using only `https://api.example.com` as `baseURL` makes the generated client call
+`/last-sign-in-method` instead of `/auth/last-sign-in-method`. The backend then returns 404.
+</Callout>
+
+The value is `""` when the feature is disabled, the cookie is absent, or its signature is invalid.
+This is a read of a non-essential cookie; it does not establish a Session.
+
 ## Second factor management
 
 ```ts

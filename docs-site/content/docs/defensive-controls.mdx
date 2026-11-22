@@ -1,0 +1,148 @@
+---
+title: Defensive controls
+description: Opt-in breach checks, captcha checks, audit events and last sign-in method.
+---
+
+All four controls are opt-in. Without configuration, authentication behaves exactly as before.
+Signet ships no HTTP client for breach services, no captcha SDKs, no audit database and no
+database column for the last sign-in method. See ADR-0011.
+
+## Breach check
+
+Set `Config.BreachChecker` to an implementation of the `BreachChecker` interface. Signet calls it
+before hashing a new password on sign-up, change-password and reset.
+
+```go
+type myBreachChecker struct{ client *http.Client }
+
+func (c myBreachChecker) Check(ctx context.Context, password string) (bool, error) {
+    // Hash with SHA-1 and send only the first five hex characters to the
+    // HIBP range API; compare the returned suffixes locally.
+    // Never send the password or the full hash.
+}
+
+cfg.BreachChecker = myBreachChecker{client: http.DefaultClient}
+```
+
+A breached password returns `ErrPasswordCompromised` with wire code `password_compromised` (400).
+A provider error fails closed as a generic `internal_error` (500) and is logged as a warning.
+A missing checker disables the feature.
+
+## Captcha check
+
+Set `Config.CaptchaVerifier` and optionally `Config.CaptchaEndpoints`. The default endpoint list is
+`signup`, `signin` and `send-password-reset`; a custom list replaces it.
+
+```go
+cfg.CaptchaVerifier = myVerifier
+cfg.CaptchaEndpoints = []string{"signup", "signin"}
+```
+
+HTTP requests supply the token in `X-Captcha-Response`. Signet passes it and the trusted-proxy-aware
+client IP to `CaptchaVerifier.Verify`. Go callers set `CaptchaToken` and `CaptchaRemoteIP` on the
+input struct. Verification runs *after* rate limiting and before password hashing or mail work.
+
+A missing token returns `ErrCaptchaRequired`; a rejected token returns `ErrCaptchaInvalid`
+(both `invalid_input`, 400). A provider outage is distinct: `ErrCaptchaUnavailable`
+(`captcha_unavailable`, 503). Only the three password endpoints can be configured; an unknown
+name is rejected at `New` with `ErrInvalidCaptchaEndpoint`.
+
+## Audit sink
+
+Set `Config.AuditSink` to receive a deliberate subset of security events: sign-up, sign-in
+success and failure, sign-out, email verification and change, password change and reset, user
+deletion, account unlink, Second factor enable/disable, backup-code use, refresh replay and
+OAuth/passwordless sign-in. Rehash and mail-notification failures are not audit events.
+
+```go
+type mySink struct{}
+
+func (mySink) Record(ctx context.Context, event signet.AuditEvent) error {
+    // Persist event.Name, UserID, SessionID, Outcome and Metadata.
+    return nil
+}
+
+cfg.AuditSink = mySink{}
+```
+
+An `AuditEvent` never contains a password, verifier, token, code or secret. A sink failure is
+logged and never fails the authentication request. Signet owns no retention policy — the sink
+does.
+
+## Last sign-in method
+
+Set `Config.LastSignInMethod` to record the method of a User's most recent successful sign-in in a
+signed, HttpOnly cookie. No database column is added and the cookie is not readable by scripts.
+
+### 1. Configure it in Go
+
+```go
+cfg := signet.DefaultConfig()
+cfg.Store = store
+cfg.Mailer = mailer
+cfg.RateLimiter = limiter
+cfg.CSRFKey = csrfKey // required: 32 bytes, also signs this cookie
+cfg.AppURL = "http://localhost:8080"
+cfg.PathPrefix = "/auth"
+
+cfg.LastSignInMethod = &signet.LastSignInMethodConfig{
+    TTL:        30 * 24 * time.Hour, // default when zero
+    CookieName: "signet_last_method", // default when empty
+    BeforeStore: func(ctx context.Context, method string) bool {
+        return true // return false to skip the cookie; sign-in still succeeds
+    },
+}
+
+auth, err := signet.New(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+mux := http.NewServeMux()
+mux.Handle("/auth/", auth.Handler())
+```
+
+The feature requires CSRF keys for signing; **JWT-only applications cannot enable it** — `New`
+returns an error. A `BeforeStore` callback returning `false` skips the cookie without failing
+sign-in.
+
+### 2. Let the HTTP adapter write it
+
+When `auth.Handler()` is mounted at `PathPrefix`, the adapter writes the cookie automatically on
+every successful sign-in response: password, username, magic link, email OTP, OAuth, and after a
+Two-factor challenge. Completing a challenge preserves the first factor rather than replacing it
+with a TOTP method.
+
+The method is also returned in `SignInResult.LastSignInMethod`: `password`, `username`,
+`magic-link`, `email-otp`, or the OAuth provider name.
+
+### 3. Read it over HTTP
+
+```text
+GET /auth/last-sign-in-method  →  200 {"method":"password"}
+```
+
+The endpoint is anonymous and CSRF-exempt. The value is `""` when the feature is disabled, the
+cookie is absent, or its signature is invalid. Tampered cookies are never trusted.
+
+### 4. Use it from your own Go handler
+
+```go
+result, err := auth.SignIn(ctx, signet.SignInInput{Email: email, Password: password})
+if err != nil {
+    // handle error
+}
+
+auth.SetLastMethodCookie(w, result.LastSignInMethod) // if you produce the Session yourself
+method := auth.LastSignInMethod(ctx, r)              // read the signed cookie
+auth.ClearLastSignInMethod(w)                        // expire it
+```
+
+`Client.LastSignInMethod` takes the request so it can read the cookie; the HTTP adapter passes the
+request context through for you.
+
+For frontend code, see [Frontend client](/docs/frontend-client#last-sign-in-method).
+
+## Out of scope
+
+i18n and anomaly detection are not implemented and are not planned. Signet's error messages stay
+in English and are part of the generated contract.

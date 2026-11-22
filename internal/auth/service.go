@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/token"
@@ -31,6 +32,10 @@ type Dependencies struct {
 	Logger                   *slog.Logger
 	Password                 core.PasswordConfig
 	Username                 *core.UsernameConfig
+	BreachChecker            core.BreachChecker
+	CaptchaVerifier          core.CaptchaVerifier
+	CaptchaEndpoints         []string
+	AuditSink                core.AuditSink
 	RequireVerifiedEmail     bool
 	SendVerificationOnSignUp bool
 	OnSignUp                 func(context.Context, *core.User)
@@ -130,6 +135,9 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 	if err := s.allow(ctx, "signup", in.RateLimitKey); err != nil {
 		return nil, err
 	}
+	if err := checkCaptcha(ctx, s.deps.CaptchaVerifier, s.deps.CaptchaEndpoints, "signup", in.CaptchaToken, in.CaptchaRemoteIP); err != nil {
+		return nil, err
+	}
 	if _, err := s.deps.Store.UserByEmail(ctx, email); err == nil {
 		return nil, core.ErrEmailAlreadyExists
 	} else if !errors.Is(err, core.ErrNotFound) {
@@ -144,6 +152,9 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 		}
 	}
 
+	if err := checkBreach(ctx, s.deps.BreachChecker, in.Password); err != nil {
+		return nil, err
+	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.Password)
 	if err != nil {
 		return nil, err
@@ -173,6 +184,7 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 		}
 	}
 	s.logInfo("sign_up", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignUp, UserID: user.ID, Outcome: "success"})
 	s.deps.OnSignUp(ctx, redacted(user))
 	if s.deps.SendVerificationOnSignUp {
 		if err := s.deps.SendVerification(ctx, user); err != nil {
@@ -199,8 +211,15 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	if err := s.allow(ctx, "signin", in.RateLimitKey); err != nil {
 		return nil, err
 	}
+	if err := checkCaptcha(ctx, s.deps.CaptchaVerifier, s.deps.CaptchaEndpoints, "signin", in.CaptchaToken, in.CaptchaRemoteIP); err != nil {
+		return nil, err
+	}
 	var user *core.User
 	var err error
+	method := "password"
+	if in.Username != "" {
+		method = "username"
+	}
 	if email != "" {
 		user, err = s.deps.Store.UserByEmail(ctx, email)
 	} else {
@@ -209,12 +228,14 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	if err != nil || user.Disabled {
 		s.dummyVerify(ctx, in.Password)
 		s.logInfo("sign_in_failure", "reason", "unavailable")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "unavailable"}})
 		return nil, core.ErrInvalidCredentials
 	}
 	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
 	if err != nil {
 		s.dummyVerify(ctx, in.Password)
 		s.logInfo("sign_in_failure", "reason", "unavailable")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "unavailable"}})
 		return nil, core.ErrInvalidCredentials
 	}
 	ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.Password)
@@ -223,22 +244,24 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	}
 	if !ok {
 		s.logInfo("sign_in_failure", "reason", "mismatch")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "mismatch"}})
 		return nil, core.ErrInvalidCredentials
 	}
 	if s.deps.RequireVerifiedEmail && !user.EmailVerified {
 		s.logInfo("sign_in_failure", "reason", "unverified")
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInFailure, Outcome: "blocked", Metadata: map[string]string{"reason": "unverified"}})
 		return nil, core.ErrEmailNotVerified
 	}
 	s.rehashIfNeeded(ctx, account, in.Password, user.ID)
 	if s.deps.TOTPStore != nil {
 		state, stateErr := s.deps.TOTPStore.Get(ctx, user.ID)
 		if stateErr == nil && state.Verified {
-			challenge, _, issueErr := s.deps.Tokens.Issue(ctx, user.ID, core.TokenTwoFactor, challengeTTL)
+			challenge, _, issueErr := s.deps.Tokens.IssueWithData(ctx, user.ID, core.TokenTwoFactor, challengeTTL, method)
 			if issueErr != nil {
 				return nil, issueErr
 			}
 			s.logInfo("two_factor_challenge_issued", "user_id", user.ID)
-			return &core.SignInResult{User: user, TwoFactorChallenge: challenge}, nil
+			return &core.SignInResult{User: user, TwoFactorChallenge: challenge, LastSignInMethod: method}, nil
 		}
 		if stateErr != nil && !errors.Is(stateErr, core.ErrNotFound) {
 			return nil, stateErr
@@ -249,8 +272,9 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 		return nil, err
 	}
 	s.logInfo("sign_in_success", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success"})
 	s.deps.OnSignIn(ctx, redacted(user))
-	return &core.SignInResult{User: user, SessionToken: sessionToken}, nil
+	return &core.SignInResult{User: user, SessionToken: sessionToken, LastSignInMethod: method}, nil
 }
 
 // SignOut revokes the Session identified by a Session token.
@@ -269,5 +293,6 @@ func (s *Service) SignOut(ctx context.Context, in core.SignOutInput) error {
 		return err
 	}
 	s.logInfo("sign_out", "user_id", session.UserID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.SignOut, UserID: session.UserID, SessionID: session.ID, Outcome: "success"})
 	return nil
 }

@@ -18,6 +18,7 @@ any router, and it never owns your database schema.
 - Passwordless sign-in with magic links and six-digit email OTPs
 - Opt-in session caching, key rotation rings, JWKS publication and redirect patterns
 - Username sign-in, guarded account unlinking and optional TOTP Second factor with Backup codes
+- Opt-in breach checks, captcha checks, audit events and Last sign-in method
 - Same-origin checks and signed double-submit CSRF protection
 - PostgreSQL and SQLite adapters with explicit, embedded migrations
 - Pluggable storage, mail, password hashing, rate limiting and logging

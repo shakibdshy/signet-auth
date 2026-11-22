@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/token"
@@ -37,6 +38,10 @@ type VerificationDependencies struct {
 	CreateSession    func(context.Context, string) (string, error)
 	RevokeSessions   func(context.Context, string) error
 	FlushSessions    func(context.Context)
+	BreachChecker    core.BreachChecker
+	CaptchaVerifier  core.CaptchaVerifier
+	CaptchaEndpoints []string
+	AuditSink        core.AuditSink
 }
 
 // VerificationService implements email verification, password reset and
@@ -130,6 +135,7 @@ func (s *VerificationService) VerifyEmail(ctx context.Context, in core.VerifyEma
 		return err
 	}
 	s.logInfo("email_verified", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.EmailVerified, UserID: user.ID, Outcome: "success"})
 	return nil
 }
 
@@ -141,6 +147,9 @@ func (s *VerificationService) SendPasswordReset(ctx context.Context, in core.Sen
 		return core.ErrInvalidEmail
 	}
 	if err := allow(ctx, s.deps.Limiter, "send-password-reset", in.RateLimitKey); err != nil {
+		return err
+	}
+	if err := checkCaptcha(ctx, s.deps.CaptchaVerifier, s.deps.CaptchaEndpoints, "send-password-reset", in.CaptchaToken, in.CaptchaRemoteIP); err != nil {
 		return err
 	}
 	user, err := s.deps.Store.UserByEmail(ctx, email)
@@ -242,6 +251,7 @@ func (s *VerificationService) DeleteUser(ctx context.Context, in core.ConfirmDel
 		return err
 	}
 	s.logInfo("user_deleted", "user_id", proof.UserID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.UserDeleted, UserID: proof.UserID, Outcome: "success"})
 	return nil
 }
 
@@ -342,6 +352,7 @@ func (s *VerificationService) VerifyEmailChange(ctx context.Context, in core.Ver
 		s.deps.FlushSessions(ctx)
 	}
 	s.logInfo("email_changed", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.EmailChanged, UserID: user.ID, Outcome: "success"})
 	return nil
 }
 
@@ -400,6 +411,9 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 	if !ok {
 		return core.ErrInvalidCredentials
 	}
+	if err := checkBreach(ctx, s.deps.BreachChecker, in.NewPassword); err != nil {
+		return err
+	}
 	for _, kind := range core.AllTokenKinds {
 		if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, kind); err != nil {
 			return err
@@ -418,6 +432,7 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 		return err
 	}
 	s.logInfo("password_changed", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.PasswordChanged, UserID: user.ID, Outcome: "success"})
 	message := s.deps.Templates.PasswordChanged(core.TemplateData{Email: user.Email, Name: user.Name})
 	if err := s.deps.Mailer.Send(ctx, message); err != nil {
 		s.logWarn("password_changed_notification_failed", "user_id", user.ID, "error", err)
@@ -437,6 +452,9 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 		return core.ErrPasswordTooLong
 	}
 	if err := allow(ctx, s.deps.Limiter, "reset-password", in.RateLimitKey); err != nil {
+		return err
+	}
+	if err := checkBreach(ctx, s.deps.BreachChecker, in.NewPassword); err != nil {
 		return err
 	}
 	proof, err := s.deps.Tokens.Consume(ctx, core.TokenResetPassword, in.Token)
@@ -473,6 +491,7 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 		return err
 	}
 	s.logInfo("reset-password", "user_id", user.ID)
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.ResetPassword, UserID: user.ID, Outcome: "success"})
 
 	message := s.deps.Templates.PasswordChanged(core.TemplateData{Email: user.Email, Name: user.Name})
 	if err := s.deps.Mailer.Send(ctx, message); err != nil {

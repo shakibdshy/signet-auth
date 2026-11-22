@@ -27,6 +27,7 @@
     "---Operations---",
     "mail",
     "security",
+    "defensive-controls",
     "deployment",
     "troubleshooting",
     "tooling",

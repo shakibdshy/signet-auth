@@ -180,6 +180,37 @@ type PasswordHasher interface {
 	NeedsRehash(string) bool
 }
 
+// BreachChecker reports whether a password has appeared in a known breach.
+type BreachChecker interface {
+	Check(context.Context, string) (bool, error)
+}
+
+// CaptchaVerifier verifies a captcha token for a client request.
+type CaptchaVerifier interface {
+	Verify(context.Context, string, string) error
+}
+
+// AuditEvent is a security-relevant action and its outcome.
+type AuditEvent struct {
+	Name      string
+	UserID    string
+	SessionID string
+	Outcome   string
+	Metadata  map[string]string
+}
+
+// AuditSink receives Audit events. Implementations own persistence and retention.
+type AuditSink interface {
+	Record(context.Context, AuditEvent) error
+}
+
+// LastSignInMethodConfig controls the optional Last sign-in method cookie.
+type LastSignInMethodConfig struct {
+	TTL         time.Duration
+	CookieName  string
+	BeforeStore func(context.Context, string) bool
+}
+
 // RateLimiter decides whether an action may proceed.
 type RateLimiter interface {
 	Allow(context.Context, string) (bool, error)
@@ -367,6 +398,11 @@ type Config struct {
 	OAuth                    *OAuthConfig
 	Passwordless             *PasswordlessConfig
 	AllowedRedirectPatterns  []string
+	BreachChecker            BreachChecker
+	CaptchaVerifier          CaptchaVerifier
+	CaptchaEndpoints         []string
+	AuditSink                AuditSink
+	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
 	JWTOnly                  bool
@@ -438,11 +474,13 @@ type PasswordConfig struct {
 
 // SignUpInput is the input to a sign-up.
 type SignUpInput struct {
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	Name         string `json:"name"`
-	Username     string `json:"username"`
-	RateLimitKey string `json:"-"`
+	Email           string `json:"email"`
+	CaptchaToken    string `json:"-"`
+	CaptchaRemoteIP string `json:"-"`
+	Password        string `json:"password"`
+	Name            string `json:"name"`
+	Username        string `json:"username"`
+	RateLimitKey    string `json:"-"`
 }
 
 // SignUpResult is the outcome of a successful sign-up.
@@ -450,10 +488,12 @@ type SignUpResult struct{ User *User }
 
 // SignInInput is the input to a sign-in.
 type SignInInput struct {
-	Email        string `json:"email"`
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	RateLimitKey string `json:"-"`
+	Email           string `json:"email"`
+	CaptchaToken    string `json:"-"`
+	CaptchaRemoteIP string `json:"-"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
+	RateLimitKey    string `json:"-"`
 }
 
 // SignInResult is the outcome of a successful sign-in.
@@ -462,6 +502,7 @@ type SignInResult struct {
 	SessionToken string
 	// TwoFactorChallenge is returned instead of a Session when a Second factor is required.
 	TwoFactorChallenge string `json:"two_factor_challenge,omitempty"`
+	LastSignInMethod   string `json:"last_sign_in_method,omitempty"`
 	// CallbackURL is the allowlisted callback embedded in a magic-link proof.
 	// It is transport-only and never serialised.
 	CallbackURL string `json:"-"`
@@ -582,8 +623,10 @@ type VerifyEmailInput struct {
 
 // SendPasswordResetInput requests a password reset email.
 type SendPasswordResetInput struct {
-	Email        string `json:"email"`
-	RateLimitKey string `json:"-"`
+	Email           string `json:"email"`
+	CaptchaToken    string `json:"-"`
+	CaptchaRemoteIP string `json:"-"`
+	RateLimitKey    string `json:"-"`
 }
 
 // ResetPasswordInput carries a reset Token and new password.
@@ -656,6 +699,7 @@ type TokenPair struct {
 	RefreshToken       string `json:"refresh_token"`
 	ExpiresIn          int64  `json:"expires_in"`
 	TwoFactorChallenge string `json:"two_factor_challenge,omitempty"`
+	LastSignInMethod   string `json:"last_sign_in_method,omitempty"`
 }
 
 // OAuthStartInput selects a provider and redirect target.
@@ -679,10 +723,11 @@ type OAuthCallbackInput struct {
 
 // OAuthCallbackResult carries a signed-in User or an explicit link token.
 type OAuthCallbackResult struct {
-	User         *User
-	SessionToken string
-	LinkToken    string
-	Redirect     string
+	User             *User
+	SessionToken     string
+	LastSignInMethod string
+	LinkToken        string
+	Redirect         string
 }
 
 // LinkOAuthAccountInput carries the one-time link token and User ID.
@@ -761,6 +806,16 @@ var (
 	ErrTwoFactorRequired = errors.New("signet: second factor required")
 	// ErrTOTPNotConfigured reports a Second factor operation without a configured store or key.
 	ErrTOTPNotConfigured = errors.New("signet: second factor is not configured")
+	// ErrPasswordCompromised reports a password found in a known breach.
+	ErrPasswordCompromised = errors.New("signet: password has been compromised")
+	// ErrCaptchaRequired reports a missing captcha token.
+	ErrCaptchaRequired = errors.New("signet: captcha token required")
+	// ErrCaptchaInvalid reports a rejected captcha token.
+	ErrCaptchaInvalid = errors.New("signet: captcha verification failed")
+	// ErrCaptchaUnavailable reports a captcha provider outage.
+	ErrCaptchaUnavailable = errors.New("signet: captcha provider unavailable")
+	// ErrInvalidCaptchaEndpoint reports an unsupported captcha endpoint name.
+	ErrInvalidCaptchaEndpoint = errors.New("signet: invalid captcha endpoint")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

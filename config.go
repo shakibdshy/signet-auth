@@ -43,6 +43,21 @@ type TOTPStore = core.TOTPStore
 // TOTPState is the persisted state of a Second factor enrollment.
 type TOTPState = core.TOTPState
 
+// BreachChecker reports whether a password has appeared in a known breach.
+type BreachChecker = core.BreachChecker
+
+// CaptchaVerifier verifies a captcha token for a client request.
+type CaptchaVerifier = core.CaptchaVerifier
+
+// AuditSink receives Audit events.
+type AuditSink = core.AuditSink
+
+// AuditEvent is a security-relevant action and its outcome.
+type AuditEvent = core.AuditEvent
+
+// LastSignInMethodConfig controls the Last sign-in method cookie.
+type LastSignInMethodConfig = core.LastSignInMethodConfig
+
 // PasswordlessConfig controls magic-link and email-OTP sign-in.
 type PasswordlessConfig = core.PasswordlessConfig
 

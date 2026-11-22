@@ -20,6 +20,7 @@ from the declarative contract into the [API reference](/docs/openapi).
 | --- | --- | --- | --- | --- | --- | --- |
 | POST `/signup` | no | exempt | 201 `{"user":User}` | `email_exists` 400, `invalid_input` 400, `rate_limited` 429 | Creating a User and its credential Account. | [signup](/docs/openapi/signup_post) |
 | POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | `invalid_credentials` 401, `email_not_verified` 403, `rate_limited` 429 | Exchanging credentials for a Session; sets cookies and returns the CSRF token. | [signin](/docs/openapi/signin_post) |
+| GET `/last-sign-in-method` | no | exempt | 200 `{"method":"..."}` | none | Read the signed Last sign-in method cookie. |
 | GET `/accounts` | yes | n/a | 200 `{"accounts":[...]}` | `unauthorized` 401 | List safe Account fields. |
 | POST `/unlink-account` | yes | required | 200 | `last_account` 400, `unauthorized` 401 | Unlink one guarded Account. |
 | POST `/enable-two-factor` | yes | required | 200 `{"totp_uri","backup_codes"}` | `invalid_credentials` 401 | Start TOTP enrollment. |

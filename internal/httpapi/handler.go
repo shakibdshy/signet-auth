@@ -34,6 +34,8 @@ type API interface {
 	ListAccounts(context.Context, core.ListAccountsInput) (*core.ListAccountsResult, error)
 	UnlinkAccount(context.Context, core.UnlinkAccountInput) error
 	SessionTokenFromRequest(*http.Request) string
+	LastSignInMethod(*http.Request) string
+	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
 	RevokeSession(context.Context, core.RevokeSessionInput) error
 	RevokeAllSessions(context.Context, core.RevokeAllSessionsInput) error
@@ -85,6 +87,7 @@ var Endpoints = []Endpoint{
 	{Name: "verify-two-factor", Anonymous: true},
 	{Name: "disable-two-factor"},
 	{Name: "regenerate-backup-codes"},
+	{Name: "last-sign-in-method", Anonymous: true},
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -141,6 +144,8 @@ func (h *Handler) Handler() http.Handler {
 			h.handleDisableTwoFactor(w, r)
 		case "regenerate-backup-codes":
 			h.handleRegenerateBackupCodes(w, r)
+		case "last-sign-in-method":
+			h.handleLastSignInMethod(w, r)
 		case "accounts":
 			h.handleAccounts(w, r)
 		case "unlink-account":
@@ -189,6 +194,8 @@ func (h *Handler) Handler() http.Handler {
 
 func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 	var in core.SignUpInput
+	in.CaptchaToken = r.Header.Get("X-Captcha-Response")
+	in.CaptchaRemoteIP = h.clientIP(r)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
@@ -204,6 +211,8 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	var in core.SignInInput
+	in.CaptchaToken = r.Header.Get("X-Captcha-Response")
+	in.CaptchaRemoteIP = h.clientIP(r)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
@@ -215,6 +224,7 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if result.TwoFactorChallenge != "" {
+		h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"user": result.User, "two_factor_challenge": result.TwoFactorChallenge,
 			"error": "two_factor_required",
@@ -226,6 +236,7 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":          result.User,
 		"session_token": result.SessionToken,
@@ -270,6 +281,7 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
+	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	callback := in.CallbackURL
 	if callback == "" {
 		// The emailed link carries the callback inside its proof; the query
@@ -323,6 +335,7 @@ func (h *Handler) handleVerifyOTP(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user": result.User, "session_token": result.SessionToken,
 	})
@@ -386,6 +399,7 @@ func (h *Handler) handleVerifyTwoFactor(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
+	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "session_token": result.SessionToken})
 }
 
@@ -435,6 +449,14 @@ func (h *Handler) handleRegenerateBackupCodes(w http.ResponseWriter, r *http.Req
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleLastSignInMethod(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"method": h.api.LastSignInMethod(r)})
 }
 
 func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {
@@ -579,6 +601,8 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleSendPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var in core.SendPasswordResetInput
+	in.CaptchaToken = r.Header.Get("X-Captcha-Response")
+	in.CaptchaRemoteIP = h.clientIP(r)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
@@ -734,6 +758,7 @@ func (h *Handler) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	http.Redirect(w, r, target.String(), http.StatusFound)
 }
 
