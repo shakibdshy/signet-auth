@@ -56,6 +56,26 @@ _Avoid_: passcode, verification code
 A URL carrying a single-use Token that signs a User in when opened.
 _Avoid_: login link, sign-in link
 
+**Username**:
+A human-chosen identifier for a User, represented as an Account whose name is the identifier.
+_Avoid_: handle, login name
+
+**Second factor**:
+An additional proof required after a first factor before a Session is created.
+_Avoid_: 2FA, two-step verification
+
+**TOTP code**:
+A time-based one-time code derived from a shared secret and the current time.
+_Avoid_: authenticator code, OTP
+
+**Backup code**:
+A single-use fallback proof issued when a Second factor is enabled.
+_Avoid_: recovery code, backup passcode
+
+**Two-factor challenge**:
+A short-lived, single-use proof issued after a valid first factor and exchanged for a Session together with a Second factor.
+_Avoid_: 2FA token, challenge token
+
 **Access token**:
 A short-lived bearer credential presented to an API on each request.
 _Avoid_: session token
