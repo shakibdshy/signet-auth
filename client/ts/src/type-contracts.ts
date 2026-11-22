@@ -22,6 +22,17 @@ void client.signIn({ email: 42, password: "correct horse" });
 // @ts-expect-error unknown method must not exist
 void client.deleteEverything();
 
+void client.sendMagicLink({
+	email: "user@example.com",
+	callback_url: "https://app.example.com/welcome",
+});
+void client.verifyMagicLink({ token: "proof", callback_url: "https://app.example.com/welcome" });
+void client.sendOtp({ email: "user@example.com" });
+void client.verifyOtp({ email: "user@example.com", code: "123456" });
+
+// @ts-expect-error code is required by the published contract
+void client.verifyOtp({ email: "user@example.com" });
+
 void client.changePassword({ current_password: "old", new_password: "new" });
 
 // @ts-expect-error new_password is required by the published contract

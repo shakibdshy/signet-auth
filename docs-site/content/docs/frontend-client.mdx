@@ -36,6 +36,68 @@ Cookies are included on every request. The CSRF token is fetched lazily from
 `GET /csrf-token`, cached, and sent as `X-CSRF-Token` on state-changing calls.
 After a sign-in the token is refreshed from the response.
 
+## Passwordless sign-in
+
+The client exposes the four passwordless endpoints. They are anonymous and CSRF-exempt, so no
+`X-CSRF-Token` is fetched for them.
+
+```ts
+// Magic link: send the email, then the browser opens the link.
+await auth.sendMagicLink({
+  email: 'ada@example.com',
+  callback_url: 'https://app.example.com/welcome', // must be allowlisted on the server
+});
+
+// If your app handles the link itself, read token from the URL and exchange it:
+const sent = await auth.verifyMagicLink({
+  token: new URL(location.href).searchParams.get('token')!,
+  callback_url: 'https://app.example.com/welcome',
+});
+// sent?.user, sent?.session_token
+
+// Email OTP: request a six-digit code, then submit it with the same email.
+await auth.sendOtp({ email: 'grace@example.com' });
+const result = await auth.verifyOtp({
+  email: 'grace@example.com',
+  code: '123456',
+});
+// result?.user, result?.session_token
+```
+
+A clicked magic link normally navigates directly to `GET /verify-magic-link`, which sets the
+cookies and redirects. Call `verifyMagicLink()` yourself only when your frontend owns that
+route. Both verification methods return the typed `user` and `session_token` body; a redirect
+returns no JSON body.
+
+Handle passwordless failures with the published error codes:
+
+```ts
+try {
+  await auth.verifyOtp({ email, code });
+} catch (err) {
+  if (err instanceof SignetApiError) {
+    switch (err.code) {
+      case 'invalid_code':        // wrong email, expired or rotated code
+      case 'invalid_link':        // malformed, expired or rotated magic link
+        return showMessage('That code or link is no longer valid. Request a new one.');
+      case 'code_already_used':   // OTP consumed
+      case 'link_already_used':   // magic link consumed
+        return showMessage('You already used that proof. Request a new one.');
+      case 'invalid_request':     // callback not allowlisted or mismatched
+        return showMessage('That sign-in link is not valid for this app.');
+      case 'rate_limited':
+        return showMessage('Too many attempts. Try again shortly.');
+    }
+  }
+  throw err;
+}
+```
+
+The full list of codes lives in [Errors](/docs/errors); the request and response shapes come
+from the generated [OpenAPI contract](/docs/openapi). See
+[Passwordless sign-in](/docs/passwordless) for the server-side setup and
+[Magic-link sign-in](/docs/magic-link) / [Email OTP sign-in](/docs/email-otp) for each flow.
+
 ## With a separate backend repository
 
 The backend team merges this base spec into its own application spec and publishes
