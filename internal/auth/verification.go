@@ -34,6 +34,7 @@ type VerificationDependencies struct {
 	Passwordless   *core.PasswordlessConfig
 	OAuthRedirects []string
 	CreateSession  func(context.Context, string) (string, error)
+	RevokeSessions func(context.Context, string) error
 }
 
 // VerificationService implements email verification, password reset and
@@ -218,7 +219,7 @@ func (s *VerificationService) DeleteUser(ctx context.Context, in core.ConfirmDel
 	if err != nil {
 		return err
 	}
-	if err := s.deps.Store.DeleteSessionsForUser(ctx, proof.UserID); err != nil {
+	if err := s.deps.RevokeSessions(ctx, proof.UserID); err != nil {
 		return err
 	}
 	for _, kind := range core.AllTokenKinds {
@@ -399,7 +400,7 @@ func (s *VerificationService) ChangePassword(ctx context.Context, in core.Change
 			return err
 		}
 	}
-	if err := s.deps.Store.DeleteSessionsForUser(ctx, user.ID); err != nil {
+	if err := s.deps.RevokeSessions(ctx, user.ID); err != nil {
 		return err
 	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)
@@ -454,7 +455,7 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 	if err := s.deps.Store.DeleteTokensForUser(ctx, user.ID, core.TokenResetPassword); err != nil {
 		return err
 	}
-	if err := s.deps.Store.DeleteSessionsForUser(ctx, user.ID); err != nil {
+	if err := s.deps.RevokeSessions(ctx, user.ID); err != nil {
 		return err
 	}
 	encoded, err := s.deps.Hasher.Hash(ctx, in.NewPassword)

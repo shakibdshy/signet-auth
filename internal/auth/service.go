@@ -34,6 +34,7 @@ type Dependencies struct {
 	OnSignIn                 func(context.Context, *core.User)
 	SendVerification         func(context.Context, *core.User) error
 	CreateSession            func(context.Context, string) (string, error)
+	RevokeSession            func(context.Context, string) error
 	DummyVerifier            string
 }
 
@@ -212,7 +213,7 @@ func (s *Service) SignOut(ctx context.Context, in core.SignOutInput) error {
 	if err != nil {
 		return err
 	}
-	if err := s.deps.Store.DeleteSession(ctx, session.ID); err != nil {
+	if err := s.deps.RevokeSession(ctx, session.ID); err != nil {
 		return err
 	}
 	s.logInfo("sign_out", "user_id", session.UserID)

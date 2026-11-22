@@ -133,6 +133,7 @@ func New(cfg Config) (*Client, error) {
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
 			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
+			RevokeSessions: c.sessions.RevokeAll,
 		})
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
@@ -149,7 +150,7 @@ func New(cfg Config) (*Client, error) {
 		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
 		AppURL: cfg.AppURL, PathPrefix: cfg.PathPrefix, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
-		CreateSession: c.createSession,
+		CreateSession: c.createSession, RevokeSessions: c.sessions.RevokeAll,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
@@ -157,7 +158,7 @@ func New(cfg Config) (*Client, error) {
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
-		DummyVerifier: dummy,
+		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
 	})
 	return c, nil
 }

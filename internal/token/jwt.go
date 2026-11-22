@@ -50,12 +50,13 @@ func ValidateJWTConfig(cfg *core.JWTConfig) error {
 // JWTDependencies holds the resolved configuration and collaborators the JWT
 // service needs.
 type JWTDependencies struct {
-	Config  *core.JWTConfig
-	Store   core.Store
-	Clock   core.Clock
-	Limiter core.RateLimiter
-	Logger  *slog.Logger
-	SignIn  func(context.Context, core.SignInInput) (*core.SignInResult, error)
+	Config         *core.JWTConfig
+	Store          core.Store
+	Clock          core.Clock
+	Limiter        core.RateLimiter
+	Logger         *slog.Logger
+	SignIn         func(context.Context, core.SignInInput) (*core.SignInResult, error)
+	RevokeSessions func(context.Context, string) error
 }
 
 // JWTService implements Signet's optional bearer-token mode.
@@ -194,7 +195,7 @@ func (s *JWTService) refreshTokens(ctx context.Context, presented string) (*core
 func (s *JWTService) handleRefreshReuse(ctx context.Context, userID string) (*core.TokenPair, error) {
 	// Security: a replayed Refresh token is treated as theft. Contain it by
 	// revoking every Session and Refresh token of that User.
-	_ = s.deps.Store.DeleteSessionsForUser(ctx, userID)
+	_ = s.deps.RevokeSessions(ctx, userID)
 	for _, kind := range core.AllTokenKinds {
 		_ = s.deps.Store.DeleteTokensForUser(ctx, userID, kind)
 	}
