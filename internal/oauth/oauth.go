@@ -41,6 +41,7 @@ type linkPayload struct {
 // Service implements the OAuth start, callback and link flows.
 type Service struct {
 	cfg      *core.OAuthConfig
+	patterns []string
 	store    core.Store
 	clock    core.Clock
 	limiter  core.RateLimiter
@@ -50,8 +51,8 @@ type Service struct {
 }
 
 // New returns an OAuth Service.
-func New(cfg *core.OAuthConfig, store core.Store, clock core.Clock, limiter core.RateLimiter, logger *slog.Logger, tokens *token.Service, sessions *session.Service) *Service {
-	return &Service{cfg: cfg, store: store, clock: clock, limiter: limiter, logger: logger, tokens: tokens, sessions: sessions}
+func New(cfg *core.OAuthConfig, patterns []string, store core.Store, clock core.Clock, limiter core.RateLimiter, logger *slog.Logger, tokens *token.Service, sessions *session.Service) *Service {
+	return &Service{cfg: cfg, patterns: patterns, store: store, clock: clock, limiter: limiter, logger: logger, tokens: tokens, sessions: sessions}
 }
 
 func (s *Service) logInfo(msg string, attrs ...any) {
@@ -82,7 +83,7 @@ func (s *Service) provider(name string) core.OAuthProvider {
 }
 
 func (s *Service) redirectAllowed(redirect string) bool {
-	return core.RedirectAllowed(redirect, s.cfg.AllowedRedirects)
+	return core.RedirectPermitted(redirect, s.cfg.AllowedRedirects, s.patterns)
 }
 
 func (s *Service) seal(value any) (string, error) {

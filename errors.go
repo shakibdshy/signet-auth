@@ -56,6 +56,8 @@ var (
 	ErrInvalidJWTKey = core.ErrInvalidJWTKey
 	// ErrInvalidKeyRing reports an empty, mixed or duplicate key ring.
 	ErrInvalidKeyRing = core.ErrInvalidKeyRing
+	// ErrInvalidRedirectPattern reports a malformed redirect pattern.
+	ErrInvalidRedirectPattern = core.ErrInvalidRedirectPattern
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

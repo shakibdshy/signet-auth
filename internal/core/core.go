@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -229,12 +231,70 @@ type PasswordlessConfig struct {
 // RedirectAllowed reports whether redirect is in the allowlist. An empty
 // allowlist rejects every redirect; callers supply their own fallback.
 func RedirectAllowed(redirect string, allowed []string) bool {
-	for _, candidate := range allowed {
+	return RedirectPermitted(redirect, allowed, nil)
+}
+
+// RedirectPermitted reports whether redirect matches an exact entry or a
+// configured pattern. Exact matches are checked first.
+func RedirectPermitted(redirect string, exact, patterns []string) bool {
+	for _, candidate := range exact {
 		if redirect == candidate {
 			return true
 		}
 	}
+	for _, pattern := range patterns {
+		if matchRedirectPattern(redirect, pattern) {
+			return true
+		}
+	}
 	return false
+}
+
+func matchRedirectPattern(redirect, pattern string) bool {
+	parsedPattern, err := url.Parse(pattern)
+	if err != nil {
+		return false
+	}
+	parsedRedirect, err := url.Parse(redirect)
+	if err != nil || parsedRedirect.Scheme != parsedPattern.Scheme {
+		return false
+	}
+	patternHost := parsedPattern.Hostname()
+	redirectHost := parsedRedirect.Hostname()
+	if !strings.HasPrefix(patternHost, "*.") {
+		return redirect == pattern
+	}
+	suffix := patternHost[1:]
+	if strings.Contains(redirectHost, "*") || !strings.HasSuffix(redirectHost, suffix) {
+		return false
+	}
+	base := strings.TrimPrefix(suffix, ".")
+	return redirectHost != base && strings.Count(redirectHost, ".") > strings.Count(base, ".")
+}
+
+// ValidateRedirectPatterns checks that every pattern is an https URL with a
+// wildcard only as the leftmost host label and at least two host labels.
+func ValidateRedirectPatterns(patterns []string) error {
+	for _, pattern := range patterns {
+		parsed, err := url.Parse(pattern)
+		if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+			return ErrInvalidRedirectPattern
+		}
+		host := parsed.Hostname()
+		if !strings.HasPrefix(host, "*.") {
+			return ErrInvalidRedirectPattern
+		}
+		labels := strings.Split(strings.TrimPrefix(host, "*."), ".")
+		if len(labels) < 2 {
+			return ErrInvalidRedirectPattern
+		}
+		for _, label := range labels {
+			if label == "" || strings.Contains(label, "*") {
+				return ErrInvalidRedirectPattern
+			}
+		}
+	}
+	return nil
 }
 
 // JWTConfig enables bearer-token mode.
@@ -297,6 +357,7 @@ type Config struct {
 	Templates                EmailTemplates
 	OAuth                    *OAuthConfig
 	Passwordless             *PasswordlessConfig
+	AllowedRedirectPatterns  []string
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
 	JWTOnly                  bool
@@ -566,6 +627,8 @@ var (
 	ErrInvalidJWTKey = errors.New("signet: invalid jwt signing key")
 	// ErrInvalidKeyRing reports an empty, mixed or duplicate key ring.
 	ErrInvalidKeyRing = errors.New("signet: invalid key ring")
+	// ErrInvalidRedirectPattern reports a malformed redirect pattern.
+	ErrInvalidRedirectPattern = errors.New("signet: invalid redirect pattern")
 	// ErrRefreshReuse reports replay of a consumed Refresh token.
 	ErrRefreshReuse = errors.New("signet: refresh token reuse detected")
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.

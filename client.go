@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/oauth"
@@ -64,6 +65,9 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	if err := core.ValidateRedirectPatterns(cfg.AllowedRedirectPatterns); err != nil {
+		return nil, err
+	}
 	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
 		return nil, ErrInvalidPasswordlessConfig
 	}
@@ -158,7 +162,7 @@ func New(cfg Config) (*Client, error) {
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
 	if cfg.OAuth != nil {
-		c.oauth = oauth.New(cfg.OAuth, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
+		c.oauth = oauth.New(cfg.OAuth, cfg.AllowedRedirectPatterns, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions)
 	}
 	var oauthRedirects []string
 	if cfg.OAuth != nil {
@@ -169,7 +173,8 @@ func New(cfg Config) (*Client, error) {
 		Clock: cfg.Clock, Limiter: limiter, Logger: cfg.Logger,
 		AppURL: cfg.AppURL, PathPrefix: cfg.PathPrefix, Password: cfg.Password, Hasher: cfg.PasswordHasher,
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
-		CreateSession: c.createSession, RevokeSessions: c.sessions.RevokeAll,
+		RedirectPatterns: cfg.AllowedRedirectPatterns,
+		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
