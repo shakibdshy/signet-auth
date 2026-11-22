@@ -23,7 +23,7 @@ func (c *fakeBreachChecker) Check(_ context.Context, password string) (bool, err
 	return c.compromised[password], nil
 }
 
-func breachClient(t *testing.T, checker signet.BreachChecker) (*signet.Client, *testutil.Mailer, string) {
+func breachClient(t *testing.T, checker signet.BreachChecker) (*signet.Client, *testutil.Mailer) {
 	t.Helper()
 	store := testutil.NewStore()
 	mailer := testutil.NewMailer()
@@ -36,12 +36,12 @@ func breachClient(t *testing.T, checker signet.BreachChecker) (*signet.Client, *
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	return client, mailer, ""
+	return client, mailer
 }
 
 func TestBreachCheckBlocksSignUp(t *testing.T) {
 	checker := &fakeBreachChecker{compromised: map[string]bool{"bad-password": true}}
-	client, _, _ := breachClient(t, checker)
+	client, _ := breachClient(t, checker)
 	_, err := client.SignUp(context.Background(), signet.SignUpInput{
 		Email: "user@example.com", Password: "bad-password",
 	})
@@ -55,7 +55,7 @@ func TestBreachCheckBlocksSignUp(t *testing.T) {
 
 func TestBreachCheckBlocksPasswordChange(t *testing.T) {
 	checker := &fakeBreachChecker{compromised: map[string]bool{"breached-new-password": true}}
-	client, _, _ := breachClient(t, checker)
+	client, _ := breachClient(t, checker)
 	ctx := context.Background()
 	signUp, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
 	if err != nil {
@@ -71,7 +71,7 @@ func TestBreachCheckBlocksPasswordChange(t *testing.T) {
 
 func TestBreachCheckBlocksPasswordReset(t *testing.T) {
 	checker := &fakeBreachChecker{compromised: map[string]bool{"breached-reset-password": true}}
-	client, mailer, _ := breachClient(t, checker)
+	client, mailer := breachClient(t, checker)
 	ctx := context.Background()
 	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
 		t.Fatalf("SignUp: %v", err)
@@ -90,7 +90,7 @@ func TestBreachCheckBlocksPasswordReset(t *testing.T) {
 
 func TestBreachProviderFailureFailsClosed(t *testing.T) {
 	checker := &fakeBreachChecker{fail: errors.New("provider down")}
-	client, _, _ := breachClient(t, checker)
+	client, _ := breachClient(t, checker)
 	_, err := client.SignUp(context.Background(), signet.SignUpInput{
 		Email: "user@example.com", Password: "correct horse",
 	})

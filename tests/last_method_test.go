@@ -37,9 +37,9 @@ func signInHTTP(t *testing.T, client *signet.Client, body string) *httptest.Resp
 	return rr
 }
 
-func cookieValue(rr *httptest.ResponseRecorder, name string) *http.Cookie {
+func cookieValue(rr *httptest.ResponseRecorder) *http.Cookie {
 	for _, cookie := range rr.Result().Cookies() {
-		if cookie.Name == name {
+		if cookie.Name == "signet_last_method" {
 			return cookie
 		}
 	}
@@ -56,7 +56,7 @@ func TestLastMethodSetByHTTPSignIn(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
 	}
-	cookie := cookieValue(rr, "signet_last_method")
+	cookie := cookieValue(rr)
 	if cookie == nil || !cookie.HttpOnly || cookie.Value == "" {
 		t.Fatalf("last-method cookie = %+v", cookie)
 	}
@@ -82,7 +82,7 @@ func TestLastMethodGoResultAndConsent(t *testing.T) {
 		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 	rr := signInHTTP(t, client, `{"email":"user@example.com","password":"correct horse"}`)
-	if cookie := cookieValue(rr, "signet_last_method"); cookie != nil {
+	if cookie := cookieValue(rr); cookie != nil {
 		t.Fatalf("consent should skip the cookie: %+v", cookie)
 	}
 }
@@ -91,7 +91,7 @@ func TestLastMethodRejectsTamperedCookie(t *testing.T) {
 	client := lastMethodClient(t, nil)
 	read := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/last-sign-in-method", nil)
-	req.AddCookie(&http.Cookie{Name: "signet_last_method", Value: "tampered.value"})
+	req.AddCookie(&http.Cookie{Name: "signet_last_method", Value: "tampered.value", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	client.Handler().ServeHTTP(read, req)
 	if read.Code != http.StatusOK || !strings.Contains(read.Body.String(), `"method":""`) {
 		t.Fatalf("status = %d body = %s", read.Code, read.Body.String())
@@ -102,7 +102,7 @@ func TestLastMethodClear(t *testing.T) {
 	client := lastMethodClient(t, nil)
 	rr := httptest.NewRecorder()
 	client.ClearLastSignInMethod(rr)
-	cookie := cookieValue(rr, "signet_last_method")
+	cookie := cookieValue(rr)
 	if cookie == nil || cookie.MaxAge >= 0 {
 		t.Fatalf("clear cookie = %+v", cookie)
 	}
@@ -114,7 +114,7 @@ func TestLastMethodExpires(t *testing.T) {
 	})
 	rr := httptest.NewRecorder()
 	client.SetLastMethodCookie(rr, "password")
-	cookie := cookieValue(rr, "signet_last_method")
+	cookie := cookieValue(rr)
 	if cookie == nil || cookie.MaxAge != 60 {
 		t.Fatalf("cookie = %+v", cookie)
 	}

@@ -40,7 +40,7 @@ func (s *fakeAuditSink) snapshot() []signet.AuditEvent {
 	return append([]signet.AuditEvent(nil), s.events...)
 }
 
-func auditClient(t *testing.T, sink signet.AuditSink) (*signet.Client, *testutil.Mailer) {
+func auditClient(t *testing.T, sink signet.AuditSink) *signet.Client {
 	t.Helper()
 	cfg := testutil.NewConfig()
 	cfg.Store = testutil.NewStore()
@@ -52,7 +52,8 @@ func auditClient(t *testing.T, sink signet.AuditSink) (*signet.Client, *testutil
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	return client, mailer
+	_ = mailer
+	return client
 }
 
 func hasEvent(names []string, name string) bool {
@@ -66,7 +67,7 @@ func hasEvent(names []string, name string) bool {
 
 func TestAuditSinkReceivesSecurityEvents(t *testing.T) {
 	sink := &fakeAuditSink{}
-	client, _ := auditClient(t, sink)
+	client := auditClient(t, sink)
 	ctx := context.Background()
 	signUp, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
 	if err != nil {
@@ -95,7 +96,7 @@ func TestAuditSinkReceivesSecurityEvents(t *testing.T) {
 
 func TestAuditEventsContainNoSecrets(t *testing.T) {
 	sink := &fakeAuditSink{}
-	client, _ := auditClient(t, sink)
+	client := auditClient(t, sink)
 	ctx := context.Background()
 	signUp, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
 	if err != nil {
@@ -119,7 +120,7 @@ func TestAuditEventsContainNoSecrets(t *testing.T) {
 
 func TestAuditSinkFailureDoesNotBreakAuthentication(t *testing.T) {
 	sink := &fakeAuditSink{fail: errors.New("sink down")}
-	client, _ := auditClient(t, sink)
+	client := auditClient(t, sink)
 	result, err := client.SignIn(context.Background(), signet.SignInInput{
 		Email: "nobody@example.com", Password: "correct horse",
 	})

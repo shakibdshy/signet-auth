@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/last-sign-in-method": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /last-sign-in-method */
+        get: operations["last-sign-in-method_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/callback": {
         parameters: {
             query?: never;
@@ -496,7 +513,7 @@ export interface components {
         };
         ApiError: {
             /** @enum {string} */
-            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
+            error: "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
             message: string;
         };
         ChangeEmailInput: {
@@ -582,6 +599,7 @@ export interface components {
         TokenPair: {
             access_token: string;
             expires_in: number;
+            last_sign_in_method?: string;
             refresh_token: string;
             two_factor_challenge?: string;
         };
@@ -642,7 +660,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -729,7 +747,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -816,7 +834,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -903,7 +921,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -988,7 +1006,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1075,7 +1093,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1168,7 +1186,92 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description code_already_used */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description email_not_verified */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description oauth_account_conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description rate_limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description internal_error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "last-sign-in-method_get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        method: string;
+                    };
+                };
+            };
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1252,7 +1355,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1339,7 +1442,7 @@ export interface operations {
                     "application/json": components["schemas"]["OAuthStartResult"];
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1430,7 +1533,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1513,7 +1616,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1600,7 +1703,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1685,7 +1788,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1770,7 +1873,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1857,7 +1960,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1944,7 +2047,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2027,7 +2130,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2112,7 +2215,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2195,7 +2298,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2288,7 +2391,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2375,7 +2478,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2464,7 +2567,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2551,7 +2654,7 @@ export interface operations {
                     "application/json": components["schemas"]["TokenPair"];
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2638,7 +2741,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2725,7 +2828,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2812,7 +2915,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2901,7 +3004,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2991,7 +3094,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3081,7 +3184,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description invalid_input */
+            /** @description password_compromised */
             400: {
                 headers: {
                     [name: string]: unknown;

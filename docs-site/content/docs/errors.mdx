@@ -36,6 +36,9 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrTOTPInvalid | 401 invalid_code | A TOTP code or Backup code was invalid or already used. |
 | ErrTwoFactorRequired | 401 two_factor_required | Sign-in needs a Second factor challenge. |
 | ErrTOTPNotConfigured | 404 not_found | A TOTP operation was called without both a TOTPStore and a 32-byte TOTPKey. |
+| ErrPasswordCompromised | 400 password_compromised | The password was found in a known breach. |
+| ErrCaptchaRequired | 400 invalid_input | A configured endpoint was called without `X-Captcha-Response`. |
+| ErrCaptchaInvalid | 400 invalid_input | Captcha verification was rejected or failed. |
 
 ## Credentials and email
 

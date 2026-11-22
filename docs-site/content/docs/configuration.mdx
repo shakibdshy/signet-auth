@@ -54,6 +54,11 @@ auth, err := signet.New(cfg)
 | TOTPStore | TOTPStore | nil = Second factor disabled | Application-supplied store for TOTP enrollment state. See [Second factor](/docs/two-factor). |
 | TOTPKey | []byte | required with TOTPStore | 32-byte key for encrypting TOTP secrets. |
 | TOTP | *TOTPConfig | 6 digits, 30s period, ±1 window | TOTP code parameters and issuer. |
+| BreachChecker | BreachChecker | nil = disabled | Rejects passwords found in a known breach. |
+| CaptchaVerifier | CaptchaVerifier | nil = disabled | Verifies captcha tokens on configured endpoints. |
+| CaptchaEndpoints | []string | signup, signin, send-password-reset | Endpoints that require a captcha token. |
+| AuditSink | AuditSink | nil = disabled | Receives a security subset of Audit events. |
+| LastSignInMethod | *LastSignInMethodConfig | nil = disabled | Signed HttpOnly cookie with 30-day default TTL; requires CSRF keys. |
 | CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
 | CSRFKeys | [][]byte | empty = use CSRFKey | Ordered key ring; first signs, all verify. Each key must be 32 bytes. |
 | SessionCache | SessionCache | nil = disabled | Optional short-lived Session lookup cache; the Store stays authoritative. |

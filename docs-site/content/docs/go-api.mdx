@@ -51,6 +51,9 @@ only `github.com/shakibdshy/signet`.
 | `VerifyTwoFactor(ctx, VerifyTwoFactorInput) (*SignInResult, error)` | Exchange a challenge and code for a Session. |
 | `DisableTwoFactor(ctx, DisableTwoFactorInput) error` | Remove Second factor enrollment. |
 | `RegenerateBackupCodes(ctx, RegenerateBackupCodesInput) (*RegenerateBackupCodesResult, error)` | Replace all Backup codes. |
+| `SetLastMethodCookie(w, method string)` | Write the signed Last sign-in method cookie. |
+| `LastSignInMethod(r *http.Request) string` | Read the signed Last sign-in method from a request. |
+| `ClearLastSignInMethod(w)` | Expire the Last sign-in method cookie. |
 | `ListSessions(ctx, ListSessionsInput) (*ListSessionsResult, error)` | List safe Session fields for a User. |
 | `RevokeSession(ctx, RevokeSessionInput) error` | Revoke one Session; unknown IDs are a no-op. |
 | `RevokeAllSessions(ctx, RevokeAllSessionsInput) error` | Revoke every Session of a User. |

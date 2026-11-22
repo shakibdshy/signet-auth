@@ -32,7 +32,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -138,7 +138,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -244,7 +244,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -345,7 +345,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -441,7 +441,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -542,7 +542,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -669,7 +669,103 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_already_used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "email_not_verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "oauth_account_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/last-sign-in-method": {
+      "get": {
+        "operationId": "last-sign-in-method_get",
+        "summary": "GET /last-sign-in-method",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "method": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "method"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -768,7 +864,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -866,7 +962,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -985,7 +1081,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1081,7 +1177,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1182,7 +1278,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1273,7 +1369,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1364,7 +1460,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1465,7 +1561,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1566,7 +1662,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1662,7 +1758,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1758,7 +1854,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1860,7 +1956,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -1978,7 +2074,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2079,7 +2175,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2185,7 +2281,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2283,7 +2379,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2384,7 +2480,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2485,7 +2581,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2586,7 +2682,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2704,7 +2800,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2814,7 +2910,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -2924,7 +3020,7 @@
             }
           },
           "400": {
-            "description": "invalid_input",
+            "description": "password_compromised",
             "content": {
               "application/json": {
                 "schema": {
@@ -3051,6 +3147,7 @@
               "not_found",
               "oauth_account_conflict",
               "oauth_email_not_verified",
+              "password_compromised",
               "rate_limited",
               "two_factor_not_enabled",
               "two_factor_required",
@@ -3348,6 +3445,9 @@
           },
           "expires_in": {
             "type": "integer"
+          },
+          "last_sign_in_method": {
+            "type": "string"
           },
           "refresh_token": {
             "type": "string"
