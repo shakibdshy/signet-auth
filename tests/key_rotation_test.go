@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -110,6 +111,55 @@ func TestJWKSHandlerPublishesAsymmetricKeysOnly(t *testing.T) {
 				t.Fatalf("private field %q in JWK: %+v", privateField, key)
 			}
 		}
+	}
+}
+
+func TestAsymmetricAccessTokenHasMatchingKid(t *testing.T) {
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey: %v", err)
+	}
+	store := testutil.NewStore()
+	client := ringJWTClient(t, store, func(cfg *signet.JWTConfig) {
+		cfg.Algorithm = "RS256"
+		cfg.Key = nil
+		cfg.Keys = []any{rsaKey}
+	})
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	pair, err := client.ExchangeToken(ctx, signet.TokenInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("ExchangeToken: %v", err)
+	}
+	parts := strings.Split(pair.AccessToken, ".")
+	if len(parts) != 3 {
+		t.Fatalf("access token is not a JWT: %q", pair.AccessToken)
+	}
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		t.Fatalf("decode header: %v", err)
+	}
+	var header struct {
+		Kid string `json:"kid"`
+	}
+	if err := json.Unmarshal(headerBytes, &header); err != nil || header.Kid == "" {
+		t.Fatalf("header = %s, err = %v", headerBytes, err)
+	}
+
+	rr := httptest.NewRecorder()
+	client.JWKSHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/jwks.json", nil))
+	var document struct {
+		Keys []struct {
+			Kid string `json:"kid"`
+		} `json:"keys"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &document); err != nil {
+		t.Fatalf("decode JWKS: %v", err)
+	}
+	if len(document.Keys) != 1 || document.Keys[0].Kid != header.Kid {
+		t.Fatalf("JWKS kid %+v does not match token kid %q", document.Keys, header.Kid)
 	}
 }
 

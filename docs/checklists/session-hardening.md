@@ -12,8 +12,10 @@ Tests live in `tests/session_cache_test.go`, `tests/key_rotation_test.go`, `test
 | "cache hit skips the Store" | `TestSessionCacheHitSkipsStore` |
 | "cache errors warn and fall back to the Store" | `TestSessionCacheErrorFallsBackToStore` |
 | "Store errors reject" | `TestSessionStoreErrorRejectsRequest` |
-| "every revocation flushes the cache" | `TestSessionCacheFlushOnRevokeSession`, `TestSessionCacheFlushOnRevokeAll`, `TestSessionCacheFlushOnSignOut`, `TestSessionCacheFlushOnPasswordReset`, `TestSessionCacheFlushOnPasswordChange`, `TestSessionCacheFlushOnAccountDeletion`, `TestSessionCacheFlushOnRefreshReuse` |
-| "expired Sessions are never served from cache" | `TestSessionCacheHitSkipsStore` (deadline check in the cached value) |
+| "every revocation flushes the cache" | `TestSessionCacheFlushOnRevokeSession`, `TestSessionCacheFlushOnRevokeAll`, `TestSessionCacheFlushOnSignOut`, `TestSessionCacheFlushOnPasswordReset`, `TestSessionCacheFlushOnPasswordChange`, `TestSessionCacheFlushOnAccountDeletion`, `TestSessionCacheFlushOnEmailChange`, `TestSessionCacheFlushOnRefreshReuse` |
+| "expired Sessions are never served from cache" | `TestSessionCacheExpiredSessionRejected` |
+| "a stale cached User is bounded by a flush" | `TestSessionCacheStaleUserClearedByFlush` |
+| "Access tokens carry a matching kid" | `TestAsymmetricAccessTokenHasMatchingKid` |
 | "legacy single key keeps working" | `TestJWTLegacySingleKeyStillWorks`, `TestKeyRingSignsWithFirstAndVerifiesAll` |
 | "first key signs, all verify" | `TestJWTRingSignsWithFirstAndVerifiesOlderKey`, `TestKeyRingSignsWithFirstAndVerifiesAll` |
 | "ring validation rejects empty/mixed/duplicate" | `TestJWTRingRejectsInvalidConfiguration` |
@@ -26,8 +28,9 @@ Tests live in `tests/session_cache_test.go`, `tests/key_rotation_test.go`, `test
 
 | Requirement | Test or explained limitation |
 | --- | --- |
-| The Store is authoritative; a cache never grants access the Store would deny | `TestSessionCacheErrorFallsBackToStore`, `TestSessionStoreErrorRejectsRequest` |
-| Revocation is observable across every deletion path | seven `TestSessionCacheFlushOn*` effect tests |
+| The Store is authoritative for revocation and expiry | `TestSessionCacheFlushOnRevokeSession`, `TestSessionCacheExpiredSessionRejected`, `TestSessionStoreErrorRejectsRequest` |
+| A changed User snapshot has bounded staleness | `TestSessionCacheStaleUserClearedByFlush`; limitation: a User disabled after caching is served until the cache is flushed or its TTL expires |
+| Revocation is observable across every deletion path | eight `TestSessionCacheFlushOn*` effect tests |
 | Revocation lag is bounded by the configured TTL | limitation: cross-process revocation may take up to `CacheTTL`; the value is capped by the idle timeout and documented in [Sessions](/docs/sessions) |
 | Rotating a key never invalidates live tokens | `TestJWTRingSignsWithFirstAndVerifiesOlderKey` |
 | No private key material leaves the process | `TestJWKSHandlerPublishesAsymmetricKeysOnly` |
@@ -40,7 +43,7 @@ Tests live in `tests/session_cache_test.go`, `tests/key_rotation_test.go`, `test
 | Digest-keyed Session cache | second authenticated request performs no Store read | `TestSessionCacheHitSkipsStore` |
 | Cache fallback | request succeeds when the cache errors | `TestSessionCacheErrorFallsBackToStore` |
 | Fail-closed Store | request returns 401 when the Store fails | `TestSessionStoreErrorRejectsRequest` |
-| Namespace flush | cached Session rejected after each revocation path | seven `TestSessionCacheFlushOn*` tests |
+| Namespace flush | cached Session rejected after each revocation path | eight `TestSessionCacheFlushOn*` tests |
 | Ordered key ring | old-signed token verifies under a new ring | `TestJWTRingSignsWithFirstAndVerifiesOlderKey` |
 | Asymmetric-only JWKS | only public keys appear; symmetric-only config is empty | `TestJWKSHandlerPublishesAsymmetricKeysOnly`, `TestJWKSHandlerEmptyForSymmetricKeys` |
 | Pattern validation | invalid host/scheme patterns rejected at construction | `TestValidateRedirectPatterns`, `TestRedirectPatternInvalidConfigurationRejected` |

@@ -37,6 +37,8 @@ func TestValidateRedirectPatterns(t *testing.T) {
 	}
 	for _, pattern := range []string{
 		"http://*.example.com",
+		"https://*.example.com/welcome",
+		"https://app.example.com:8443",
 		"https://example.com",
 		"https://app.*.com",
 		"*://example.com",

@@ -2,6 +2,7 @@
 package csrf
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -18,6 +19,24 @@ import (
 )
 
 const ttl = 12 * time.Hour
+
+// ValidateKeys checks that a CSRF key ring is non-empty, 32-byte and unique.
+func ValidateKeys(keys [][]byte) error {
+	if len(keys) == 0 {
+		return core.ErrInvalidCSRFConfig
+	}
+	for i, key := range keys {
+		if len(key) != 32 {
+			return core.ErrInvalidCSRFConfig
+		}
+		for _, earlier := range keys[:i] {
+			if bytes.Equal(earlier, key) {
+				return core.ErrInvalidKeyRing
+			}
+		}
+	}
+	return nil
+}
 
 // Header is the header clients must use for the CSRF token.
 const Header = "X-CSRF-Token"

@@ -64,7 +64,7 @@ Caching is off by default. Set `Session.CacheTTL` and supply a `SessionCache` to
 copy of a Session answer a lookup without a Store read. The TTL is capped by the Session idle
 timeout. A cache hit is bounded staleness: a revocation performed by another process may take up
 to that TTL to be observed (Revocation lag). Every revocation path flushes the cache. A cache
-error falls back to the Store; a Store error rejects the request.
+error is logged and falls back to the Store; a Store error rejects the request.
 
 ```go
 cfg.SessionCache = myCache // implements Get, Put and Flush

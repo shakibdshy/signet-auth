@@ -2,6 +2,7 @@ package session_test
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func TestIsFreshUsesCreatedAtNotLastSeen(t *testing.T) {
 		ID: "id", TokenHash: secret.Digest(raw),
 		CreatedAt: now.Add(-time.Hour), LastSeenAt: now,
 	}
-	svc := session.New(store, clock, core.SessionConfig{FreshAge: 5 * time.Minute}, nil)
+	svc := session.New(store, clock, core.SessionConfig{FreshAge: 5 * time.Minute}, nil, slog.Default())
 	fresh, err := svc.IsFresh(context.Background(), raw)
 	if err != nil || fresh {
 		t.Fatalf("fresh = %v, err = %v; want false", fresh, err)

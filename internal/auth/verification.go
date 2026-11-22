@@ -36,6 +36,7 @@ type VerificationDependencies struct {
 	RedirectPatterns []string
 	CreateSession    func(context.Context, string) (string, error)
 	RevokeSessions   func(context.Context, string) error
+	FlushSessions    func(context.Context)
 }
 
 // VerificationService implements email verification, password reset and
@@ -336,6 +337,9 @@ func (s *VerificationService) VerifyEmailChange(ctx context.Context, in core.Ver
 	user.EmailVerified = false
 	if err := s.deps.Store.UpdateUser(ctx, user); err != nil {
 		return err
+	}
+	if s.deps.FlushSessions != nil {
+		s.deps.FlushSessions(ctx)
 	}
 	s.logInfo("email_changed", "user_id", user.ID)
 	return nil

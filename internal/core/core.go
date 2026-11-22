@@ -39,6 +39,7 @@ type Account struct {
 
 // CachedSession is a short-lived copy of a resolved Session.
 type CachedSession struct {
+	ID                string
 	User              *User
 	IdleExpiresAt     time.Time
 	AbsoluteExpiresAt time.Time
@@ -277,7 +278,8 @@ func matchRedirectPattern(redirect, pattern string) bool {
 func ValidateRedirectPatterns(patterns []string) error {
 	for _, pattern := range patterns {
 		parsed, err := url.Parse(pattern)
-		if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" ||
+			parsed.Fragment != "" || parsed.Port() != "" || (parsed.Path != "" && parsed.Path != "/") {
 			return ErrInvalidRedirectPattern
 		}
 		host := parsed.Hostname()
@@ -301,7 +303,6 @@ func ValidateRedirectPatterns(patterns []string) error {
 type JWTConfig struct {
 	Key        any
 	Keys       []any
-	VerifyKeys []any // resolved by New from Keys; callers normally leave this empty
 	Algorithm  string
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration

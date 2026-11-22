@@ -132,6 +132,89 @@ func TestSessionCacheHitSkipsStore(t *testing.T) {
 	}
 }
 
+func cacheClientWithClock(t *testing.T, cache signet.SessionCache, clock *testutil.Clock) (*signet.Client, string) {
+	t.Helper()
+	store := &countingStore{Store: testutil.NewStore()}
+	cfg := testutil.NewConfig()
+	cfg.Store = store
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.Cookie.Name = "test_session"
+	cfg.Cookie.Path = "/app"
+	cfg.SessionCache = cache
+	cfg.Session.CacheTTL = time.Minute
+	cfg.Clock = clock
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	result, err := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	return client, result.SessionToken
+}
+
+func TestSessionCacheExpiredSessionRejected(t *testing.T) {
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	client, token := cacheClientWithClock(t, newFakeSessionCache(), clock)
+	if code := authenticateWithCookie(client, token); code != http.StatusNoContent {
+		t.Fatalf("first authenticate: %d", code)
+	}
+	clock.At = clock.At.Add(31 * time.Minute)
+	if code := authenticateWithCookie(client, token); code != http.StatusUnauthorized {
+		t.Fatalf("expired cached Session authenticated: %d", code)
+	}
+}
+
+func TestSessionCacheStaleUserClearedByFlush(t *testing.T) {
+	clock := &testutil.Clock{At: time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)}
+	store := &countingStore{Store: testutil.NewStore()}
+	cache := newFakeSessionCache()
+	cfg := testutil.NewConfig()
+	cfg.Store = store
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.Cookie.Name = "test_session"
+	cfg.Cookie.Path = "/app"
+	cfg.SessionCache = cache
+	cfg.Session.CacheTTL = time.Minute
+	cfg.Clock = clock
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	result, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	if code := authenticateWithCookie(client, result.SessionToken); code != http.StatusNoContent {
+		t.Fatalf("first authenticate: %d", code)
+	}
+	user, _ := store.UserByEmail(ctx, "user@example.com")
+	disabled := *user
+	disabled.Disabled = true
+	store.Users[disabled.ID] = &disabled
+	store.UsersByEmail[disabled.Email] = &disabled
+	// Bounded staleness: a cached User is served until the cache is flushed.
+	if code := authenticateWithCookie(client, result.SessionToken); code != http.StatusNoContent {
+		t.Fatalf("cached Session before flush: %d", code)
+	}
+	if err := cache.Flush(ctx); err != nil {
+		t.Fatalf("Flush: %v", err)
+	}
+	if code := authenticateWithCookie(client, result.SessionToken); code != http.StatusUnauthorized {
+		t.Fatalf("stale cached Session after flush: %d", code)
+	}
+}
+
 func TestSessionCacheDisabledUsesStore(t *testing.T) {
 	store := &countingStore{Store: testutil.NewStore()}
 	client, token, _ := cacheClient(t, nil, 0, store)
@@ -270,6 +353,32 @@ func TestSessionCacheFlushOnAccountDeletion(t *testing.T) {
 		t.Fatalf("DeleteUser: %v", err)
 	}
 	assertCacheFlushed(t, cache, token, client)
+}
+
+func TestSessionCacheFlushOnEmailChange(t *testing.T) {
+	store := &countingStore{Store: testutil.NewStore()}
+	cache := newFakeSessionCache()
+	client, token, mailer := cacheClient(t, cache, time.Minute, store)
+	authenticateWithCookie(client, token)
+	ctx := context.Background()
+	userID := cachedUserID(t, store)
+	if err := client.RequestEmailChange(ctx, signet.ChangeEmailInput{
+		UserID: userID, NewEmail: "new@example.com", CurrentPassword: "correct horse",
+	}); err != nil {
+		t.Fatalf("RequestEmailChange: %v", err)
+	}
+	if err := client.VerifyEmailChange(ctx, signet.VerifyEmailChangeInput{Token: tokenFromMail(t, mailer)}); err != nil {
+		t.Fatalf("VerifyEmailChange: %v", err)
+	}
+	if cache.flushes == 0 {
+		t.Fatal("email change did not flush the Session cache")
+	}
+	cache.mu.Lock()
+	remaining := len(cache.values)
+	cache.mu.Unlock()
+	if remaining != 0 {
+		t.Fatalf("cached entries after email change = %d, want 0", remaining)
+	}
 }
 
 func TestSessionCacheFlushOnPasswordChange(t *testing.T) {

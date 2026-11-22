@@ -4,7 +4,7 @@ A Session cache is off by default. When enabled, it is a read-through copy with 
 lifetime capped by the Session's idle timeout: a cache hit skips the Store until that lifetime
 expires, so a revocation performed by another process may take up to that lifetime to be
 observed. Cache failures are logged and fall back to the Store; Store failures reject the
-request. Secondary storage is not a new abstraction — a Redis-backed adapter simply implements
+request. A Secondary store is not a new abstraction — a Redis-backed adapter simply implements
 the existing `Store` interface.
 
 We considered making the cache authoritative (fastest, but permanent revocation lag until

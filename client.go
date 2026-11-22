@@ -1,7 +1,6 @@
 package signet
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -105,18 +104,8 @@ func New(cfg Config) (*Client, error) {
 		csrfKeys = [][]byte{cfg.CSRFKey}
 	}
 	if !cfg.JWTOnly {
-		if len(csrfKeys) == 0 {
-			return nil, ErrInvalidCSRFConfig
-		}
-		for i, key := range csrfKeys {
-			if len(key) != 32 {
-				return nil, ErrInvalidCSRFConfig
-			}
-			for _, earlier := range csrfKeys[:i] {
-				if bytes.Equal(earlier, key) {
-					return nil, ErrInvalidKeyRing
-				}
-			}
+		if err := csrf.ValidateKeys(csrfKeys); err != nil {
+			return nil, err
 		}
 	}
 	var jwtCfg *JWTConfig
@@ -149,10 +138,10 @@ func New(cfg Config) (*Client, error) {
 		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
 			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
 		tokens:   token.New(cfg.Store, cfg.Clock),
-		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache),
+		sessions: session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
 	}
 	if jwtCfg != nil {
-		c.jwtKeys = jwtCfg.VerifyKeys
+		c.jwtKeys = token.VerificationKeys(jwtCfg)
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
 			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn,
@@ -175,6 +164,7 @@ func New(cfg Config) (*Client, error) {
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		RedirectPatterns: cfg.AllowedRedirectPatterns,
 		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
+		FlushSessions: c.sessions.Flush,
 	})
 	c.auth = auth.New(auth.Dependencies{
 		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,

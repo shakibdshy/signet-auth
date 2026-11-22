@@ -60,12 +60,22 @@ func ValidateJWTConfig(cfg *core.JWTConfig) error {
 		}
 	}
 	cfg.Key = keys[0]
-	cfg.VerifyKeys = keys
 	if cfg.AccessTTL == 0 {
 		cfg.AccessTTL = defaultAccessTTL
 	}
 	if cfg.RefreshTTL == 0 {
 		cfg.RefreshTTL = defaultRefreshTTL
+	}
+	return nil
+}
+
+// VerificationKeys returns every key that should verify an Access token.
+func VerificationKeys(cfg *core.JWTConfig) []any {
+	if len(cfg.Keys) > 0 {
+		return cfg.Keys
+	}
+	if cfg.Key != nil {
+		return []any{cfg.Key}
 	}
 	return nil
 }
@@ -83,10 +93,15 @@ type JWTDependencies struct {
 }
 
 // JWTService implements Signet's optional bearer-token mode.
-type JWTService struct{ deps JWTDependencies }
+type JWTService struct {
+	deps       JWTDependencies
+	verifyKeys []any
+}
 
 // NewJWT returns a JWTService.
-func NewJWT(deps JWTDependencies) *JWTService { return &JWTService{deps: deps} }
+func NewJWT(deps JWTDependencies) *JWTService {
+	return &JWTService{deps: deps, verifyKeys: VerificationKeys(deps.Config)}
+}
 
 func (s *JWTService) allow(ctx context.Context, endpoint, key string) error {
 	if key == "" {
@@ -131,9 +146,9 @@ func (s *JWTService) VerifyAccessToken(ctx context.Context, raw string) (*core.U
 	if s.deps.Config == nil {
 		return nil, core.ErrJWTDisabled
 	}
-	keys := s.deps.Config.VerifyKeys
+	keys := s.verifyKeys
 	if len(keys) == 0 {
-		keys = []any{s.deps.Config.Key}
+		return nil, core.ErrTokenInvalid
 	}
 	var claims *jwt.RegisteredClaims
 	var parsed *jwt.Token
@@ -174,7 +189,16 @@ func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair,
 	if !ok {
 		return nil, core.ErrInvalidJWTAlgorithm
 	}
-	access, err := jwt.NewWithClaims(algorithm.method, claims).SignedString(s.deps.Config.Key)
+	signed := jwt.NewWithClaims(algorithm.method, claims)
+	switch s.deps.Config.Key.(type) {
+	case *rsa.PrivateKey, ed25519.PrivateKey:
+		kid, err := keyID(s.deps.Config.Key)
+		if err != nil {
+			return nil, err
+		}
+		signed.Header["kid"] = kid
+	}
+	access, err := signed.SignedString(s.deps.Config.Key)
 	if err != nil {
 		return nil, err
 	}
