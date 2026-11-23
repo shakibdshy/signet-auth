@@ -56,6 +56,13 @@ const (
 	SSOConnectionCreated = "sso_connection_created"
 	SSOConnectionDeleted = "sso_connection_deleted"
 	SSOSignIn            = "sso_sign_in"
+	SCIMUnauthorized     = "scim_unauthorized"
+	SCIMUserCreated      = "scim_user_created"
+	SCIMUserUpdated      = "scim_user_updated"
+	SCIMUserDeleted      = "scim_user_deleted"
+	SCIMGroupCreated     = "scim_group_created"
+	SCIMGroupUpdated     = "scim_group_updated"
+	SCIMGroupDeleted     = "scim_group_deleted"
 )
 
 // Emit records an event when a sink is configured. A sink failure is logged

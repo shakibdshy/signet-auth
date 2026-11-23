@@ -538,6 +538,38 @@ type SAMLACSResult struct {
 	OrganizationID string `json:"organization_id"`
 }
 
+// SCIMGroup is a directory group mapped to a local identifier.
+type SCIMGroup struct {
+	ID          string
+	ExternalID  string
+	DisplayName string
+	Members     []string
+}
+
+// SCIMStore persists external identities and directory groups. It is optional.
+type SCIMStore interface {
+	UserByExternalID(context.Context, string) (*User, error)
+	SetUserExternalID(context.Context, string, string) error
+	ExternalIDByUser(context.Context, string) (string, error)
+	ListUsers(context.Context) ([]*User, error)
+	GroupByExternalID(context.Context, string) (*SCIMGroup, error)
+	GroupByID(context.Context, string) (*SCIMGroup, error)
+	CreateGroup(context.Context, *SCIMGroup) error
+	UpdateGroup(context.Context, *SCIMGroup) error
+	DeleteGroup(context.Context, string) error
+	ListGroups(context.Context) ([]*SCIMGroup, error)
+}
+
+// SCIMGroupProjector projects a directory group to application roles/memberships.
+type SCIMGroupProjector func(context.Context, *SCIMGroup) error
+
+// SCIMConfig enables SCIM 2.0 provisioning.
+type SCIMConfig struct {
+	Store     SCIMStore
+	Token     string
+	Projector SCIMGroupProjector
+}
+
 // AuditSink receives Audit events. Implementations own persistence and retention.
 type AuditSink interface {
 	Record(context.Context, AuditEvent) error
@@ -994,6 +1026,7 @@ type Config struct {
 	AutoSignIn               *AutoSignInConfig
 	AuthorizationServer      *AuthorizationServerConfig
 	SSO                      *SSOConfig
+	SCIM                     *SCIMConfig
 	Passkeys                 *PasskeysConfig
 	Authorizer               Authorizer
 	AuthorizeIn              AuthorizeIn
@@ -1475,6 +1508,10 @@ var (
 	ErrSAMLConnectionNotFound = errors.New("signet: saml connection not found")
 	// ErrSAMLReplay reports a replayed SAML assertion.
 	ErrSAMLReplay = errors.New("signet: saml replay")
+	// ErrInvalidSCIMConfig reports a misconfigured SCIM server.
+	ErrInvalidSCIMConfig = errors.New("signet: invalid scim configuration")
+	// ErrSCIMUnauthorized reports a rejected SCIM bearer token.
+	ErrSCIMUnauthorized = errors.New("signet: scim unauthorized")
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = errors.New("signet: forbidden")
 )

@@ -37,6 +37,8 @@ github.com/dustin/go-humanize v1.1.0 h1:dbKTrvD0klcbBV/h4AWJdMuZogJACoMlvWIWZ5b2
 github.com/dustin/go-humanize v1.1.0/go.mod h1:hc1CvRkJMsgxqjmjMQF3QNRAZBwY8AXBAzKYoSX9sFI=
 github.com/ebitengine/purego v0.10.1 h1:dewVBCBT2GaMu1SrNTYxQhgQBethzfhiwvZiLGP/qyY=
 github.com/ebitengine/purego v0.10.1/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
+github.com/elimity-com/scim v0.0.0-20261113092633-5fffe914c211 h1:OgMK4yR0kLeklASUsgFhJdZ0pRBYk5sUFo2KBcvnqyo=
+github.com/elimity-com/scim v0.0.0-20261113092633-5fffe914c211/go.mod h1:dpiTnMjNr1HGBYKa+Rm6nljbWfApPKBFLIdOdK8fXnE=
 github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeORc=
 github.com/felixge/httpsnoop v1.1.0/go.mod h1:Zqxgdd+1Rkcz8euOqdr7lqgCRJztwr5hp9vDSi5UZCE=
 github.com/fxamacker/cbor/v2 v2.9.4 h1:xwjVlxEMR3S605oUlgBjKLTTeGFciYPGYCtF/35LKGo=
@@ -118,12 +120,18 @@ github.com/philhofer/fwd v1.2.0/go.mod h1:RqIHx9QI14HlwKwm98g9Re5prTQ6LdeRQn+gXJ
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 h1:o4JXh1EVt9k/+g42oCprj/FisM4qX9L3sZB3upGN2ZU=
 github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
+github.com/q-uint/parser v0.3.1 h1:VCHob90UXy0L5oMgny5EjbDC2YeEGNc6qahWa8+tUhQ=
+github.com/q-uint/parser v0.3.1/go.mod h1:+Ds4ucT1DM1SwDpzgz7glN+rnrzxMAXgiYpt4aRUUY8=
+github.com/q-uint/xsd-datetime v1.0.0 h1:D2LCjbiDGeh121e1EH0XdOMPjDs/mmSq9yurbIYNWYY=
+github.com/q-uint/xsd-datetime v1.0.0/go.mod h1:ZiZOJFx47KCuqNEe7bFIZlmDAFw4qLNcpJm8Dr8sQ+s=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/russellhaering/gosaml2/v2 v2.0.0-20260902035127-a1bb21061635 h1:YwghYDTlXu5yiHziRkaLQ7XkX5njp8AKoha/4iC/x10=
 github.com/russellhaering/gosaml2/v2 v2.0.0-20260902035127-a1bb21061635/go.mod h1:kgpPfpQArv5ZLoV89LEUPBPF/1sPh8o02fq3mJaH0cM=
 github.com/russellhaering/goxmldsig v1.6.1 h1:SB7R5ttvrGIDB2juJAK/i7DQ2Ivr7agG+ohfNJjwyYU=
 github.com/russellhaering/goxmldsig v1.6.1/go.mod h1:haZkRcLs9W/Xp989fIjP3BrTdbFQveRF0QNZSYoH09w=
+github.com/scim2/filter-parser/v2 v2.3.1 h1:o24v+z9drjtWoF6XLtXOFWpkmo1GGfBKZqrAjy6npQM=
+github.com/scim2/filter-parser/v2 v2.3.1/go.mod h1:R5u/HUG8vO+TVvtmBzUX2LSuEej27v+ckcJqjIa4d8E=
 github.com/shirou/gopsutil/v4 v4.26.6 h1:Mzr/npDtQC/xpeEuQKHZt8Zo9CmPvhTj8nkR8w5TLDs=
 github.com/shirou/gopsutil/v4 v4.26.6/go.mod h1:LZ6ewCSkBqUpvSOf+LsTGnRinC6iaNUNMGBtDkJBaLQ=
 github.com/sirupsen/logrus v1.9.4 h1:TsZE7l11zFCLZnZ+teH4Umoq5BhEIfIzfRDZ1Uzql2w=

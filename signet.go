@@ -398,6 +398,18 @@ type CreateSSOConnectionInput = core.CreateSSOConnectionInput
 // DeleteSSOConnectionInput identifies a connection to delete.
 type DeleteSSOConnectionInput = core.DeleteSSOConnectionInput
 
+// SCIMConfig enables SCIM 2.0 provisioning.
+type SCIMConfig = core.SCIMConfig
+
+// SCIMStore persists external identities and directory groups.
+type SCIMStore = core.SCIMStore
+
+// SCIMGroup is a directory group mapped to a local identifier.
+type SCIMGroup = core.SCIMGroup
+
+// SCIMGroupProjector projects a directory group to application roles.
+type SCIMGroupProjector = core.SCIMGroupProjector
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

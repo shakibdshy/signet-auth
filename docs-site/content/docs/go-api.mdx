@@ -190,3 +190,7 @@ Types: `AuthorizationServerConfig`, `OAuthClient`, `OAuthClientStore`, `DeviceAu
 | --- | --- |
 | `StartSAMLSignIn(ctx, SAMLStartInput) (*SAMLStartResult, error)` | Begin an SP-initiated ceremony. |
 | `CompleteSAMLSignIn(ctx, string, *http.Request) (*SAMLACSResult, error)` | Validate the assertion and create a Session. |
+
+## SCIM provisioning
+
+`SCIMHandler() http.Handler` exposes the mounted SCIM server; `ValidateSCIMToken(token) error` checks a bearer token with `ErrSCIMUnauthorized` on failure. Types: `SCIMConfig`, `SCIMStore`, `SCIMGroup`, `SCIMGroupProjector`.

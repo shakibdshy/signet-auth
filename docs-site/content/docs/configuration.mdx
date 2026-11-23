@@ -70,6 +70,7 @@ auth, err := signet.New(cfg)
 | AutoSignIn | *AutoSignInConfig | nil = disabled | Issue a Session after Sign-up and/or email verification. See [Verification and reset](/docs/verification-and-reset). |
 | AuthorizationServer | *AuthorizationServerConfig | nil = disabled | Issue OAuth tokens with PKCE and device authorization. Requires `JWT`. See [Authorization server](/docs/authorization-server). |
 | SAML connections | `protocol: "saml"` on SSO connections | opt-in | Pinned metadata, HTTPS SSO URL and signed assertions. See [SAML SSO](/docs/saml). |
+| SCIM | *SCIMConfig | nil = disabled | Provision Users and Groups from a directory. Requires `Store` and `Token`. See [SCIM provisioning](/docs/scim). |
 | CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
 | CSRFKeys | [][]byte | empty = use CSRFKey | Ordered key ring; first signs, all verify. Each key must be 32 bytes. |
 | SessionCache | SessionCache | nil = disabled | Optional short-lived Session lookup cache; the Store stays authoritative. |

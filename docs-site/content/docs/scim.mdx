@@ -1,0 +1,42 @@
+---
+title: SCIM provisioning
+description: Provision Users and Groups from a corporate directory, with group-to-role projection.
+---
+
+SCIM 2.0 is opt-in and handles **provisioning**, not sign-in. It lets a directory create, update, deactivate and delete Users and Groups in Signet. All new state stays behind optional application-owned adapters, so no User column or schema migration is required.
+
+## Configure
+
+```go
+cfg.SCIM = &signet.SCIMConfig{
+    Store: mySCIMStore,          // external IDs and directory groups
+    Token: myProvisioningToken,  // bearer token for the /scim/* endpoints
+    Projector: func(ctx context.Context, group *signet.SCIMGroup) error {
+        return myRoles.Project(ctx, group)
+    },
+}
+```
+
+Both `Store` and `Token` are required; `New` returns `ErrInvalidSCIMConfig` otherwise. The token is compared in constant time. A missing or wrong bearer token returns 401 with an Audit event.
+
+## Endpoints
+
+The SCIM server is mounted under your configured `PathPrefix`, for example `/auth/scim/Users` and `/auth/scim/Groups`. It follows the SCIM 2.0 resource shape:
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/scim/Users` | List Users |
+| `POST` | `/scim/Users` | Create a User |
+| `GET` | `/scim/Users/{id}` | Read a User |
+| `PATCH` | `/scim/Users/{id}` | Update fields including `active` |
+| `DELETE` | `/scim/Users/{id}` | Delete a User |
+| `GET` | `/scim/Groups` | List Groups |
+| `POST` | `/scim/Groups` | Create a Group |
+| `PATCH` | `/scim/Groups/{id}` | Update members |
+| `DELETE` | `/scim/Groups/{id}` | Delete a Group |
+
+Directory groups are passed to `Projector`, where your application maps them to roles or Organization memberships. Signet owns no group-to-role policy.
+
+Provisioning events (`scim_user_created`, `scim_user_updated`, `scim_user_deleted`, `scim_group_created`, `scim_group_updated`, `scim_group_deleted`) are emitted through the configured Audit sink. Bulk operations and schema-discovery endpoints are not included in this phase.
+
+See [Organization SSO](/docs/organization-sso) for the authentication side of enterprise identity.

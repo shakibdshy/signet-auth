@@ -75,6 +75,7 @@ type API interface {
 	BeginDeviceAuthorization(context.Context, core.DeviceAuthorizeInput) (*core.DeviceAuthorizeResult, error)
 	ApproveDeviceAuthorization(context.Context, core.DeviceApproveInput) error
 	ExchangeDeviceAuthorization(context.Context, string) (*core.OAuthTokenResult, error)
+	SCIMHandler() http.Handler
 	CreateSSOConnection(context.Context, core.CreateSSOConnectionInput) (*core.SSOConnectionInfo, error)
 	ListSSOConnections(context.Context, string) ([]*core.SSOConnectionInfo, error)
 	DeleteSSOConnection(context.Context, string, string) error
@@ -201,6 +202,10 @@ func (h *Handler) Handler() http.Handler {
 		routes[prefix+"/"+endpoint.Name] = endpoint.Name
 	}
 	base := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, prefix+"/scim/") {
+			http.StripPrefix(prefix+"/scim", h.api.SCIMHandler()).ServeHTTP(w, r)
+			return
+		}
 		endpoint, ok := routes[r.URL.Path]
 		if !ok {
 			http.NotFound(w, r)
