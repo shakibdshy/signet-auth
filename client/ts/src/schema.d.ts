@@ -686,6 +686,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/saml/acs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** /saml/acs */
+        post: operations["saml/acs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/saml/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** /saml/start */
+        post: operations["saml/start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/send-magic-link": {
         parameters: {
             query?: never;
@@ -1107,7 +1141,7 @@ export interface components {
         };
         ApiError: {
             /** @enum {string} */
-            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "sso_connection_not_found" | "sso_domain_not_verified" | "sso_invalid_assertion" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
+            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "saml_connection_not_found" | "saml_invalid_assertion" | "saml_replay" | "sso_connection_not_found" | "sso_domain_not_verified" | "sso_invalid_assertion" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
             message: string;
         };
         BanUserInput: {
@@ -1153,6 +1187,7 @@ export interface components {
             domains: string[];
             issuer: string;
             organization_id: string;
+            protocol: string;
         };
         DeleteSSOConnectionInput: {
             id: string;
@@ -1288,6 +1323,18 @@ export interface components {
         };
         RevokeSessionInput: {
             SessionID: string;
+        };
+        SAMLACSResult: {
+            organization_id: string;
+            session_token: string;
+        };
+        SAMLStartInput: {
+            email: string;
+            organization_id: string;
+        };
+        SAMLStartResult: {
+            state: string;
+            url: string;
         };
         SSOCallbackResult: {
             organization_id: string;
@@ -5363,6 +5410,194 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "saml/acs_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SAMLACSResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "saml/start_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SAMLStartInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SAMLStartResult"];
+                };
             };
             /** @description Bad Request */
             400: {

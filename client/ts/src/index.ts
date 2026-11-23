@@ -220,6 +220,12 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.POST("/oauth/device/authorize", { body }));
 		},
 
+		async startSAMLSignIn(
+			body: RequestBody<"/saml/start", "post">,
+		): Promise<SuccessBody<"/saml/start", "post", 200>> {
+			return unwrap(await api.POST("/saml/start", { body }));
+		},
+
 		async startSSOSignIn(
 			body: RequestBody<"/sso/start", "post">,
 		): Promise<SuccessBody<"/sso/start", "post", 200>> {

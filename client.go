@@ -17,6 +17,7 @@ import (
 	"github.com/shakibdshy/signet/internal/orgadmin"
 	"github.com/shakibdshy/signet/internal/passkey"
 	"github.com/shakibdshy/signet/internal/ratelimit"
+	"github.com/shakibdshy/signet/internal/samlsp"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/sso"
@@ -247,9 +248,13 @@ func New(cfg Config) (*Client, error) {
 	if cfg.AuthorizationServer != nil {
 		c.oauthserver = oauthserver.New(&cfg, c.tokens, c.jwtService, cfg.Logger, sessions.Resolve)
 	}
+	var samlService *samlsp.Service
+	if cfg.SSO != nil {
+		samlService, _ = samlsp.New()
+	}
 	c.sso = sso.New(sso.Deps{
 		Config: &cfg, Store: cfg.Store, Tokens: c.tokens, Sessions: sessions, Logger: cfg.Logger,
-		Resolve: sessions.Resolve,
+		Resolve: sessions.Resolve, SAML: samlService,
 	})
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
@@ -815,6 +820,16 @@ func (c *Client) CompleteSSOSignIn(ctx context.Context, in SSOCallbackInput) (*S
 	return c.sso.Callback(ctx, in)
 }
 
+// StartSAMLSignIn begins an SP-initiated SAML ceremony.
+func (c *Client) StartSAMLSignIn(ctx context.Context, in SAMLStartInput) (*SAMLStartResult, error) {
+	return c.sso.StartSAML(ctx, in)
+}
+
+// CompleteSAMLSignIn validates a SAML assertion and creates a Session.
+func (c *Client) CompleteSAMLSignIn(ctx context.Context, state string, r *http.Request) (*SAMLACSResult, error) {
+	return c.sso.CompleteSAML(ctx, state, r)
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -1021,6 +1036,12 @@ func (a httpAdapter) ApproveDeviceAuthorization(ctx context.Context, in DeviceAp
 }
 func (a httpAdapter) ExchangeDeviceAuthorization(ctx context.Context, code string) (*OAuthTokenResult, error) {
 	return a.Client.ExchangeDeviceAuthorization(ctx, code)
+}
+func (a httpAdapter) StartSAMLSignIn(ctx context.Context, in SAMLStartInput) (*SAMLStartResult, error) {
+	return a.Client.StartSAMLSignIn(ctx, in)
+}
+func (a httpAdapter) CompleteSAMLSignIn(ctx context.Context, state string, r *http.Request) (*SAMLACSResult, error) {
+	return a.Client.CompleteSAMLSignIn(ctx, state, r)
 }
 func (a httpAdapter) CreateSSOConnection(ctx context.Context, in CreateSSOConnectionInput) (*SSOConnectionInfo, error) {
 	return a.Client.CreateSSOConnection(ctx, in)

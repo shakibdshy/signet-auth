@@ -38,6 +38,8 @@ var namedTypes = map[string]reflect.Type{
 	"SSOStartResult":                reflect.TypeOf(core.SSOStartResult{}),
 	"SSOCallbackResult":             reflect.TypeOf(core.SSOCallbackResult{}),
 	"SSOConnectionInfo":             reflect.TypeOf(core.SSOConnectionInfo{}),
+	"SAMLStartResult":               reflect.TypeOf(core.SAMLStartResult{}),
+	"SAMLACSResult":                 reflect.TypeOf(core.SAMLACSResult{}),
 }
 
 type oasDocument struct {

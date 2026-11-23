@@ -24,6 +24,7 @@
     "api-keys",
     "organizations",
     "organization-sso",
+    "saml",
     "admin-management",
     "passkeys",
     "verification-and-reset",

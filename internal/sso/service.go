@@ -7,11 +7,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet/internal/samlsp"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/token"
@@ -27,6 +30,7 @@ type Deps struct {
 	Sessions *session.Service
 	Logger   *slog.Logger
 	Resolve  func(context.Context, string) (*core.User, error)
+	SAML     *samlsp.Service
 }
 
 // Service implements the public SSO operations.
@@ -147,6 +151,99 @@ func (s *Service) DeleteConnection(ctx context.Context, id, sessionToken string)
 	}
 	s.emit(ctx, audit.SSOConnectionDeleted, id, "", "success")
 	return nil
+}
+
+// StartSAML begins an SP-initiated SAML ceremony.
+func (s *Service) StartSAML(ctx context.Context, in core.SAMLStartInput) (*core.SAMLStartResult, error) {
+	if !s.Enabled() || s.deps.SAML == nil {
+		return nil, core.ErrForbidden
+	}
+	connection, err := s.resolveConnection(ctx, core.SSOStartInput{
+		OrganizationID: in.OrganizationID, Email: in.Email,
+	})
+	if err != nil || connection.Protocol != "saml" {
+		return nil, core.ErrSAMLConnectionNotFound
+	}
+	spURL, err := url.Parse(s.deps.Config.AppURL)
+	if err != nil || spURL.Host == "" {
+		return nil, core.ErrSAMLConnectionNotFound
+	}
+	connection.SPHost = spURL.Host
+	connection.SPEntityID = strings.TrimRight(s.deps.Config.AppURL, "/") + "/saml/metadata"
+	result, err := s.deps.SAML.Start(ctx, connection, "/saml/acs")
+	if err != nil {
+		return nil, err
+	}
+	state, _, err := s.deps.Tokens.IssueWithData(ctx, "", core.TokenOAuthState, stateTTL,
+		`{"protocol":"saml","connection_id":"`+connection.ID+`"}`)
+	if err != nil {
+		return nil, err
+	}
+	return &core.SAMLStartResult{URL: result.URL, State: state}, nil
+}
+
+// CompleteSAML validates an assertion and provisions a Session.
+func (s *Service) CompleteSAML(ctx context.Context, state string, request *http.Request) (*core.SAMLACSResult, error) {
+	if !s.Enabled() || s.deps.SAML == nil {
+		return nil, core.ErrForbidden
+	}
+	if _, err := s.deps.Tokens.Consume(ctx, core.TokenOAuthState, state); err != nil {
+		return nil, core.ErrSAMLInvalidAssertion
+	}
+	raw, err := token.ParseData(state)
+	if err != nil || !strings.Contains(raw, `"protocol":"saml"`) {
+		return nil, core.ErrSAMLInvalidAssertion
+	}
+	var data struct {
+		ConnectionID string `json:"connection_id"`
+	}
+	_ = json.Unmarshal([]byte(raw), &data)
+	connection, err := s.deps.Config.SSO.Connections.ByID(ctx, data.ConnectionID)
+	if err != nil {
+		return nil, core.ErrSAMLConnectionNotFound
+	}
+	spURL, _ := url.Parse(s.deps.Config.AppURL)
+	connection.SPHost = spURL.Host
+	connection.SPEntityID = strings.TrimRight(s.deps.Config.AppURL, "/") + "/saml/metadata"
+	assertion, err := s.deps.SAML.ACS(ctx, connection, "/saml/acs", request.FormValue("SAMLResponse"))
+	if err != nil {
+		return nil, err
+	}
+	claims := &core.SSOClaims{
+		Subject: assertion.NameID,
+		Email:   firstAttribute(assertion.Attributes, "email", "emailaddress", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"),
+		Name:    firstAttribute(assertion.Attributes, "name", "displayname"),
+	}
+	claims.EmailVerified = claims.Email != ""
+	if s.deps.Config.SSO.MapClaims != nil {
+		if mapped := s.deps.Config.SSO.MapClaims(ctx, claims); mapped != nil {
+			claims = mapped
+		}
+	}
+	if claims.Subject == "" || claims.Email == "" || !claims.EmailVerified {
+		return nil, core.ErrSAMLInvalidAssertion
+	}
+	user, err := s.provision(ctx, &core.OAuthIdentity{
+		ProviderUserID: claims.Subject, Email: claims.Email, EmailVerified: claims.EmailVerified,
+	}, connection)
+	if err != nil {
+		return nil, err
+	}
+	sessionToken, err := s.deps.Sessions.Create(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	s.emit(ctx, audit.SSOSignIn, user.ID, connection.OrganizationID, "success")
+	return &core.SAMLACSResult{SessionToken: sessionToken, OrganizationID: connection.OrganizationID}, nil
+}
+
+func firstAttribute(attributes map[string][]string, names ...string) string {
+	for _, name := range names {
+		if values := attributes[name]; len(values) > 0 {
+			return values[0]
+		}
+	}
+	return ""
 }
 
 // resolveConnection finds a connection by Organization ID or email domain.

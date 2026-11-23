@@ -80,6 +80,8 @@ type API interface {
 	DeleteSSOConnection(context.Context, string, string) error
 	StartSSOSignIn(context.Context, core.SSOStartInput) (*core.SSOStartResult, error)
 	CompleteSSOSignIn(context.Context, core.SSOCallbackInput) (*core.SSOCallbackResult, error)
+	StartSAMLSignIn(context.Context, core.SAMLStartInput) (*core.SAMLStartResult, error)
+	CompleteSAMLSignIn(context.Context, string, *http.Request) (*core.SAMLACSResult, error)
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -164,6 +166,8 @@ var Endpoints = []Endpoint{
 	{Name: "oauth/device/approve"},
 	{Name: "sso/start", Anonymous: true},
 	{Name: "sso/callback", Anonymous: true},
+	{Name: "saml/start", Anonymous: true},
+	{Name: "saml/acs", Anonymous: true},
 	{Name: "sso/connections"},
 
 	{Name: "accounts"},
@@ -277,6 +281,10 @@ func (h *Handler) Handler() http.Handler {
 			h.handleDeviceToken(w, r)
 		case "oauth/device/approve":
 			h.handleDeviceApprove(w, r)
+		case "saml/start":
+			h.handleSAMLStart(w, r)
+		case "saml/acs":
+			h.handleSAMLACS(w, r)
 		case "sso/start":
 			h.handleSSOStart(w, r)
 		case "sso/callback":
@@ -1274,6 +1282,46 @@ func (h *Handler) handleDeviceApprove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleSAMLStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.SAMLStartInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	result, err := h.api.StartSAMLSignIn(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	for _, cookie := range result.Cookies {
+		http.SetCookie(w, cookie)
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleSAMLACS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	result, err := h.api.CompleteSAMLSignIn(r.Context(), r.FormValue("state"), r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	h.api.SetActiveOrganizationCookie(w, result.OrganizationID)
+	h.api.SetLastMethodCookie(w, "saml")
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) handleSSOStart(w http.ResponseWriter, r *http.Request) {

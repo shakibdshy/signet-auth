@@ -1,0 +1,48 @@
+---
+title: SAML SSO
+description: Per-organization SAML 2.0 Web SSO with signed assertions.
+---
+
+SAML 2.0 Web SSO is a protocol variant of an existing SSO connection. Signet acts as a Service provider, supports SP-initiated HTTP-POST binding with signed AuthnRequests, and provisions Users through the same just-in-time path as OIDC SSO.
+
+## Configure a SAML connection
+
+```go
+cfg.SSO = &signet.SSOConfig{
+    Connections: myConnectionStore,
+    VerifyDomain: func(ctx context.Context, orgID, domain string) bool {
+        return myDNS.Check(ctx, orgID, domain)
+    },
+}
+connection, err := auth.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
+    OrganizationID: orgID,
+    Protocol:       "saml",
+    Issuer:         "https://idp.acme.com",
+    Domains:        []string{"acme.com"},
+    SessionToken:   sessionToken,
+    Metadata:       pinnedIdPMetadataXML,
+})
+```
+
+IdP metadata is pinned in the connection; URLs must be HTTPS and changes require an explicit connection update. XML signature handling is isolated in an internal package using a pinned protocol library.
+
+## Sign in
+
+```go
+start, err := auth.StartSAMLSignIn(ctx, signet.SAMLStartInput{OrganizationID: orgID})
+// start.URL is the IdP destination; start.Cookies must be set on the response.
+
+result, err := auth.CompleteSAMLSignIn(ctx, stateFromBrowser, r)
+// result.SessionToken is a normal Session; result.OrganizationID is the active org.
+```
+
+Assertions must be signed and carry the configured issuer, SP audience, a valid validity window and a matching `InResponseTo`. `NameID` becomes the external Subject; attribute names for email and name are configurable with `SSOConfig.MapClaims`. Missing or unverified email is rejected. A successful assertion creates a User with a namespaced Account, adds the User to the Organization with the configured default role, sets the active-organization cookie and records `saml` as the Last sign-in method.
+
+## HTTP endpoints
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/saml/start` | none | Start an SP-initiated ceremony |
+| `POST` | `/saml/acs` | none | Assertion consumer service |
+
+`SAMLStartResult` carries the IdP URL, tracking cookies and state Token; `SAMLACSResult` carries the Session and Organization. Connection management continues through `/sso/connections` with `protocol: "saml"`. SLO, artifact binding and IdP-initiated SSO are not included.
