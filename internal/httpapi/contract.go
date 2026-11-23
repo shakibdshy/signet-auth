@@ -196,6 +196,26 @@ func ContractFor() Contract {
 			{Name: "oauth/device/approve", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.DeviceApproveInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "sso/start", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SSOStartInput{}),
+				Response: ResponseSpec{Ref: "SSOStartResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "sso/callback", Anonymous: true, Methods: []Method{{
+				Verb: "GET",
+				Parameters: []Parameter{
+					{Name: "state", In: "query", Required: true, Type: "string"},
+					{Name: "code", In: "query", Required: true, Type: "string"},
+				},
+				Response: ResponseSpec{Ref: "SSOCallbackResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "sso/connections", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{typeField("connections", []core.SSOConnectionInfo{})}}, Status: http.StatusOK,
+			}, {
+				Verb: "POST", Request: reflect.TypeOf(core.CreateSSOConnectionInput{}),
+				Response: ResponseSpec{Ref: "SSOConnectionInfo"}, Status: http.StatusCreated,
+			}, {
+				Verb: "DELETE", Request: reflect.TypeOf(core.DeleteSSOConnectionInput{}), Status: http.StatusOK,
+			}}},
 			{Name: "set-active-organization", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SetActiveOrganizationInput{}), Status: http.StatusOK,
 			}}},
@@ -347,6 +367,9 @@ func ContractFor() Contract {
 			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
 			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
 			{core.ErrForbidden, http.StatusForbidden, "forbidden", "permission denied"},
+			{core.ErrSSOConnectionNotFound, http.StatusNotFound, "sso_connection_not_found", "sso connection not found"},
+			{core.ErrSSODomainNotVerified, http.StatusForbidden, "sso_domain_not_verified", "sso domain not verified"},
+			{core.ErrSSOInvalidAssertion, http.StatusUnauthorized, "sso_invalid_assertion", "sso assertion rejected"},
 			{core.ErrPasswordCompromised, http.StatusBadRequest, "password_compromised", "password has been compromised"},
 			{core.ErrCaptchaRequired, http.StatusBadRequest, "invalid_input", "captcha token required"},
 			{core.ErrCaptchaInvalid, http.StatusBadRequest, "invalid_input", "captcha verification failed"},

@@ -19,6 +19,7 @@ import (
 	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
+	"github.com/shakibdshy/signet/internal/sso"
 	"github.com/shakibdshy/signet/internal/token"
 
 	"github.com/shakibdshy/signet/internal/auth"
@@ -45,6 +46,7 @@ type Client struct {
 	orgadmin              *orgadmin.Service
 	passkeys              *passkey.Service
 	oauthserver           *oauthserver.Service
+	sso                   *sso.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
@@ -128,6 +130,14 @@ func New(cfg Config) (*Client, error) {
 	if cfg.AuthorizationServer != nil {
 		if cfg.JWT == nil || cfg.AuthorizationServer.Devices == nil {
 			return nil, ErrInvalidAuthorizationServerConfig
+		}
+	}
+	if cfg.SSO != nil {
+		if cfg.SSO.Connections == nil {
+			return nil, ErrInvalidSSOConfig
+		}
+		if cfg.SSO.Provider == nil {
+			cfg.SSO.Provider = sso.NewProviderFactory(cfg.SSO.MapClaims)
 		}
 	}
 	if cfg.OAuth != nil {
@@ -237,6 +247,10 @@ func New(cfg Config) (*Client, error) {
 	if cfg.AuthorizationServer != nil {
 		c.oauthserver = oauthserver.New(&cfg, c.tokens, c.jwtService, cfg.Logger, sessions.Resolve)
 	}
+	c.sso = sso.New(sso.Deps{
+		Config: &cfg, Store: cfg.Store, Tokens: c.tokens, Sessions: sessions, Logger: cfg.Logger,
+		Resolve: sessions.Resolve,
+	})
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
 	if cfg.OAuth != nil {
@@ -776,6 +790,31 @@ func (c *Client) ExchangeDeviceAuthorization(ctx context.Context, deviceCode str
 	return c.oauthserver.DeviceToken(ctx, deviceCode)
 }
 
+// CreateSSOConnection stores a verified SSO connection.
+func (c *Client) CreateSSOConnection(ctx context.Context, in CreateSSOConnectionInput) (*SSOConnectionInfo, error) {
+	return c.sso.CreateConnection(ctx, in)
+}
+
+// ListSSOConnections returns safe views of configured SSO connections.
+func (c *Client) ListSSOConnections(ctx context.Context, sessionToken string) ([]*SSOConnectionInfo, error) {
+	return c.sso.ListConnections(ctx, sessionToken)
+}
+
+// DeleteSSOConnection removes an SSO connection.
+func (c *Client) DeleteSSOConnection(ctx context.Context, id, sessionToken string) error {
+	return c.sso.DeleteConnection(ctx, id, sessionToken)
+}
+
+// StartSSOSignIn begins an SSO ceremony.
+func (c *Client) StartSSOSignIn(ctx context.Context, in SSOStartInput) (*SSOStartResult, error) {
+	return c.sso.Start(ctx, in)
+}
+
+// CompleteSSOSignIn verifies the assertion and creates a Session.
+func (c *Client) CompleteSSOSignIn(ctx context.Context, in SSOCallbackInput) (*SSOCallbackResult, error) {
+	return c.sso.Callback(ctx, in)
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -982,6 +1021,21 @@ func (a httpAdapter) ApproveDeviceAuthorization(ctx context.Context, in DeviceAp
 }
 func (a httpAdapter) ExchangeDeviceAuthorization(ctx context.Context, code string) (*OAuthTokenResult, error) {
 	return a.Client.ExchangeDeviceAuthorization(ctx, code)
+}
+func (a httpAdapter) CreateSSOConnection(ctx context.Context, in CreateSSOConnectionInput) (*SSOConnectionInfo, error) {
+	return a.Client.CreateSSOConnection(ctx, in)
+}
+func (a httpAdapter) ListSSOConnections(ctx context.Context, token string) ([]*SSOConnectionInfo, error) {
+	return a.Client.ListSSOConnections(ctx, token)
+}
+func (a httpAdapter) DeleteSSOConnection(ctx context.Context, id, token string) error {
+	return a.Client.DeleteSSOConnection(ctx, id, token)
+}
+func (a httpAdapter) StartSSOSignIn(ctx context.Context, in SSOStartInput) (*SSOStartResult, error) {
+	return a.Client.StartSSOSignIn(ctx, in)
+}
+func (a httpAdapter) CompleteSSOSignIn(ctx context.Context, in SSOCallbackInput) (*SSOCallbackResult, error) {
+	return a.Client.CompleteSSOSignIn(ctx, in)
 }
 func (a httpAdapter) CookieName() string { return a.cookies.Name() }
 

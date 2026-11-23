@@ -220,6 +220,34 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.POST("/oauth/device/authorize", { body }));
 		},
 
+		async startSSOSignIn(
+			body: RequestBody<"/sso/start", "post">,
+		): Promise<SuccessBody<"/sso/start", "post", 200>> {
+			return unwrap(await api.POST("/sso/start", { body }));
+		},
+
+		async completeSSOSignIn(
+			state: string, code: string,
+		): Promise<SuccessBody<"/sso/callback", "get", 200>> {
+			return unwrap(await api.GET("/sso/callback", { params: { query: { state, code } } }));
+		},
+
+		async listSSOConnections(): Promise<SuccessBody<"/sso/connections", "get", 200>> {
+			return unwrap(await api.GET("/sso/connections"));
+		},
+
+		async createSSOConnection(
+			body: RequestBody<"/sso/connections", "post">,
+		): Promise<SuccessBody<"/sso/connections", "post", 201>> {
+			return unwrap(await api.POST("/sso/connections", { body, headers: await csrfHeaders() }));
+		},
+
+		async deleteSSOConnection(
+			id: string,
+		): Promise<SuccessBody<"/sso/connections", "delete", 200>> {
+			return unwrap(await api.DELETE("/sso/connections", { body: { id }, headers: await csrfHeaders() }));
+		},
+
 		async deviceToken(
 			body: RequestBody<"/oauth/device/token", "post">,
 		): Promise<SuccessBody<"/oauth/device/token", "post", 200>> {

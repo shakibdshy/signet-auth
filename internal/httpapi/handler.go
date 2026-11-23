@@ -75,6 +75,11 @@ type API interface {
 	BeginDeviceAuthorization(context.Context, core.DeviceAuthorizeInput) (*core.DeviceAuthorizeResult, error)
 	ApproveDeviceAuthorization(context.Context, core.DeviceApproveInput) error
 	ExchangeDeviceAuthorization(context.Context, string) (*core.OAuthTokenResult, error)
+	CreateSSOConnection(context.Context, core.CreateSSOConnectionInput) (*core.SSOConnectionInfo, error)
+	ListSSOConnections(context.Context, string) ([]*core.SSOConnectionInfo, error)
+	DeleteSSOConnection(context.Context, string, string) error
+	StartSSOSignIn(context.Context, core.SSOStartInput) (*core.SSOStartResult, error)
+	CompleteSSOSignIn(context.Context, core.SSOCallbackInput) (*core.SSOCallbackResult, error)
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -157,6 +162,10 @@ var Endpoints = []Endpoint{
 	{Name: "oauth/device/authorize", Anonymous: true},
 	{Name: "oauth/device/token", Anonymous: true},
 	{Name: "oauth/device/approve"},
+	{Name: "sso/start", Anonymous: true},
+	{Name: "sso/callback", Anonymous: true},
+	{Name: "sso/connections"},
+
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -268,6 +277,13 @@ func (h *Handler) Handler() http.Handler {
 			h.handleDeviceToken(w, r)
 		case "oauth/device/approve":
 			h.handleDeviceApprove(w, r)
+		case "sso/start":
+			h.handleSSOStart(w, r)
+		case "sso/callback":
+			h.handleSSOCallback(w, r)
+		case "sso/connections":
+			h.handleSSOConnections(w, r)
+
 		case "set-active-organization":
 			h.handleSetActiveOrganization(w, r)
 		case "active-organization":
@@ -1255,6 +1271,101 @@ func (h *Handler) handleDeviceApprove(w http.ResponseWriter, r *http.Request) {
 	in.UserID = user.ID
 	if err := h.api.ApproveDeviceAuthorization(r.Context(), in); err != nil {
 		writeOAuthError(w, "invalid_grant", "device code rejected")
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleSSOStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.SSOStartInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	result, err := h.api.StartSSOSignIn(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	result, err := h.api.CompleteSSOSignIn(r.Context(), core.SSOCallbackInput{
+		State: r.URL.Query().Get("state"), Code: r.URL.Query().Get("code"),
+	})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	h.api.SetActiveOrganizationCookie(w, result.OrganizationID)
+	h.api.SetLastMethodCookie(w, "sso")
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleSSOConnections(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		result, err := h.api.ListSSOConnections(r.Context(), h.api.SessionTokenFromRequest(r))
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	case http.MethodDelete:
+		h.handleSSODelete(w, r)
+	case http.MethodPost:
+		var in core.CreateSSOConnectionInput
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+			return
+		}
+		in.SessionToken = h.api.SessionTokenFromRequest(r)
+		result, err := h.api.CreateSSOConnection(r.Context(), in)
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, result)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+	_ = user
+}
+
+func (h *Handler) handleSSODelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if _, ok := h.api.Authenticate(w, r, true); !ok {
+		return
+	}
+	var in struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	if err := h.api.DeleteSSOConnection(r.Context(), in.ID, h.api.SessionTokenFromRequest(r)); err != nil {
+		writeAuthError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

@@ -173,3 +173,13 @@ optional application-supplied adapters described in [Authorization](/docs/author
 | `ExchangeDeviceAuthorization(ctx, string) (*OAuthTokenResult, error)` | Poll for device tokens. |
 
 Types: `AuthorizationServerConfig`, `OAuthClient`, `OAuthClientStore`, `DeviceAuthorization`, `DeviceStore`, `OAuthScope`, `OAuthAuthorizeInput`, `OAuthAuthorizeResult`, `OAuthTokenInput`, `OAuthTokenResult`, `DeviceAuthorizeInput`, `DeviceAuthorizeResult`, `DeviceApproveInput`.
+
+## Organization SSO
+
+| Method | Purpose |
+| --- | --- |
+| `CreateSSOConnection(ctx, CreateSSOConnectionInput) (*SSOConnectionInfo, error)` | Store a verified connection. |
+| `ListSSOConnections(ctx, string) ([]*SSOConnectionInfo, error)` | List connections. |
+| `DeleteSSOConnection(ctx, string, string) error` | Delete a connection. |
+| `StartSSOSignIn(ctx, SSOStartInput) (*SSOStartResult, error)` | Begin an SSO ceremony. |
+| `CompleteSSOSignIn(ctx, SSOCallbackInput) (*SSOCallbackResult, error)` | Verify and create a Session. |

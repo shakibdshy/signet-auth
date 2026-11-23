@@ -421,6 +421,97 @@ type DeviceApproveInput struct {
 	SessionToken string `json:"-"`
 }
 
+// SSOConnection is an Organization's OIDC provider configuration.
+type SSOConnection struct {
+	ID             string
+	OrganizationID string
+	Issuer         string
+	ClientID       string
+	ClientSecret   string
+	Domains        []string
+	DefaultRole    string
+}
+
+// SSOConnectionStore persists SSO connections. It is optional.
+type SSOConnectionStore interface {
+	Create(context.Context, *SSOConnection) error
+	ByOrganization(context.Context, string) (*SSOConnection, error)
+	ByID(context.Context, string) (*SSOConnection, error)
+	ByDomain(context.Context, string) (*SSOConnection, error)
+	List(context.Context) ([]*SSOConnection, error)
+	Delete(context.Context, string) error
+}
+
+// SSOProviderFactory builds an OIDC provider for a connection.
+type SSOProviderFactory func(context.Context, *SSOConnection) (OAuthProvider, error)
+
+// SSOClaims are the normalized identity claims from an SSO assertion.
+type SSOClaims struct {
+	Subject       string
+	Email         string
+	EmailVerified bool
+	Name          string
+}
+
+// SSOConfig enables per-organization OIDC SSO.
+type SSOConfig struct {
+	Connections  SSOConnectionStore
+	VerifyDomain func(context.Context, string, string) bool
+	DefaultRole  string
+	Provider     SSOProviderFactory
+	MapClaims    func(context.Context, *SSOClaims) *SSOClaims
+}
+
+// SSOConnectionInfo is the safe public view of an SSO connection.
+type SSOConnectionInfo struct {
+	ID             string   `json:"id"`
+	OrganizationID string   `json:"organization_id"`
+	Issuer         string   `json:"issuer"`
+	Domains        []string `json:"domains"`
+	DefaultRole    string   `json:"default_role"`
+}
+
+// DeleteSSOConnectionInput identifies a connection to delete.
+type DeleteSSOConnectionInput struct {
+	ID string `json:"id"`
+}
+
+// SSOStartInput starts an SSO sign-in.
+type SSOStartInput struct {
+	OrganizationID string `json:"organization_id"`
+	Email          string `json:"email"`
+	RedirectURI    string `json:"redirect_uri"`
+}
+
+// SSOStartResult carries the provider URL and single-use state Token.
+type SSOStartResult struct {
+	URL   string `json:"url"`
+	State string `json:"state"`
+}
+
+// SSOCallbackInput completes an SSO sign-in.
+type SSOCallbackInput struct {
+	State string `json:"state"`
+	Code  string `json:"code"`
+}
+
+// SSOCallbackResult carries the Session and selected organization.
+type SSOCallbackResult struct {
+	SessionToken   string `json:"session_token"`
+	OrganizationID string `json:"organization_id"`
+}
+
+// CreateSSOConnectionInput describes a new SSO connection.
+type CreateSSOConnectionInput struct {
+	OrganizationID string   `json:"organization_id"`
+	Issuer         string   `json:"issuer"`
+	ClientID       string   `json:"client_id"`
+	ClientSecret   string   `json:"client_secret"`
+	Domains        []string `json:"domains"`
+	DefaultRole    string   `json:"default_role"`
+	SessionToken   string   `json:"-"`
+}
+
 // AuditSink receives Audit events. Implementations own persistence and retention.
 type AuditSink interface {
 	Record(context.Context, AuditEvent) error
@@ -876,6 +967,7 @@ type Config struct {
 	AuditSink                AuditSink
 	AutoSignIn               *AutoSignInConfig
 	AuthorizationServer      *AuthorizationServerConfig
+	SSO                      *SSOConfig
 	Passkeys                 *PasskeysConfig
 	Authorizer               Authorizer
 	AuthorizeIn              AuthorizeIn
@@ -1343,6 +1435,14 @@ var (
 	ErrInvalidAuthorizationServerConfig = errors.New("signet: invalid authorization server configuration")
 	// ErrOAuthSlowDown reports that a device is polling too quickly.
 	ErrOAuthSlowDown = errors.New("signet: oauth slow down")
+	// ErrSSOConnectionNotFound reports an unknown SSO connection.
+	ErrSSOConnectionNotFound = errors.New("signet: sso connection not found")
+	// ErrSSODomainNotVerified reports an unverified SSO domain.
+	ErrSSODomainNotVerified = errors.New("signet: sso domain not verified")
+	// ErrSSOInvalidAssertion reports a rejected SSO assertion.
+	ErrSSOInvalidAssertion = errors.New("signet: sso invalid assertion")
+	// ErrInvalidSSOConfig reports a misconfigured SSO feature.
+	ErrInvalidSSOConfig = errors.New("signet: invalid sso configuration")
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = errors.New("signet: forbidden")
 )
