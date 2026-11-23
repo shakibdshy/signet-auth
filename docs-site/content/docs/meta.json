@@ -17,6 +17,7 @@
     "---Integrations---",
     "google",
     "github",
+    "oidc",
     "---Verification and recovery---",
     "verification-and-reset",
     "passwordless-verification",

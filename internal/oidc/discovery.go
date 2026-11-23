@@ -26,14 +26,14 @@ type Document struct {
 
 // SafeHTTP returns a client that refuses redirects, with a bounded timeout.
 func SafeHTTP(client *http.Client) *http.Client {
-	copy := *client
-	copy.CheckRedirect = func(*http.Request, []*http.Request) error {
+	cloned := *client
+	cloned.CheckRedirect = func(*http.Request, []*http.Request) error {
 		return errors.New("oidc: redirects are not allowed")
 	}
-	if copy.Timeout == 0 {
-		copy.Timeout = 10 * time.Second
+	if cloned.Timeout == 0 {
+		cloned.Timeout = 10 * time.Second
 	}
-	return &copy
+	return &cloned
 }
 
 // requireHTTPS validates a metadata URL.

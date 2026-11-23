@@ -292,7 +292,7 @@ func TestOIDCProviderIDConflicts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}
-	for _, name := range []string{"google", "github", "acme"} {
+	{
 		cfg := testutil.NewConfig()
 		cfg.Store = testutil.NewStore()
 		cfg.Mailer = testutil.NewMailer()
@@ -303,11 +303,9 @@ func TestOIDCProviderIDConflicts(t *testing.T) {
 			AllowedRedirects: []string{"https://app.example.com/callback"},
 			StateKey:         make([]byte, 32),
 		}
-		_ = name
 		if _, err := signet.New(cfg); !errors.Is(err, signet.ErrOAuthProviderConflict) {
 			t.Fatalf("duplicate provider error = %v", err)
 		}
-		break
 	}
 }
 

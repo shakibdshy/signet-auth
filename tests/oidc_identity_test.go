@@ -43,8 +43,8 @@ func newOIDCFixture(t *testing.T) *oidcFixture {
 	}
 	f.jwks = map[string]any{"keys": []any{map[string]any{
 		"kty": "RSA", "kid": "test-key", "alg": "RS256",
-		"n": base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()),
-		"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.PublicKey.E)).Bytes()),
+		"n": base64.RawURLEncoding.EncodeToString(key.N.Bytes()),
+		"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes()),
 	}}}
 	f.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		base := f.server.URL
@@ -119,9 +119,9 @@ func (f *oidcFixture) serverURL() string {
 	return f.server.URL
 }
 
-func (f *oidcFixture) providerConfig(id string) oidc.Config {
+func (f *oidcFixture) providerConfig() oidc.Config {
 	return oidc.Config{
-		ProviderID: id, ClientID: "client-id", ClientSecret: "client-secret",
+		ProviderID: "acme", ClientID: "client-id", ClientSecret: "client-secret",
 		Issuer: f.server.URL, HTTPClient: f.server.Client(),
 	}
 }
@@ -145,11 +145,11 @@ func (f *oidcFixture) client(t *testing.T, provider signet.OAuthProvider) *signe
 	return client
 }
 
-func (f *oidcFixture) signIn(t *testing.T, client *signet.Client, id string) (*signet.OAuthCallbackResult, error) {
+func (f *oidcFixture) signIn(t *testing.T, client *signet.Client) (*signet.OAuthCallbackResult, error) {
 	t.Helper()
 	ctx := context.Background()
 	started, err := client.OAuthStart(ctx, signet.OAuthStartInput{
-		Provider: id, Redirect: "https://app.example.com/callback",
+		Provider: "acme", Redirect: "https://app.example.com/callback",
 	})
 	if err != nil {
 		t.Fatalf("OAuthStart: %v", err)
@@ -167,12 +167,12 @@ func (f *oidcFixture) signIn(t *testing.T, client *signet.Client, id string) (*s
 func TestOIDCIdentityVerifiedIDToken(t *testing.T) {
 	f := newOIDCFixture(t)
 	defer f.server.Close()
-	provider, err := oidc.NewProvider(context.Background(), f.providerConfig("acme"))
+	provider, err := oidc.NewProvider(context.Background(), f.providerConfig())
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}
 	client := f.client(t, provider)
-	result, err := f.signIn(t, client, "acme")
+	result, err := f.signIn(t, client)
 	if err != nil {
 		t.Fatalf("OAuthCallback: %v", err)
 	}
@@ -197,12 +197,12 @@ func TestOIDCIdentityRejectsBadTokenClaims(t *testing.T) {
 			defer f.server.Close()
 			f.claims = claims
 			f.badNonce = name == "nonce mismatch"
-			provider, err := oidc.NewProvider(context.Background(), f.providerConfig("acme"))
+			provider, err := oidc.NewProvider(context.Background(), f.providerConfig())
 			if err != nil {
 				t.Fatalf("NewProvider: %v", err)
 			}
 			client := f.client(t, provider)
-			if _, err := f.signIn(t, client, "acme"); err == nil {
+			if _, err := f.signIn(t, client); err == nil {
 				t.Fatal("expected token verification to fail")
 			}
 		})
@@ -213,12 +213,12 @@ func TestOIDCIdentityUserInfoFallback(t *testing.T) {
 	f := newOIDCFixture(t)
 	defer f.server.Close()
 	f.sendToken = false
-	provider, err := oidc.NewProvider(context.Background(), f.providerConfig("acme"))
+	provider, err := oidc.NewProvider(context.Background(), f.providerConfig())
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}
 	client := f.client(t, provider)
-	result, err := f.signIn(t, client, "acme")
+	result, err := f.signIn(t, client)
 	if err != nil {
 		t.Fatalf("OAuthCallback: %v", err)
 	}
@@ -230,14 +230,14 @@ func TestOIDCIdentityUserInfoFallback(t *testing.T) {
 func TestOIDCIdentityJWKSFailureIsHardError(t *testing.T) {
 	f := newOIDCFixture(t)
 	defer f.server.Close()
-	cfg := f.providerConfig("acme")
+	cfg := f.providerConfig()
 	cfg.JWKSURI = f.server.URL + "/missing-jwks"
 	provider, err := oidc.NewProvider(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
 	}
 	client := f.client(t, provider)
-	if _, err := f.signIn(t, client, "acme"); err == nil || strings.Contains(err.Error(), "verification") {
+	if _, err := f.signIn(t, client); err == nil || strings.Contains(err.Error(), "verification") {
 		t.Fatalf("JWKS fetch failure must be a hard error: %v", err)
 	}
 }
