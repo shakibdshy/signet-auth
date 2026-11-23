@@ -86,6 +86,8 @@ var (
 	ErrRefreshReuse = core.ErrRefreshReuse
 	// ErrInvalidOAuthConfig reports invalid OAuth configuration.
 	ErrInvalidOAuthConfig = core.ErrInvalidOAuthConfig
+	// ErrOAuthProviderConflict reports duplicate or reserved provider IDs.
+	ErrOAuthProviderConflict = core.ErrOAuthProviderConflict
 	// ErrInvalidPasswordlessConfig reports a negative proof lifetime.
 	ErrInvalidPasswordlessConfig = core.ErrInvalidPasswordlessConfig
 	// ErrOAuthDisabled reports OAuth use while Config.OAuth is nil.

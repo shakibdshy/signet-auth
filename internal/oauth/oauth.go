@@ -149,10 +149,11 @@ func (s *Service) Start(ctx context.Context, in core.OAuthStartInput) (*core.OAu
 		return nil, core.ErrOAuthProviderNotFound
 	}
 	verifier := secret.NewToken()
+	nonce := secret.NewToken()
 	challengeSum := sha256Sum(verifier)
 	state, err := s.seal(statePayload{
 		Provider: in.Provider, Redirect: in.Redirect,
-		Verifier: verifier, Nonce: secret.NewToken(),
+		Verifier: verifier, Nonce: nonce,
 		ExpiresAt: s.clock.Now().Add(stateTTL),
 	})
 	if err != nil {
@@ -165,7 +166,12 @@ func (s *Service) Start(ctx context.Context, in core.OAuthStartInput) (*core.OAu
 		return nil, err
 	}
 	redirectURI := strings.TrimRight(s.cfg.RedirectBaseURL, "/") + "/oauth/callback"
-	authURL := provider.AuthURL("", redirectURI, state, challengeSum)
+	var authURL string
+	if withNonce, ok := provider.(core.AuthURLWithNonce); ok {
+		authURL = withNonce.AuthURLWithNonce("", redirectURI, state, challengeSum, nonce)
+	} else {
+		authURL = provider.AuthURL("", redirectURI, state, challengeSum)
+	}
 	s.logInfo("oauth/start", "provider", in.Provider)
 	return &core.OAuthStartResult{URL: authURL}, nil
 }
@@ -197,7 +203,13 @@ func (s *Service) Callback(ctx context.Context, in core.OAuthCallbackInput) (*co
 		return nil, core.ErrOAuthRedirectNotAllowed
 	}
 	redirectURI := strings.TrimRight(s.cfg.RedirectBaseURL, "/") + "/oauth/callback"
-	identity, err := provider.Exchange(ctx, in.Code, state.Verifier, redirectURI)
+	var identity *core.OAuthIdentity
+	var err error
+	if withNonce, ok := provider.(core.ExchangeWithNonce); ok {
+		identity, err = withNonce.ExchangeWithNonce(ctx, in.Code, state.Verifier, redirectURI, state.Nonce)
+	} else {
+		identity, err = provider.Exchange(ctx, in.Code, state.Verifier, redirectURI)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -202,6 +202,33 @@ All codes are listed in [Errors](/docs/errors); request and response shapes come
 generated [OpenAPI contract](/docs/openapi). Server setup lives in [Passwordless sign-in](/docs/passwordless),
 [Second factor](/docs/two-factor) and [Username and accounts](/docs/accounts).
 
+## OAuth providers
+
+Google, GitHub and [generic OIDC](/docs/oidc) providers all use the same OAuth endpoints. The
+provider ID is whatever the backend registered in `Config.OAuth.Providers`.
+
+```ts
+const { url } = await auth.oauthStart({
+  provider: 'acme',
+  redirect: 'https://app.example.com/callback', // must be allowlisted on the backend
+});
+
+window.location.assign(url);
+```
+
+The full browser flow:
+
+1. Your page calls `oauthStart` and redirects to the returned provider `url`.
+2. The provider authenticates the User and redirects to the backend callback
+   (`GET /auth/oauth/callback`). Signet owns this endpoint — do not implement it.
+3. Signet redeems the code, verifies the identity and creates a Session cookie.
+4. The backend redirects to your `redirect` URL. Read session state from your own app; the typed
+   client does not keep a reactive session store.
+
+If the User's email is not verified by the provider, the callback response carries a `link_token`
+instead of a Session. Pass it to your backend's explicit account-linking step before treating the
+User as signed in.
+
 ## Separate backend repository
 
 The backend team can merge this base spec into its own application spec and publish a versioned

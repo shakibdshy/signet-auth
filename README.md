@@ -13,7 +13,7 @@ any router, and it never owns your database schema.
 
 - Email/password authentication with Argon2id, transparent rehash and a bcrypt option
 - Cookie sessions with idle and absolute timeouts, plus optional JWT access and refresh tokens
-- OAuth sign-in with Google and GitHub, PKCE and verified-only account linking
+- OAuth sign-in with Google, GitHub and generic OIDC providers, PKCE and verified-only account linking
 - Email verification and password reset with single-use, hashed tokens
 - Passwordless sign-in with magic links and six-digit email OTPs
 - Opt-in session caching, key rotation rings, JWKS publication and redirect patterns
@@ -130,8 +130,9 @@ with HTML and plain-text defaults. `mailer/smtp` uses STARTTLS by default;
 Register providers through `Config.OAuth` with a 32-byte `StateKey`, an
 application origin and an exact redirect allowlist. `POST /oauth/start` returns
 the authorization URL; `GET /oauth/callback` redeems the code and redirects.
-`oauth/google` and `oauth/github` are built in, and the root `OAuthProvider`
-interface lets you add more without changing the core.
+`oauth/google`, `oauth/github` and `oauth/oidc` are built in. The generic OIDC adapter
+uses discovery and verified ID tokens; the root `OAuthProvider` interface lets you add
+more providers without changing the core.
 
 ## Storage
 
@@ -148,7 +149,7 @@ be validated with the shared suite in `store/conformance`.
 | Form | Embedded Go library | Embedded Go library | Embedded Go library | Standalone identity service |
 | Password auth | Yes | No | Yes | Yes |
 | Sessions / JWT | Both | Neither | Server-side sessions | Sessions + tokens |
-| OAuth | Google, GitHub | Many providers | Limited | Configurable |
+| OAuth | Google, GitHub, generic OIDC | Many providers | Limited | Configurable |
 | Schema ownership | Yours or bundled SQL | N/A | More opinionated | Service-owned |
 | Router coupling | `net/http` only | `net/http` | Framework-friendly | HTTP API |
 

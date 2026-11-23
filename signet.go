@@ -103,6 +103,12 @@ type OAuthIdentity = core.OAuthIdentity
 // OAuthProvider is the contract an external identity provider implements.
 type OAuthProvider = core.OAuthProvider
 
+// AuthURLWithNonce is implemented by Providers that bind an OIDC nonce.
+type AuthURLWithNonce = core.AuthURLWithNonce
+
+// ExchangeWithNonce is implemented by Providers that verify an OIDC nonce.
+type ExchangeWithNonce = core.ExchangeWithNonce
+
 // OAuthConfig enables external sign-in providers.
 type OAuthConfig = core.OAuthConfig
 

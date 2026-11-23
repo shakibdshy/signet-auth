@@ -292,7 +292,7 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | CLI schema generation/check | [CLI](https://better-auth.com/docs/concepts/cli) | partial | Explicit embedded migrations and `generate-check` for spec drift; no CLI. |
 | Two-factor / passkey / magic link / email OTP / phone | [2FA](https://better-auth.com/docs/plugins/2fa) · [Passkey](https://better-auth.com/docs/plugins/passkey) · [Magic link](https://better-auth.com/docs/plugins/magic-link) · [Email OTP](https://better-auth.com/docs/plugins/email-otp) · [Phone](https://better-auth.com/docs/plugins/phone-number) | partial | TOTP Second factor with Backup codes, magic link and email OTP are shipped; passkeys and phone OTP are not. |
 | Username / anonymous / one tap / SIWE / one-time token | [Username](https://better-auth.com/docs/plugins/username) · [Anonymous](https://better-auth.com/docs/plugins/anonymous) · [One Tap](https://better-auth.com/docs/plugins/one-tap) · [SIWE](https://better-auth.com/docs/plugins/siwe) · [OTT](https://better-auth.com/docs/plugins/one-time-token) | partial | Username sign-in is shipped as a `username` Account (ADR-0010); anonymous, One Tap, SIWE and one-time tokens are not. |
-| Generic OAuth provider | [Generic OAuth](https://better-auth.com/docs/plugins/generic-oauth) | partial | The `OAuthProvider` interface is the extension seam but ships no OIDC discovery/token plumbing. |
+| Generic OAuth provider | [Generic OAuth](https://better-auth.com/docs/plugins/generic-oauth) | already | An `oauth/oidc` adapter implements discovery, PKCE and verified ID tokens on the existing `OAuthProvider` seam. |
 | Admin / organization / API keys | [Admin](https://better-auth.com/docs/plugins/admin) · [Organization](https://better-auth.com/docs/plugins/organization) · [API Key](https://better-auth.com/docs/plugins/api-key) | missing | Organizations are planned in Signet's README; no roles, bans, impersonation or API keys. |
 | OAuth/OIDC provider, device flow, MCP, CIMD | [OAuth Provider](https://better-auth.com/docs/plugins/oauth-provider) · [Device](https://better-auth.com/docs/plugins/device-authorization) · [MCP](https://better-auth.com/docs/plugins/mcp) · [CIMD](https://better-auth.com/docs/plugins/cimd) | missing | Signet is a relying party only. |
 | SAML/OIDC SSO and SCIM | [SSO](https://better-auth.com/docs/plugins/sso) · [SCIM](https://better-auth.com/docs/plugins/scim) | missing | No enterprise federation or directory provisioning. |
@@ -305,9 +305,8 @@ Feature order follows dependencies: session primitives and user lifecycle first,
 first factors, then provider/enterprise surfaces, then defensive and operational extras. Effort is
 relative for a small Go library that already has the Store and token primitives.
 
-As of 2026-11-22, phases 1–3 below are **shipped** (PRs #53, #58 and #65 merged; PR #70 covers
-Phase 3). The remaining order is phase 4 → 6 → 5, since the defensive extras are smaller and
-less coupled than authorization/management.
+As of 2026-11-23, phases 1, 2, 3, 4 and 6 below are **shipped** (PRs #53, #58 and #65 merged; PR #70 covers
+Phase 3). The remaining roadmap item is phase 5 (authorization and management).
 
 1. **Foundation — user lifecycle and session controls (shipped).**
    `ChangePassword`/`SetPassword`, `ChangeEmail`, `DeleteUser` with re-verification, and

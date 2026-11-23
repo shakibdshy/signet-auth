@@ -13,7 +13,7 @@ version. Missing documentation is never the reason — every shipped feature has
 - **Email/password auth** — sign-up, sign-in, sign-out, rehash, anti-enumeration. See [Quickstart](/docs/quickstart) and [Security](/docs/security).
 - **Sessions** — hashed tokens, idle/absolute deadlines, freshness checks, list/revoke, secure cookies and CSRF. See [Sessions and cookies](/docs/sessions).
 - **Email verification, email change, password reset/change and verified account deletion** — single-use Tokens, templates and full revocation. See [Verification and reset](/docs/verification-and-reset).
-- **OAuth sign-in** — [Google](/docs/google) and [GitHub](/docs/github) adapters, PKCE, encrypted state, verified-only linking and custom providers. See [OAuth sign-in](/docs/oauth).
+- **OAuth sign-in** — [Google](/docs/google), [GitHub](/docs/github) and [generic OIDC](/docs/oidc) adapters, PKCE, encrypted state, verified-only linking and custom providers. See [OAuth sign-in](/docs/oauth).
 - **JWT mode** — Access/Refresh Tokens, rotation and replay containment. See [JWT mode](/docs/jwt).
 - **Passwordless sign-in** — magic links and six-digit email OTPs, digest-only proofs, verified email and Session issuance. See [Passwordless sign-in](/docs/passwordless).
 - **Session and token hardening** — opt-in Session cache, CSRF/JWT key rings, opt-in JWKS handler and validated redirect patterns. See [Sessions](/docs/sessions), [JWT mode](/docs/jwt) and [Security](/docs/security).
@@ -33,7 +33,6 @@ The foundation, passwordless, hardening and Phase 3 sign-in features are shipped
   transaction across them. A best-effort delete removes the User if the second call fails.
 - Rate limits use a boolean `RateLimiter` interface with per-endpoint rules and opt-in
   trusted-proxy keys; the library does not ship a window-aware limiter.
-- Only Google and GitHub ship as OAuth providers.
   JWKS publication is opt-in and asymmetric-only; key rings and redirect patterns are opt-in.
 - There is no framework-specific reactive client, no CLI and no queryable audit log.
 
@@ -42,7 +41,8 @@ The foundation, passwordless, hardening and Phase 3 sign-in features are shipped
 A capability survey of Better Auth lives in `docs/research/better-auth-authentication-features.md`.
 i18n and anomaly detection are explicitly out of scope. It also records features Signet does not have: passkeys, phone OTP,
 anonymous sessions, organizations, roles/API keys, OAuth/OIDC provider,
-SSO/SCIM, device flow, captcha, compromised-password checks and anomaly detection. It is a
+SSO/SCIM, device flow and anomaly detection. Captcha and compromised-password checks are shipped
+as opt-in defensive controls. It is a
 reference for future decisions, not a promise of delivery.
 
 The glossary terms email change, account deletion, fresh Session and trusted proxy describe

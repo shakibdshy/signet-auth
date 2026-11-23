@@ -18,9 +18,9 @@ cfg.OAuth = &signet.OAuthConfig{
 }
 ```
 
-Signet ships two provider adapters: [Google](/docs/google) and [GitHub](/docs/github). Each is a
-small `OAuthProvider` implementation; you can add another provider without changing Signet
-internals.
+Signet ships two built-in adapters, [Google](/docs/google) and [GitHub](/docs/github), plus a
+[generic OIDC provider](/docs/oidc) for any OpenID Connect identity provider. Each implements the
+same public `OAuthProvider` interface, so adding a provider never changes Signet internals.
 
 `POST /oauth/start` returns the provider authorization URL. `GET /oauth/callback`
 redeems the code, consumes the encrypted single-use state, and redirects to the
