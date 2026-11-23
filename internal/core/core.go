@@ -394,28 +394,32 @@ type UserInfo struct {
 
 // BanUserInput describes an administrative ban.
 type BanUserInput struct {
-	ActorID string
-	UserID  string
-	Reason  string
+	ActorID      string
+	SessionToken string
+	UserID       string
+	Reason       string
 }
 
 // UnbanUserInput identifies a User to unban.
 type UnbanUserInput struct {
-	ActorID string
-	UserID  string
+	ActorID      string
+	SessionToken string
+	UserID       string
 }
 
 // AdminSetUserRoleInput assigns global roles to a User.
 type AdminSetUserRoleInput struct {
-	ActorID string
-	UserID  string
-	Roles   []string
+	ActorID      string
+	SessionToken string
+	UserID       string
+	Roles        []string
 }
 
 // ImpersonateUserInput starts an impersonation Session.
 type ImpersonateUserInput struct {
-	ActorID string
-	UserID  string
+	ActorID      string
+	SessionToken string
+	UserID       string
 }
 
 // ImpersonationResult carries the temporary credentials.

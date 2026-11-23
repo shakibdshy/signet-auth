@@ -39,7 +39,7 @@ func timeDurationHours(hours int) (d time.Duration) {
 	return time.Duration(hours) * time.Hour
 }
 
-func adminFixture(t *testing.T, sink signet.AuditSink) (*signet.Client, *testutil.Store, string) {
+func adminFixture(t *testing.T, sink signet.AuditSink) (*signet.Client, *testutil.Store, string, string) {
 	authorizer := &fakeAuthorizer{allowed: map[string]bool{
 		"users:ban": true, "users:set-role": true, "users:impersonate": true, "sessions:revoke": true,
 	}}
@@ -49,12 +49,15 @@ func adminFixture(t *testing.T, sink signet.AuditSink) (*signet.Client, *testuti
 	if err != nil {
 		t.Fatalf("SignUp admin: %v", err)
 	}
-	target, err := client.SignUp(ctx, signet.SignUpInput{Email: "target@example.com", Password: "correct horse"})
+	_, err = client.SignUp(ctx, signet.SignUpInput{Email: "target@example.com", Password: "correct horse"})
 	if err != nil {
 		t.Fatalf("SignUp target: %v", err)
 	}
-	_ = target
-	return client, store, admin.User.ID
+	adminSession, err := client.SignIn(ctx, signet.SignInInput{Email: "admin@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn admin: %v", err)
+	}
+	return client, store, admin.User.ID, adminSession.SessionToken
 }
 
 func TestAdminBanRequiresGrant(t *testing.T) {
@@ -68,7 +71,7 @@ func TestAdminBanRequiresGrant(t *testing.T) {
 
 func TestAdminBanUnbanAndSelfBlock(t *testing.T) {
 	sink := &adminAuditSink{}
-	client, store, adminID := adminFixture(t, sink)
+	client, store, adminID, sessionToken := adminFixture(t, sink)
 	ctx := context.Background()
 	targets, err := client.AdminListUsers(ctx, signet.AdminListUsersInput{ActorID: adminID})
 	if err != nil || len(targets.Users) != 2 {
@@ -80,16 +83,16 @@ func TestAdminBanUnbanAndSelfBlock(t *testing.T) {
 			targetID = user.ID
 		}
 	}
-	if err := client.BanUser(ctx, signet.BanUserInput{ActorID: adminID, UserID: targetID, Reason: "abuse"}); err != nil {
+	if err := client.BanUser(ctx, signet.BanUserInput{ActorID: adminID, SessionToken: sessionToken, UserID: targetID, Reason: "abuse"}); err != nil {
 		t.Fatalf("BanUser: %v", err)
 	}
 	if !store.Users[targetID].Disabled {
 		t.Fatal("target should be banned")
 	}
-	if err := client.BanUser(ctx, signet.BanUserInput{ActorID: adminID, UserID: adminID}); !errors.Is(err, signet.ErrForbidden) {
+	if err := client.BanUser(ctx, signet.BanUserInput{ActorID: adminID, SessionToken: sessionToken, UserID: adminID}); !errors.Is(err, signet.ErrForbidden) {
 		t.Fatalf("self-ban error = %v", err)
 	}
-	if err := client.UnbanUser(ctx, signet.UnbanUserInput{ActorID: adminID, UserID: targetID}); err != nil {
+	if err := client.UnbanUser(ctx, signet.UnbanUserInput{ActorID: adminID, SessionToken: sessionToken, UserID: targetID}); err != nil {
 		t.Fatalf("UnbanUser: %v", err)
 	}
 	if store.Users[targetID].Disabled {
@@ -101,7 +104,7 @@ func TestAdminBanUnbanAndSelfBlock(t *testing.T) {
 }
 
 func TestAdminSetRoleRequiresGrant(t *testing.T) {
-	client, _, adminID := adminFixture(t, nil)
+	client, _, adminID, _ := adminFixture(t, nil)
 	err := client.AdminSetUserRole(context.Background(), signet.AdminSetUserRoleInput{
 		ActorID: adminID, UserID: "target-1", Roles: []string{"admin"},
 	})
@@ -112,7 +115,7 @@ func TestAdminSetRoleRequiresGrant(t *testing.T) {
 
 func TestAdminImpersonationLifecycle(t *testing.T) {
 	sink := &adminAuditSink{}
-	client, _, adminID := adminFixture(t, sink)
+	client, _, adminID, sessionToken := adminFixture(t, sink)
 	ctx := context.Background()
 	targetID := ""
 	users, _ := client.AdminListUsers(ctx, signet.AdminListUsersInput{ActorID: adminID})
@@ -121,7 +124,7 @@ func TestAdminImpersonationLifecycle(t *testing.T) {
 			targetID = user.ID
 		}
 	}
-	started, err := client.ImpersonateUser(ctx, signet.ImpersonateUserInput{ActorID: adminID, UserID: targetID})
+	started, err := client.ImpersonateUser(ctx, signet.ImpersonateUserInput{ActorID: adminID, SessionToken: sessionToken, UserID: targetID})
 	if err != nil {
 		t.Fatalf("ImpersonateUser: %v", err)
 	}

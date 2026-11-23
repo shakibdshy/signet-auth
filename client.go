@@ -551,7 +551,7 @@ func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
 	if in.ActorID == in.UserID {
 		return ErrForbidden
 	}
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID) {
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return ErrForbidden
 	}
 	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
@@ -568,7 +568,7 @@ func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
 
 // UnbanUser re-enables a User account.
 func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID) {
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return ErrForbidden
 	}
 	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
@@ -585,7 +585,7 @@ func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
 
 // AdminSetUserRole writes global roles for a User.
 func (c *Client) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersSetRole) || !c.freshActor(ctx, in.ActorID) {
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersSetRole) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return ErrForbidden
 	}
 	if c.cfg.RoleWriter == nil {
@@ -603,7 +603,7 @@ func (c *Client) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (
 	if in.ActorID == in.UserID {
 		return nil, ErrForbidden
 	}
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersImpersonate) || !c.freshActor(ctx, in.ActorID) {
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersImpersonate) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return nil, ErrForbidden
 	}
 	raw := secret.NewToken()
@@ -623,13 +623,42 @@ func (c *Client) StopImpersonating(ctx context.Context, in StopImpersonatingInpu
 	return nil
 }
 
-func (c *Client) freshActor(_ context.Context, _ string) bool { return true }
+func (c *Client) freshActor(ctx context.Context, _ string, sessionToken string) bool {
+	if sessionToken == "" {
+		return false
+	}
+	fresh, err := c.sessions.IsFreshWithin(ctx, sessionToken, c.cfg.Accounts.FreshWindow)
+	return err == nil && fresh
+}
 
 func (c *Client) emitAdminAudit(ctx context.Context, name, actorID, userID string) {
 	if c.cfg.AuditSink == nil {
 		return
 	}
 	_ = c.cfg.AuditSink.Record(ctx, AuditEvent{Name: name, UserID: actorID, Outcome: "success", Metadata: map[string]string{"target": userID}})
+}
+
+// RemoveOrganizationMember removes a Member from an Organization.
+func (c *Client) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID string) error {
+	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, actorID, PermissionOrgsMemberRemove) {
+		return ErrForbidden
+	}
+	return c.cfg.OrganizationStore.RemoveMember(ctx, orgID, userID)
+}
+
+// SetOrganizationMemberRole changes a Member's role in an Organization.
+func (c *Client) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID string) error {
+	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, actorID, PermissionOrgsMemberRole) {
+		return ErrForbidden
+	}
+	return c.cfg.OrganizationStore.SetMemberRole(ctx, orgID, userID, role)
+}
+
+// ClearActiveOrganization clears the Active organization cookie.
+func (c *Client) ClearActiveOrganization(w http.ResponseWriter) {
+	if c.activeOrg != nil {
+		c.activeOrg.Clear(w)
+	}
 }
 
 // CreateOrganization creates an Organization owned by a User.
