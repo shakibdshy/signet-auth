@@ -18,8 +18,8 @@ from the declarative contract into the [API reference](/docs/openapi).
 
 | Method + path | Auth | CSRF | Success | Key errors | Use it when | Reference |
 | --- | --- | --- | --- | --- | --- | --- |
-| POST `/signup` | no | exempt | 201 `{"user":User}` | `email_exists` 400, `invalid_input` 400, `rate_limited` 429 | Creating a User and its credential Account. | [signup](/docs/openapi/signup_post) |
-| POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | `invalid_credentials` 401, `email_not_verified` 403, `rate_limited` 429 | Exchanging credentials for a Session; sets cookies and returns the CSRF token. | [signin](/docs/openapi/signin_post) |
+| POST `/signup` | no | exempt | 201 `{"user":User}` | `email_exists` 400, `invalid_input` 400, `rate_limited` 429 | Creating a User and its credential Account. | [signup](/docs/openapi/authentication/signup_post) |
+| POST `/signin` | no | exempt | 200 `{"user","session_token","csrf_token"}` | `invalid_credentials` 401, `email_not_verified` 403, `rate_limited` 429 | Exchanging credentials for a Session; sets cookies and returns the CSRF token. | [signin](/docs/openapi/authentication/signin_post) |
 | GET `/last-sign-in-method` | no | exempt | 200 `{"method":"..."}` | none | Read the signed Last sign-in method cookie. |
 | GET `/accounts` | yes | n/a | 200 `{"accounts":[...]}` | `unauthorized` 401 | List safe Account fields. |
 | POST `/unlink-account` | yes | required | 200 | `last_account` 400, `unauthorized` 401 | Unlink one guarded Account. |
@@ -27,27 +27,27 @@ from the declarative contract into the [API reference](/docs/openapi).
 | POST `/verify-two-factor` | no | exempt | 200 `{"user","session_token"}` | `invalid_code` 401, `two_factor_required` 401 | Exchange a challenge and code for a Session. |
 | POST `/disable-two-factor` | yes | required | 200 | `invalid_credentials` 401 | Remove Second factor enrollment. |
 | POST `/regenerate-backup-codes` | yes | required | 200 `{"backup_codes"}` | `two_factor_not_enabled` 400 | Replace all Backup codes. |
-| POST `/send-magic-link` | no | exempt | 200 | `invalid_request` 400, `rate_limited` 429 | Email a single-use magic link. | [send-magic-link](/docs/openapi/send-magic-link_post) |
-| GET `/verify-magic-link` | no | exempt | 200 `{"user","session_token"}` or 302 | `invalid_token` 401, `invalid_request` 400, `rate_limited` 429 | Consume the link, set cookies and redirect to the allowlisted callback. | [verify-magic-link](/docs/openapi/verify-magic-link_get) |
-| POST `/send-otp` | no | exempt | 200 | `invalid_input` 400, `rate_limited` 429 | Email a six-digit sign-in code. | [send-otp](/docs/openapi/send-otp_post) |
-| POST `/verify-otp` | no | exempt | 200 `{"user","session_token"}` | `invalid_token` 401, `rate_limited` 429 | Consume a code, set cookies and return the Session. | [verify-otp](/docs/openapi/verify-otp_post) |
-| POST `/request-account-deletion` | yes | required | 200 | `invalid_credentials` 401, `rate_limited` 429 | Issue a deletion confirmation proof. | [request-account-deletion](/docs/openapi/request-account-deletion_post) |
-| POST `/confirm-account-deletion` | no | required | 200 | `invalid_token` 401, `rate_limited` 429 | Remove the User and all child records. | [confirm-account-deletion](/docs/openapi/confirm-account-deletion_post) |
-| POST `/change-email` | yes | required | 200 | `invalid_credentials` 401, `invalid_email` 400, `email_exists` 400, `rate_limited` 429 | Issue a proof to a new address. | [change-email](/docs/openapi/change-email_post) |
-| POST `/verify-change-email` | no | required | 200 | `invalid_token` 401, `email_exists` 400, `rate_limited` 429 | Commit a verified email change. | [verify-change-email](/docs/openapi/verify-change-email_post) |
-| POST `/change-password` | yes | required | 200 | `invalid_credentials` 401, `invalid_input` 400, `rate_limited` 429 | Replace an authenticated User's password; revokes all Sessions and Tokens. | [change-password](/docs/openapi/change-password_post) |
-| POST `/signout` | no | required | 204 | `csrf` 403, `invalid_input` 400 | Ending the current Session and clearing its cookie. | [signout](/docs/openapi/signout_post) |
-| GET `/sessions` | yes | n/a | 200 `{"sessions":[SessionInfo]}` | `unauthorized` 401, `csrf` 403 | Listing the authenticated User's Sessions. | [sessions](/docs/openapi/sessions_get) |
-| DELETE `/sessions` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking all Sessions of the authenticated User. | [sessions](/docs/openapi/sessions_delete) |
-| DELETE `/session` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking just the current Session. | [session](/docs/openapi/session_delete) |
-| POST `/token` | no | exempt | 200 `TokenPair` | `invalid_token` 401, `not_found` 404, `rate_limited` 429 | Exchanging credentials or a Refresh token when JWT is enabled. | [token](/docs/openapi/token_post) |
-| POST `/send-verification` | no | required | 200 | `csrf` 403, `invalid_input` 400, `rate_limited` 429 | Issuing a fresh email-verification Token. | [send-verification](/docs/openapi/send-verification_post) |
-| POST `/verify-email` | no | required | 200 | `csrf` 403, `invalid_token` 401, `rate_limited` 429 | Consuming the verification Token from the emailed link. | [verify-email](/docs/openapi/verify-email_post) |
-| POST `/send-password-reset` | no | required | 200 | `csrf` 403, `invalid_input` 400, `rate_limited` 429 | Requesting a password-reset Token. | [send-password-reset](/docs/openapi/send-password-reset_post) |
-| POST `/reset-password` | no | required | 200 | `csrf` 403, `invalid_token` 401, `invalid_input` 400, `rate_limited` 429 | Consuming the reset Token and setting a new password. | [reset-password](/docs/openapi/reset-password_post) |
-| POST `/oauth/start` | no | exempt | 200 `{"url":...}` | `not_found` 404, `invalid_request` 400, `rate_limited` 429 | Starting an OAuth flow; returns the provider authorization URL. | [oauth/start](/docs/openapi/oauth/start_post) |
-| GET `/oauth/callback` | no | exempt | 302 | `invalid_request` 400, `oauth_email_not_verified` 403, `oauth_account_conflict` 409 | Provider redirect target; sets a Session cookie or appends a `link_token`. | [oauth/callback](/docs/openapi/oauth/callback_get) |
-| GET `/csrf-token` | no | exempt | 200 `{"token":...}` | 405 on other methods | Obtaining a CSRF token for browser requests; sets the CSRF cookie. | [csrf-token](/docs/openapi/csrf-token_get) |
+| POST `/send-magic-link` | no | exempt | 200 | `invalid_request` 400, `rate_limited` 429 | Email a single-use magic link. | [send-magic-link](/docs/openapi/passwordless/send-magic-link_post) |
+| GET `/verify-magic-link` | no | exempt | 200 `{"user","session_token"}` or 302 | `invalid_token` 401, `invalid_request` 400, `rate_limited` 429 | Consume the link, set cookies and redirect to the allowlisted callback. | [verify-magic-link](/docs/openapi/passwordless/verify-magic-link_get) |
+| POST `/send-otp` | no | exempt | 200 | `invalid_input` 400, `rate_limited` 429 | Email a six-digit sign-in code. | [send-otp](/docs/openapi/passwordless/send-otp_post) |
+| POST `/verify-otp` | no | exempt | 200 `{"user","session_token"}` | `invalid_token` 401, `rate_limited` 429 | Consume a code, set cookies and return the Session. | [verify-otp](/docs/openapi/passwordless/verify-otp_post) |
+| POST `/request-account-deletion` | yes | required | 200 | `invalid_credentials` 401, `rate_limited` 429 | Issue a deletion confirmation proof. | [request-account-deletion](/docs/openapi/email-and-verification/request-account-deletion_post) |
+| POST `/confirm-account-deletion` | no | required | 200 | `invalid_token` 401, `rate_limited` 429 | Remove the User and all child records. | [confirm-account-deletion](/docs/openapi/email-and-verification/confirm-account-deletion_post) |
+| POST `/change-email` | yes | required | 200 | `invalid_credentials` 401, `invalid_email` 400, `email_exists` 400, `rate_limited` 429 | Issue a proof to a new address. | [change-email](/docs/openapi/email-and-verification/change-email_post) |
+| POST `/verify-change-email` | no | required | 200 | `invalid_token` 401, `email_exists` 400, `rate_limited` 429 | Commit a verified email change. | [verify-change-email](/docs/openapi/email-and-verification/verify-change-email_post) |
+| POST `/change-password` | yes | required | 200 | `invalid_credentials` 401, `invalid_input` 400, `rate_limited` 429 | Replace an authenticated User's password; revokes all Sessions and Tokens. | [change-password](/docs/openapi/email-and-verification/change-password_post) |
+| POST `/signout` | no | required | 204 | `csrf` 403, `invalid_input` 400 | Ending the current Session and clearing its cookie. | [signout](/docs/openapi/authentication/signout_post) |
+| GET `/sessions` | yes | n/a | 200 `{"sessions":[SessionInfo]}` | `unauthorized` 401, `csrf` 403 | Listing the authenticated User's Sessions. | [sessions](/docs/openapi/sessions/sessions_get) |
+| DELETE `/sessions` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking all Sessions of the authenticated User. | [sessions](/docs/openapi/sessions/sessions_delete) |
+| DELETE `/session` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking just the current Session. | [session](/docs/openapi/sessions/session_delete) |
+| POST `/token` | no | exempt | 200 `TokenPair` | `invalid_token` 401, `not_found` 404, `rate_limited` 429 | Exchanging credentials or a Refresh token when JWT is enabled. | [token](/docs/openapi/authentication/token_post) |
+| POST `/send-verification` | no | required | 200 | `csrf` 403, `invalid_input` 400, `rate_limited` 429 | Issuing a fresh email-verification Token. | [send-verification](/docs/openapi/email-and-verification/send-verification_post) |
+| POST `/verify-email` | no | required | 200 | `csrf` 403, `invalid_token` 401, `rate_limited` 429 | Consuming the verification Token from the emailed link. | [verify-email](/docs/openapi/email-and-verification/verify-email_post) |
+| POST `/send-password-reset` | no | required | 200 | `csrf` 403, `invalid_input` 400, `rate_limited` 429 | Requesting a password-reset Token. | [send-password-reset](/docs/openapi/email-and-verification/send-password-reset_post) |
+| POST `/reset-password` | no | required | 200 | `csrf` 403, `invalid_token` 401, `invalid_input` 400, `rate_limited` 429 | Consuming the reset Token and setting a new password. | [reset-password](/docs/openapi/email-and-verification/reset-password_post) |
+| POST `/oauth/start` | no | exempt | 200 `{"url":...}` | `not_found` 404, `invalid_request` 400, `rate_limited` 429 | Starting an OAuth flow; returns the provider authorization URL. | [oauth/start](/docs/openapi/oauth-and-federation/oauth-start_post) |
+| GET `/oauth/callback` | no | exempt | 302 | `invalid_request` 400, `oauth_email_not_verified` 403, `oauth_account_conflict` 409 | Provider redirect target; sets a Session cookie or appends a `link_token`. | [oauth/callback](/docs/openapi/oauth-and-federation/oauth-callback_get) |
+| GET `/csrf-token` | no | exempt | 200 `{"token":...}` | 405 on other methods | Obtaining a CSRF token for browser requests; sets the CSRF cookie. | [csrf-token](/docs/openapi/utilities/csrf-token_get) |
 
 Authenticated operations publish a `sessionCookie` security requirement and protected
 state-changing operations publish the `X-CSRF-Token` header in the generated spec, so the
