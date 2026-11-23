@@ -55,3 +55,8 @@ PermissionOrgsCreate (`organizations:create`), PermissionOrgsMemberAdd (`organiz
 PermissionOrgsMemberRemove (`organizations:member-remove`) and PermissionOrgsMemberRole
 (`organizations:member-role`). No wildcard expansion is performed. Denials return `ErrForbidden`
 with wire code `forbidden` (403), and guarded actions emit an Audit event with `outcome: denied`.
+
+Read-only listing requires a valid Session plus a grant, but no separate "list" permission is
+published: listings reuse the related write permission (`organizations:create` to list
+Organizations, `organizations:member-add` to list Members, `users:ban` to list Users and
+`sessions:revoke` to list Sessions). Applications never invent permission strings.

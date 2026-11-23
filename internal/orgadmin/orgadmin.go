@@ -113,7 +113,7 @@ func (s *Service) CreateOrganization(ctx context.Context, in core.CreateOrganiza
 // ListOrganizations returns a User's Organizations after checking the Session and grant.
 func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizationsInput, sessionToken string) (*core.ListOrganizationsResult, error) {
 	if s.deps.Config.OrganizationStore == nil || !s.fresh(ctx, sessionToken) ||
-		!s.deps.Authz.Authorize(ctx, in.UserID, "organizations", "list") {
+		!s.deps.Authz.Authorize(ctx, in.UserID, "organizations", "create") {
 		return nil, core.ErrForbidden
 	}
 	orgs, err := s.deps.Config.OrganizationStore.List(ctx, in.UserID)
@@ -165,7 +165,7 @@ func (s *Service) SetOrganizationMemberRole(ctx context.Context, orgID, userID, 
 // ListOrganizationMembers returns an Organization's Members after an org-scoped check.
 func (s *Service) ListOrganizationMembers(ctx context.Context, orgID, userID, sessionToken string) (*core.ListOrganizationMembersResult, error) {
 	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, userID, orgID, sessionToken, "member-list") {
+		!s.orgGuard(ctx, userID, orgID, sessionToken, "member-add") {
 		return nil, core.ErrForbidden
 	}
 	members, err := s.deps.Config.OrganizationStore.Members(ctx, orgID)
@@ -191,7 +191,7 @@ func (s *Service) SetActiveOrganization(ctx context.Context, orgID, userID, sess
 // ListUsers returns safe User fields after a Session and grant check.
 func (s *Service) ListUsers(ctx context.Context, actorID, sessionToken string) (*core.AdminListUsersResult, error) {
 	if s.deps.Config.AdminUserStore == nil || !s.fresh(ctx, sessionToken) ||
-		!s.deps.Authz.Authorize(ctx, actorID, "users", "list") {
+		!s.deps.Authz.Authorize(ctx, actorID, "users", "ban") {
 		return nil, core.ErrForbidden
 	}
 	all, err := s.deps.Config.AdminUserStore.ListUsersForAdmin(ctx)
@@ -253,7 +253,7 @@ func (s *Service) SetUserRole(ctx context.Context, in core.AdminSetUserRoleInput
 
 // ListUserSessions returns a User's Sessions after a Session and grant check.
 func (s *Service) ListUserSessions(ctx context.Context, actorID, userID, sessionToken string) (*core.ListSessionsResult, error) {
-	if !s.fresh(ctx, sessionToken) || !s.deps.Authz.Authorize(ctx, actorID, "sessions", "list") {
+	if !s.fresh(ctx, sessionToken) || !s.deps.Authz.Authorize(ctx, actorID, "sessions", "revoke") {
 		return nil, core.ErrForbidden
 	}
 	sessions, err := s.deps.Sessions.List(ctx, userID)

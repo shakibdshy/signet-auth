@@ -92,7 +92,7 @@ func organizationClient(t *testing.T, store *fakeOrganizationStore, authorizer s
 func TestOrganizationCreateMemberAndActive(t *testing.T) {
 	store := newFakeOrganizationStore()
 	authorizer := &fakeAuthorizer{allowed: map[string]bool{
-		"organizations:create": true, "organizations:member-add": true, "organizations:member-list": true,
+		"organizations:create": true, "organizations:member-add": true,
 	}}
 	authStore := testutil.NewStore()
 	cfg := testutil.NewConfig()
@@ -296,7 +296,6 @@ func TestOrganizationHTTPEndpoints(t *testing.T) {
 	authorizer := &fakeAuthorizer{allowed: map[string]bool{
 		"organizations:create": true, "organizations:member-add": true,
 		"organizations:member-remove": true, "organizations:member-role": true,
-		"organizations:member-list": true, "organizations:list": true,
 	}}
 	client, token := orgClientWithExtras(t, store, authorizer, nil, nil)
 	cookies := &http.Cookie{Name: "__Host-signet_session", Value: token, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}

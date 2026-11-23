@@ -64,6 +64,8 @@ auth, err := signet.New(cfg)
 | RoleWriter | RoleWriter | nil = role writes denied | Persists global role assignments. |
 | APIKeyStore | APIKeyStore | nil = disabled | Digest-only API key persistence. See [API keys](/docs/api-keys). |
 | APIKeyProtectedEndpoints | []string | empty | Endpoint names that require an `X-API-Key` instead of a Session. |
+| OrganizationStore | OrganizationStore | nil = disabled | Organizations and memberships. See [Organizations](/docs/organizations). |
+| AdminUserStore | AdminUserStore | nil = user listing disabled | Lists Users for guarded admin management. See [Admin management](/docs/admin-management). |
 | CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
 | CSRFKeys | [][]byte | empty = use CSRFKey | Ordered key ring; first signs, all verify. Each key must be 32 bytes. |
 | SessionCache | SessionCache | nil = disabled | Optional short-lived Session lookup cache; the Store stays authoritative. |

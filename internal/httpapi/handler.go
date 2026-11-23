@@ -893,6 +893,10 @@ func (h *Handler) handleImpersonate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.api.SetImpersonationCookie(w, actor, sessionToken)
+	if _, err := h.api.SetSessionCookies(w, result.Token); err != nil {
+		writeAuthError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, result)
 }
 

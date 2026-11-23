@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -44,7 +45,7 @@ func timeDurationHours(hours int) (d time.Duration) {
 
 func adminFixture(t *testing.T, sink signet.AuditSink) (*signet.Client, *testutil.Store, string, string) {
 	authorizer := &fakeAuthorizer{allowed: map[string]bool{
-		"users:ban": true, "users:set-role": true, "users:impersonate": true, "sessions:revoke": true, "users:list": true, "sessions:list": true,
+		"users:ban": true, "users:set-role": true, "users:impersonate": true, "sessions:revoke": true,
 	}}
 	client, store := adminClient(t, authorizer, 1, sink)
 	ctx := context.Background()
@@ -143,7 +144,7 @@ func TestAdminImpersonationLifecycle(t *testing.T) {
 }
 
 func TestAdminListRevokeSessions(t *testing.T) {
-	authorizer := &fakeAuthorizer{allowed: map[string]bool{"sessions:list": true, "sessions:revoke": true}}
+	authorizer := &fakeAuthorizer{allowed: map[string]bool{"sessions:revoke": true}}
 	client, _ := adminClient(t, authorizer, 1, nil)
 	ctx := context.Background()
 	admin, err := client.SignUp(ctx, signet.SignUpInput{Email: "admin@example.com", Password: "correct horse"})
@@ -308,8 +309,8 @@ func TestSelfDeleteBlockedWhileImpersonating(t *testing.T) {
 
 func TestAdminHTTPEndpoints(t *testing.T) {
 	authorizer := &fakeAuthorizer{allowed: map[string]bool{
-		"users:list": true, "users:ban": true, "users:set-role": true,
-		"sessions:list": true, "sessions:revoke": true, "users:impersonate": true,
+		"users:ban": true, "users:set-role": true,
+		"sessions:revoke": true, "users:impersonate": true,
 	}}
 	_, store := adminClient(t, authorizer, 1, nil)
 	// AdminSetUserRole requires a RoleWriter.
@@ -373,11 +374,21 @@ func TestAdminHTTPEndpoints(t *testing.T) {
 	if rr := get("/admin-user-sessions?user_id=" + target.User.ID); rr.Code != http.StatusOK {
 		t.Fatalf("sessions status = %d body = %s", rr.Code, rr.Body.String())
 	}
-	if rr := post("/impersonate", `{"user_id":"`+target.User.ID+`"}`); rr.Code != http.StatusOK {
-		t.Fatalf("impersonate status = %d body = %s", rr.Code, rr.Body.String())
+	imp := post("/impersonate", `{"user_id":"`+target.User.ID+`"}`)
+	if imp.Code != http.StatusOK {
+		t.Fatalf("impersonate status = %d body = %s", imp.Code, imp.Body.String())
 	}
-	if rr := post("/stop-impersonating", `{"token":"bad"}`); rr.Code != http.StatusOK {
-		// The handler uses the body token; with a bad token it denies, which is fine.
-		_ = rr
+	var started struct {
+		Token string `json:"Token"`
+	}
+	if err := json.Unmarshal(imp.Body.Bytes(), &started); err != nil || started.Token == "" {
+		t.Fatalf("impersonate decode = %v body = %s", err, imp.Body.String())
+	}
+	cookieNames := make(map[string]string)
+	for _, cookie := range imp.Result().Cookies() {
+		cookieNames[cookie.Name] = cookie.Value
+	}
+	if cookieNames["signet_impersonation"] == "" || cookieNames["__Host-signet_session"] != started.Token {
+		t.Fatalf("impersonate cookies = %+v", cookieNames)
 	}
 }
