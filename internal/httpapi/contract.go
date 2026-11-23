@@ -229,6 +229,7 @@ func ContractFor() Contract {
 			{core.ErrInvalidOTP, http.StatusUnauthorized, "invalid_code", "invalid or expired code"},
 			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
 			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
+			{core.ErrForbidden, http.StatusForbidden, "forbidden", "permission denied"},
 			{core.ErrPasswordCompromised, http.StatusBadRequest, "password_compromised", "password has been compromised"},
 			{core.ErrCaptchaRequired, http.StatusBadRequest, "invalid_input", "captcha token required"},
 			{core.ErrCaptchaInvalid, http.StatusBadRequest, "invalid_input", "captcha verification failed"},

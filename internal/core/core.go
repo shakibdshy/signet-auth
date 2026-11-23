@@ -204,6 +204,39 @@ type AuditSink interface {
 	Record(context.Context, AuditEvent) error
 }
 
+// Permission is an exact resource:action authorization string.
+type Permission string
+
+// Published permission strings used by Signet's guarded operations.
+const (
+	PermissionUsersBan         Permission = "users:ban"
+	PermissionUsersSetRole     Permission = "users:set-role"
+	PermissionUsersImpersonate Permission = "users:impersonate"
+	PermissionSessionsRevoke   Permission = "sessions:revoke"
+	PermissionAPIKeysCreate    Permission = "api-keys:create"
+	PermissionAPIKeysRevoke    Permission = "api-keys:revoke"
+	PermissionOrgsCreate       Permission = "organizations:create"
+	PermissionOrgsMemberAdd    Permission = "organizations:member-add"
+	PermissionOrgsMemberRemove Permission = "organizations:member-remove"
+	PermissionOrgsMemberRole   Permission = "organizations:member-role"
+)
+
+// Authorizer answers read-only authorization questions.
+type Authorizer interface {
+	Roles(context.Context, string) []string
+	Authorize(ctx context.Context, userID, resource, action string) bool
+}
+
+// RoleWriter persists global role assignments.
+type RoleWriter interface {
+	SetRoles(context.Context, string, []string) error
+}
+
+// AuthorizeIn authorizes an action within an Organization.
+type AuthorizeIn interface {
+	AuthorizeIn(ctx context.Context, userID, orgID, resource, action string) bool
+}
+
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {
 	TTL         time.Duration
@@ -412,6 +445,8 @@ type Config struct {
 	CaptchaVerifier          CaptchaVerifier
 	CaptchaEndpoints         []string
 	AuditSink                AuditSink
+	Authorizer               Authorizer
+	RoleWriter               RoleWriter
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
@@ -848,6 +883,8 @@ var (
 	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
 	// ErrInvalidCSRFConfig reports an invalid CSRF key.
 	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
+	// ErrForbidden reports an authorization denial.
+	ErrForbidden = errors.New("signet: forbidden")
 )
 
 // ListSessionsInput selects the User whose Sessions should be listed.

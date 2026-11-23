@@ -105,3 +105,8 @@ var (
 	// ErrInvalidCSRFConfig reports a missing or short CSRF signing key.
 	ErrInvalidCSRFConfig = core.ErrInvalidCSRFConfig
 )
+
+var (
+	// ErrForbidden reports an authorization denial.
+	ErrForbidden = core.ErrForbidden
+)

@@ -512,6 +512,22 @@ func (c *Client) JWKSHandler() http.Handler {
 	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
+// Authorize reports whether a User holds a permission.
+func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
+	if c.cfg.Authorizer == nil {
+		return false
+	}
+	return c.cfg.Authorizer.Authorize(ctx, userID, resource, action)
+}
+
+// SetRoles writes a User's global roles when a RoleWriter is configured.
+func (c *Client) SetRoles(ctx context.Context, userID string, roles []string) error {
+	if c.cfg.RoleWriter == nil {
+		return ErrForbidden
+	}
+	return c.cfg.RoleWriter.SetRoles(ctx, userID, roles)
+}
+
 // ListAccounts returns the safe fields of a User's Accounts.
 func (c *Client) ListAccounts(ctx context.Context, in ListAccountsInput) (*ListAccountsResult, error) {
 	return c.auth.ListAccounts(ctx, in)

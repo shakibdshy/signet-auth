@@ -61,6 +61,22 @@ type User = core.User
 // have several provider Accounts.
 type Account = core.Account
 
+// Permission is an exact resource:action authorization string.
+type Permission = core.Permission
+
+const (
+	PermissionUsersBan         = core.PermissionUsersBan
+	PermissionUsersSetRole     = core.PermissionUsersSetRole
+	PermissionUsersImpersonate = core.PermissionUsersImpersonate
+	PermissionSessionsRevoke   = core.PermissionSessionsRevoke
+	PermissionAPIKeysCreate    = core.PermissionAPIKeysCreate
+	PermissionAPIKeysRevoke    = core.PermissionAPIKeysRevoke
+	PermissionOrgsCreate       = core.PermissionOrgsCreate
+	PermissionOrgsMemberAdd    = core.PermissionOrgsMemberAdd
+	PermissionOrgsMemberRemove = core.PermissionOrgsMemberRemove
+	PermissionOrgsMemberRole   = core.PermissionOrgsMemberRole
+)
+
 // TokenKind identifies the sensitive flow a Token proves.
 type TokenKind = core.TokenKind
 
