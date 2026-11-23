@@ -223,6 +223,9 @@ func ContractFor() Contract {
 			{Name: "verify-api-key", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Response: ResponseSpec{Ref: "Principal"}, Status: http.StatusOK,
 			}}},
+			{Name: "revoke-api-key", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.RevokeAPIKeyInput{}), Status: http.StatusOK,
+			}}},
 		},
 		OptionalFields: map[string][]string{
 			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},

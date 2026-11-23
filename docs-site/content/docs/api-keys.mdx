@@ -12,17 +12,24 @@ the owner ID and roles. A key with no owner uses `SystemOwnerID`.
 cfg.APIKeyStore = myAPIKeyStore
 cfg.Authorizer = myAuthorizer // must grant api-keys:create and api-keys:revoke
 created, err := auth.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
-    OwnerUserID: "user-1", Name: "ci", Roles: []string{"ci"}, Remaining: 10,
+    OwnerUserID: "user-1", SessionToken: sessionToken,
+    Name: "ci", Roles: []string{"ci"}, Remaining: 10,
 })
 principal, err := auth.VerifyAPIKey(ctx, created.Raw)
 listed, _ := auth.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1"})
-err = auth.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "user-1", ID: created.Key.ID})
+err = auth.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{
+    OwnerUserID: "user-1", SessionToken: sessionToken, ID: created.Key.ID,
+})
 ```
 
 `CreateAPIKeyResult` carries the raw value once and its stored digest record; `ListAPIKeysResult`
-and `RevokeAPIKeyInput` cover management. `VerifyAPIKey` uses one atomic store operation combining
-lookup, expiry, remaining-check and decrement. A missing, expired or exhausted key returns
-`ErrTokenInvalid`. Issuance and revocation require the published permissions and are owner-scoped.
+and `RevokeAPIKeyInput` cover management. Issuance and revocation are state-changing operations:
+they require the published permission, a Session within `Accounts.FreshWindow` (passed as
+`SessionToken`) and emit an Audit event. A stale Session or missing grant returns `ErrForbidden`.
+
+`VerifyAPIKey` hashes the supplied key and calls `APIKeyStore.ConsumeAPIKey(ctx, digest)` — the store
+receives only the digest, never the raw key, and must atomically look up, check expiry and remaining
+uses, and decrement. A missing, expired or exhausted key returns `ErrTokenInvalid`.
 
 ## HTTP endpoints
 
@@ -31,9 +38,10 @@ lookup, expiry, remaining-check and decrement. A missing, expired or exhausted k
 | `POST` | `/api-keys` | Session | Create a key for the signed-in User |
 | `GET` | `/api-keys` | Session | List the signed-in User's keys |
 | `POST` | `/verify-api-key` | `X-API-Key` header | Verify a key and return its `Principal` |
+| `POST` | `/revoke-api-key` | Session | Revoke a key by `id` in the JSON body |
 
-Create and list derive the owner from the session cookie — a caller cannot act on another User's
-keys. Revoke is Go-only for now; use `Client.RevokeAPIKey` from your backend.
+Create, list and revoke derive the owner from the session cookie — a caller cannot act on another
+User's keys — and create/revoke require a fresh Session.
 
 ## Per-route middleware
 

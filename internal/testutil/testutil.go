@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/secret"
 )
 
 // ErrStore is the failure returned by a Store configured to fail account creation.
@@ -334,11 +333,6 @@ func NewConfig() signet.Config {
 	cfg.SendVerificationOnSignUp = BoolPtr(false)
 	cfg.CSRFKey = make([]byte, 32)
 	return cfg
-}
-
-// DigestForTest returns the digest of a secret for test fakes.
-func DigestForTest(value string) string {
-	return secret.Digest(value)
 }
 
 // BoolPtr returns a pointer to value.

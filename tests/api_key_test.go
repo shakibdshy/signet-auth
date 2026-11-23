@@ -2,11 +2,13 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shakibdshy/signet"
 	"github.com/shakibdshy/signet/internal/testutil"
@@ -32,10 +34,10 @@ func (s *fakeAPIKeyStore) Create(_ context.Context, key *signet.APIKey) error {
 	return nil
 }
 
-func (s *fakeAPIKeyStore) Consume(_ context.Context, raw string) (*signet.APIKey, error) {
-	digest := testutil.DigestForTest(raw)
+func (s *fakeAPIKeyStore) ConsumeAPIKey(_ context.Context, digest string) (*signet.APIKey, error) {
 	for _, record := range s.keys {
-		if record.Hash == digest && record.remaining > 0 {
+		if record.Hash == digest && record.remaining > 0 &&
+			(record.ExpiresAt.IsZero() || time.Now().Before(record.ExpiresAt)) {
 			record.remaining--
 			clone := record.APIKey
 			clone.Remaining = record.remaining
@@ -60,7 +62,7 @@ func (s *fakeAPIKeyStore) Revoke(_ context.Context, id string) error {
 	return nil
 }
 
-func apiKeyClient(t *testing.T, store *fakeAPIKeyStore, authorizer signet.Authorizer) *signet.Client {
+func apiKeyClient(t *testing.T, store *fakeAPIKeyStore, authorizer signet.Authorizer) (*signet.Client, string) {
 	t.Helper()
 	cfg := testutil.NewConfig()
 	cfg.Store = testutil.NewStore()
@@ -72,15 +74,23 @@ func apiKeyClient(t *testing.T, store *fakeAPIKeyStore, authorizer signet.Author
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	return client
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	result, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	return client, result.SessionToken
 }
 
 func TestAPIKeyCreateVerifyRevoke(t *testing.T) {
 	store := newFakeAPIKeyStore()
-	client := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
 	ctx := context.Background()
 	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
-		OwnerUserID: "user-1", Name: "ci", Roles: []string{"ci"}, Remaining: 2,
+		OwnerUserID: "user-1", SessionToken: session, Name: "ci", Roles: []string{"ci"}, Remaining: 2,
 	})
 	if err != nil {
 		t.Fatalf("CreateAPIKey: %v", err)
@@ -105,7 +115,7 @@ func TestAPIKeyCreateVerifyRevoke(t *testing.T) {
 	if err != nil || len(list.Keys) != 1 {
 		t.Fatalf("list = %+v, err = %v", list, err)
 	}
-	if err := client.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "user-1", ID: created.Key.ID}); err != nil {
+	if err := client.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "user-1", SessionToken: session, ID: created.Key.ID}); err != nil {
 		t.Fatalf("RevokeAPIKey: %v", err)
 	}
 	if _, err := client.VerifyAPIKey(ctx, created.Raw); !errors.Is(err, signet.ErrTokenInvalid) {
@@ -115,8 +125,8 @@ func TestAPIKeyCreateVerifyRevoke(t *testing.T) {
 
 func TestAPIKeyRequiresPermission(t *testing.T) {
 	store := newFakeAPIKeyStore()
-	client := apiKeyClient(t, store, &fakeAuthorizer{})
-	_, err := client.CreateAPIKey(context.Background(), signet.CreateAPIKeyInput{OwnerUserID: "user-1"})
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{})
+	_, err := client.CreateAPIKey(context.Background(), signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: session})
 	if !errors.Is(err, signet.ErrForbidden) {
 		t.Fatalf("error = %v, want ErrForbidden", err)
 	}
@@ -124,9 +134,9 @@ func TestAPIKeyRequiresPermission(t *testing.T) {
 
 func TestAPIKeyOwnerScoping(t *testing.T) {
 	store := newFakeAPIKeyStore()
-	client := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
 	ctx := context.Background()
-	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", Remaining: 5})
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: session, Remaining: 5})
 	if err != nil {
 		t.Fatalf("CreateAPIKey: %v", err)
 	}
@@ -134,15 +144,15 @@ func TestAPIKeyOwnerScoping(t *testing.T) {
 	if len(list.Keys) != 0 {
 		t.Fatalf("other owner sees %d keys", len(list.Keys))
 	}
-	if err := client.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "other", ID: created.Key.ID}); !errors.Is(err, signet.ErrForbidden) {
+	if err := client.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "other", SessionToken: session, ID: created.Key.ID}); !errors.Is(err, signet.ErrForbidden) {
 		t.Fatalf("cross-owner revoke error = %v", err)
 	}
 }
 
 func TestAPIKeyRawNotStored(t *testing.T) {
 	store := newFakeAPIKeyStore()
-	client := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}})
-	created, err := client.CreateAPIKey(context.Background(), signet.CreateAPIKeyInput{OwnerUserID: "user-1"})
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}})
+	created, err := client.CreateAPIKey(context.Background(), signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: session})
 	if err != nil {
 		t.Fatalf("CreateAPIKey: %v", err)
 	}
@@ -156,19 +166,10 @@ func TestAPIKeyRawNotStored(t *testing.T) {
 func TestAPIKeyHTTPEndpoints(t *testing.T) {
 	store := newFakeAPIKeyStore()
 	authorizer := &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}}
-	client := apiKeyClient(t, store, authorizer)
-	signUp, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
-	if err != nil {
-		t.Fatalf("SignUp: %v", err)
-	}
-	result, err := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
-	if err != nil {
-		t.Fatalf("SignIn: %v", err)
-	}
-	_ = signUp
+	client, session := apiKeyClient(t, store, authorizer)
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"ci"}`))
-	req.AddCookie(&http.Cookie{Name: "__Host-signet_session", Value: result.SessionToken, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	req.AddCookie(&http.Cookie{Name: "__Host-signet_session", Value: session, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	csrfToken, csrfCookie := issueCSRFToken(t, client)
 	req.AddCookie(csrfCookie)
 	req.Header.Set("X-CSRF-Token", csrfToken)
@@ -193,7 +194,14 @@ func TestAPIKeyMiddleware(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	ctx := context.Background()
-	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", Remaining: 5})
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	signIn, err := client.SignIn(ctx, signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: signIn.SessionToken, Remaining: 5})
 	if err != nil {
 		t.Fatalf("CreateAPIKey: %v", err)
 	}
@@ -210,5 +218,159 @@ func TestAPIKeyMiddleware(t *testing.T) {
 	client.Handler().ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("with-key status = %d body = %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestAPIKeyExpiredAndMissing(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}})
+	ctx := context.Background()
+	if _, err := client.VerifyAPIKey(ctx, "does-not-exist"); !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("missing key error = %v", err)
+	}
+	expired, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
+		OwnerUserID: "user-1", SessionToken: session, Remaining: 5,
+		ExpiresAt: time.Now().Add(-time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	if _, err := client.VerifyAPIKey(ctx, expired.Raw); !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("expired key error = %v", err)
+	}
+}
+
+func TestAPIKeyRequiresFreshSession(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, _ := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}})
+	ctx := context.Background()
+	_, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: "stale-token"})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("stale session error = %v", err)
+	}
+}
+
+func TestAPIKeySuccessAudit(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	sink := &recordingAuditSink{}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.APIKeyStore = store
+	cfg.Authorizer = &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}}
+	cfg.AuditSink = sink
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "audit@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	signIn, err := client.SignIn(ctx, signet.SignInInput{Email: "audit@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: signIn.SessionToken})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	if err := client.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "user-1", SessionToken: signIn.SessionToken, ID: created.Key.ID}); err != nil {
+		t.Fatalf("RevokeAPIKey: %v", err)
+	}
+	names := make(map[string]bool)
+	for _, event := range sink.events {
+		names[event.Name] = true
+		if event.Outcome != "success" {
+			t.Fatalf("unexpected outcome %q for %s", event.Outcome, event.Name)
+		}
+	}
+	if !names["api_key_created"] || !names["api_key_revoked"] {
+		t.Fatalf("audit events = %+v", sink.events)
+	}
+}
+
+func TestAPIKeyProtectedRouteIgnoresSession(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	authorizer := &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.APIKeyStore = store
+	cfg.Authorizer = authorizer
+	cfg.APIKeyProtectedEndpoints = []string{"csrf-token"}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "ignored@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	signIn, err := client.SignIn(ctx, signet.SignInInput{Email: "ignored@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", SessionToken: signIn.SessionToken, Remaining: 5})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	// A valid session alone must not grant access to a protected route.
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/csrf-token", nil)
+	req.AddCookie(&http.Cookie{Name: "__Host-signet_session", Value: signIn.SessionToken, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("session-only status = %d", rr.Code)
+	}
+	// The key must be accepted.
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/csrf-token", nil)
+	req.Header.Set("X-API-Key", created.Raw)
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("key status = %d body = %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestAPIKeyRevokeHTTPEndpoint(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
+	ctx := context.Background()
+	// Create through HTTP so the key owner matches the authenticated User.
+	cookies := &http.Cookie{Name: "__Host-signet_session", Value: session, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
+	createReq := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"ci","remaining":5}`))
+	createReq.AddCookie(cookies)
+	createReq.AddCookie(csrfCookie)
+	createReq.Header.Set("X-CSRF-Token", csrfToken)
+	createRec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d body = %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct {
+		Raw string `json:"raw"`
+		Key struct {
+			ID string `json:"id"`
+		} `json:"key"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/revoke-api-key",
+		strings.NewReader(`{"id":"`+created.Key.ID+`"}`))
+	req.AddCookie(cookies)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+	if _, err := client.VerifyAPIKey(ctx, created.Raw); !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("revoked key error = %v", err)
 	}
 }

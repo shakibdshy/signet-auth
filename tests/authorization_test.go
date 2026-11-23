@@ -96,9 +96,6 @@ func TestAuthorizeDenialEmitsAudit(t *testing.T) {
 	if len(sink.events) != 1 || sink.events[0].Outcome != "denied" {
 		t.Fatalf("audit events = %+v", sink.events)
 	}
-	if !errors.Is(signet.ErrForbidden, signet.ErrForbidden) {
-		t.Fatal("sentinel mismatch")
-	}
 }
 
 type recordingAuditSink struct{ events []signet.AuditEvent }
@@ -153,4 +150,60 @@ type fakeAuthorizeIn struct{}
 
 func (*fakeAuthorizeIn) AuthorizeIn(context.Context, string, string, string, string) bool {
 	return true
+}
+
+func TestSystemAPIKeyUsesSentinelOwner(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.APIKeyStore = store
+	cfg.Authorizer = &sentinelAuthorizer{}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "u@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	signIn, err := client.SignIn(ctx, signet.SignInInput{Email: "u@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{SessionToken: signIn.SessionToken})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	if created.Key.OwnerUserID != signet.SystemOwnerID {
+		t.Fatalf("owner = %q, want %q", created.Key.OwnerUserID, signet.SystemOwnerID)
+	}
+	if !sentinelAuthorizerLastOwnerIsSystem() {
+		t.Fatal("system key was not authorized under sentinel owner")
+	}
+}
+
+var sentinelAuthorizerLastOwner string
+
+type sentinelAuthorizer struct{}
+
+func (*sentinelAuthorizer) Roles(context.Context, string) []string { return nil }
+
+func (*sentinelAuthorizer) Authorize(_ context.Context, userID, _, _ string) bool {
+	sentinelAuthorizerLastOwner = userID
+	return userID == signet.SystemOwnerID
+}
+
+func sentinelAuthorizerLastOwnerIsSystem() bool {
+	return sentinelAuthorizerLastOwner == signet.SystemOwnerID
+}
+
+func TestForbiddenSentinelIsDistinct(t *testing.T) {
+	if signet.ErrForbidden.Error() != "signet: forbidden" {
+		t.Fatalf("unexpected sentinel: %v", signet.ErrForbidden)
+	}
+	if errors.Is(signet.ErrForbidden, signet.ErrNotFound) {
+		t.Fatal("ErrForbidden must not match ErrNotFound")
+	}
 }

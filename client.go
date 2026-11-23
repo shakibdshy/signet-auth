@@ -163,16 +163,21 @@ func New(cfg Config) (*Client, error) {
 		}
 		lastMethodManager = lastmethod.New(csrfKeys[0], cfg.LastSignInMethod.CookieName, cfg.LastSignInMethod.TTL)
 	}
+	sessions := session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger)
 	c := &Client{
 		cfg:           cfg,
 		dummyVerifier: dummy,
 		csrf:          guard,
 		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
 			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
-		tokens:        token.New(cfg.Store, cfg.Clock),
-		sessions:      session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
-		authorization: authorization.NewService(&cfg, cfg.Clock, cfg.Logger),
-		lastMethod:    lastMethodManager,
+		tokens:   token.New(cfg.Store, cfg.Clock),
+		sessions: sessions,
+		authorization: authorization.NewService(&cfg, cfg.Clock, cfg.Logger,
+			func(ctx context.Context, raw string) bool {
+				fresh, err := sessions.IsFreshWithin(ctx, raw, cfg.Accounts.FreshWindow)
+				return err == nil && fresh
+			}),
+		lastMethod: lastMethodManager,
 		lastMethodBeforeStore: func() func(context.Context, string) bool {
 			if cfg.LastSignInMethod == nil {
 				return nil

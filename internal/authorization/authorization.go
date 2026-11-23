@@ -60,11 +60,16 @@ type Service struct {
 	cfg    *core.Config
 	clock  core.Clock
 	logger *slog.Logger
+	fresh  func(context.Context, string) bool
 }
 
-// NewService returns a Service bound to the resolved config.
-func NewService(cfg *core.Config, clock core.Clock, logger *slog.Logger) *Service {
-	return &Service{cfg: cfg, clock: clock, logger: logger}
+// NewService returns a Service bound to the resolved config. fresh reports
+// whether a raw session token is within the configured freshness window.
+func NewService(cfg *core.Config, clock core.Clock, logger *slog.Logger, fresh func(context.Context, string) bool) *Service {
+	if fresh == nil {
+		fresh = func(context.Context, string) bool { return false }
+	}
+	return &Service{cfg: cfg, clock: clock, logger: logger, fresh: fresh}
 }
 
 // Authorize reports whether a User holds a permission and audits denials.
@@ -76,7 +81,7 @@ func (s *Service) Authorize(ctx context.Context, userID, resource, action string
 		return true
 	}
 	audit.Emit(ctx, s.cfg.AuditSink, s.logger, core.AuditEvent{
-		Name: "authorization_denied", UserID: userID, Outcome: "denied",
+		Name: audit.AuthorizationDenied, UserID: userID, Outcome: "denied",
 		Metadata: map[string]string{"permission": resource + ":" + action},
 	})
 	return false
@@ -100,7 +105,7 @@ func (s *Service) CreateAPIKey(ctx context.Context, in core.CreateAPIKeyInput) (
 	if owner == "" {
 		owner = core.SystemOwnerID
 	}
-	if !s.AuthorizePermission(ctx, owner, core.PermissionAPIKeysCreate) {
+	if !s.AuthorizePermission(ctx, owner, core.PermissionAPIKeysCreate) || !s.fresh(ctx, in.SessionToken) {
 		return nil, core.ErrForbidden
 	}
 	raw := secret.NewToken()
@@ -113,6 +118,10 @@ func (s *Service) CreateAPIKey(ctx context.Context, in core.CreateAPIKeyInput) (
 	if err := s.cfg.APIKeyStore.Create(ctx, key); err != nil {
 		return nil, err
 	}
+	audit.Emit(ctx, s.cfg.AuditSink, s.logger, core.AuditEvent{
+		Name: audit.APIKeyCreated, UserID: owner, Outcome: "success",
+		Metadata: map[string]string{"key_id": key.ID},
+	})
 	return &core.CreateAPIKeyResult{Raw: raw, Key: key}, nil
 }
 
@@ -121,7 +130,7 @@ func (s *Service) VerifyAPIKey(ctx context.Context, raw string) (*core.Principal
 	if s.cfg.APIKeyStore == nil {
 		return nil, core.ErrForbidden
 	}
-	key, err := s.cfg.APIKeyStore.Consume(ctx, raw)
+	key, err := s.cfg.APIKeyStore.ConsumeAPIKey(ctx, secret.Digest(raw))
 	if err != nil {
 		return nil, core.ErrTokenInvalid
 	}
@@ -142,7 +151,7 @@ func (s *Service) ListAPIKeys(ctx context.Context, in core.ListAPIKeysInput) (*c
 
 // RevokeAPIKey revokes one of a User's API keys.
 func (s *Service) RevokeAPIKey(ctx context.Context, in core.RevokeAPIKeyInput) error {
-	if s.cfg.APIKeyStore == nil || !s.AuthorizePermission(ctx, in.OwnerUserID, core.PermissionAPIKeysRevoke) {
+	if s.cfg.APIKeyStore == nil || !s.AuthorizePermission(ctx, in.OwnerUserID, core.PermissionAPIKeysRevoke) || !s.fresh(ctx, in.SessionToken) {
 		return core.ErrForbidden
 	}
 	keys, err := s.cfg.APIKeyStore.List(ctx, in.OwnerUserID)
@@ -151,7 +160,14 @@ func (s *Service) RevokeAPIKey(ctx context.Context, in core.RevokeAPIKeyInput) e
 	}
 	for _, key := range keys {
 		if key.ID == in.ID {
-			return s.cfg.APIKeyStore.Revoke(ctx, in.ID)
+			if err := s.cfg.APIKeyStore.Revoke(ctx, in.ID); err != nil {
+				return err
+			}
+			audit.Emit(ctx, s.cfg.AuditSink, s.logger, core.AuditEvent{
+				Name: audit.APIKeyRevoked, UserID: in.OwnerUserID, Outcome: "success",
+				Metadata: map[string]string{"key_id": in.ID},
+			})
+			return nil
 		}
 	}
 	return core.ErrForbidden

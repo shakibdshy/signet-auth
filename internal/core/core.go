@@ -257,10 +257,12 @@ type APIKey struct {
 	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
 }
 
-// APIKeyStore persists digest-only API keys. It is optional.
+// APIKeyStore persists digest-only API keys. It is optional. ConsumeAPIKey
+// receives a digest, never the raw key. It must atomically look up the key,
+// reject expired or exhausted keys and decrement Remaining in one operation.
 type APIKeyStore interface {
 	Create(context.Context, *APIKey) error
-	Consume(context.Context, string) (*APIKey, error)
+	ConsumeAPIKey(context.Context, string) (*APIKey, error)
 	List(context.Context, string) ([]*APIKey, error)
 	Revoke(context.Context, string) error
 }
@@ -273,11 +275,12 @@ type Principal struct {
 
 // CreateAPIKeyInput describes a new API key.
 type CreateAPIKeyInput struct {
-	OwnerUserID string    `json:"owner_user_id"`
-	Name        string    `json:"name"`
-	Roles       []string  `json:"roles"`
-	Remaining   int       `json:"remaining"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	OwnerUserID  string    `json:"owner_user_id"`
+	SessionToken string    `json:"-"`
+	Name         string    `json:"name"`
+	Roles        []string  `json:"roles"`
+	Remaining    int       `json:"remaining"`
+	ExpiresAt    time.Time `json:"expires_at"`
 }
 
 // CreateAPIKeyResult carries the raw key once and its stored record.
@@ -296,8 +299,9 @@ type ListAPIKeysResult struct {
 
 // RevokeAPIKeyInput identifies a key to revoke and its owner.
 type RevokeAPIKeyInput struct {
-	OwnerUserID string
-	ID          string
+	OwnerUserID  string `json:"owner_user_id"`
+	SessionToken string `json:"-"`
+	ID           string `json:"id"`
 }
 
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
