@@ -154,6 +154,27 @@ type Argon2idHasher = auth.Argon2idHasher
 // Session is one authenticated visit by a User.
 type Session = core.Session
 
+// APIKey is a digest-only credential for a non-human client.
+type APIKey = core.APIKey
+
+// Principal is the identity attached to a verified API key.
+type Principal = core.Principal
+
+// CreateAPIKeyInput describes a new API key.
+type CreateAPIKeyInput = core.CreateAPIKeyInput
+
+// CreateAPIKeyResult carries the raw key once and its stored record.
+type CreateAPIKeyResult = core.CreateAPIKeyResult
+
+// ListAPIKeysInput selects the keys owned by a User.
+type ListAPIKeysInput = core.ListAPIKeysInput
+
+// ListAPIKeysResult contains a User's API keys.
+type ListAPIKeysResult = core.ListAPIKeysResult
+
+// RevokeAPIKeyInput identifies a key to revoke.
+type RevokeAPIKeyInput = core.RevokeAPIKeyInput
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

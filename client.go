@@ -520,6 +520,81 @@ func (c *Client) Authorize(ctx context.Context, userID, resource, action string)
 	return c.cfg.Authorizer.Authorize(ctx, userID, resource, action)
 }
 
+func (c *Client) authorizePermission(ctx context.Context, userID string, permission Permission) bool {
+	resource, action, ok := strings.Cut(string(permission), ":")
+	if !ok {
+		return false
+	}
+	return c.Authorize(ctx, userID, resource, action)
+}
+
+// CreateAPIKey issues a digest-only API key for a non-human client.
+func (c *Client) CreateAPIKey(ctx context.Context, in CreateAPIKeyInput) (*CreateAPIKeyResult, error) {
+	if c.cfg.APIKeyStore == nil {
+		return nil, ErrForbidden
+	}
+	if !c.authorizePermission(ctx, in.OwnerUserID, PermissionAPIKeysCreate) {
+		return nil, ErrForbidden
+	}
+	raw := secret.NewToken()
+	key := &APIKey{
+		ID: secret.NewID(), OwnerUserID: in.OwnerUserID, Name: in.Name,
+		Hash: secret.Digest(raw), Prefix: raw[:6], Roles: in.Roles,
+		Remaining: in.Remaining, ExpiresAt: in.ExpiresAt, CreatedAt: c.cfg.Clock.Now(),
+	}
+	if err := c.cfg.APIKeyStore.Create(ctx, key); err != nil {
+		return nil, err
+	}
+	return &CreateAPIKeyResult{Raw: raw, Key: key}, nil
+}
+
+// VerifyAPIKey atomically consumes one use of an API key and returns its Principal.
+func (c *Client) VerifyAPIKey(ctx context.Context, raw string) (*Principal, error) {
+	if c.cfg.APIKeyStore == nil {
+		return nil, ErrForbidden
+	}
+	key, err := c.cfg.APIKeyStore.Consume(ctx, raw)
+	if err != nil {
+		return nil, ErrTokenInvalid
+	}
+	if !key.ExpiresAt.IsZero() && !c.cfg.Clock.Now().Before(key.ExpiresAt) {
+		return nil, ErrTokenInvalid
+	}
+	return &Principal{OwnerUserID: key.OwnerUserID, Roles: key.Roles}, nil
+}
+
+// ListAPIKeys returns the API keys owned by a User.
+func (c *Client) ListAPIKeys(ctx context.Context, in ListAPIKeysInput) (*ListAPIKeysResult, error) {
+	if c.cfg.APIKeyStore == nil {
+		return nil, ErrForbidden
+	}
+	keys, err := c.cfg.APIKeyStore.List(ctx, in.OwnerUserID)
+	if err != nil {
+		return nil, err
+	}
+	return &ListAPIKeysResult{Keys: keys}, nil
+}
+
+// RevokeAPIKey revokes one of a User's API keys.
+func (c *Client) RevokeAPIKey(ctx context.Context, in RevokeAPIKeyInput) error {
+	if c.cfg.APIKeyStore == nil {
+		return ErrForbidden
+	}
+	if !c.authorizePermission(ctx, in.OwnerUserID, PermissionAPIKeysRevoke) {
+		return ErrForbidden
+	}
+	keys, err := c.cfg.APIKeyStore.List(ctx, in.OwnerUserID)
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		if key.ID == in.ID {
+			return c.cfg.APIKeyStore.Revoke(ctx, in.ID)
+		}
+	}
+	return ErrForbidden
+}
+
 // SetRoles writes a User's global roles when a RoleWriter is configured.
 func (c *Client) SetRoles(ctx context.Context, userID string, roles []string) error {
 	if c.cfg.RoleWriter == nil {

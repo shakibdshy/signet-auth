@@ -35,6 +35,7 @@ func authorizationClient(t *testing.T, authorizer signet.Authorizer, writer sign
 	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.Authorizer = authorizer
 	cfg.RoleWriter = writer
+	cfg.APIKeyStore = newFakeAPIKeyStore()
 	cfg.AuditSink = sink
 	client, err := signet.New(cfg)
 	if err != nil {

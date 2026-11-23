@@ -237,6 +237,61 @@ type AuthorizeIn interface {
 	AuthorizeIn(ctx context.Context, userID, orgID, resource, action string) bool
 }
 
+// APIKey is a digest-only credential for a non-human client.
+type APIKey struct {
+	ID          string
+	OwnerUserID string
+	Name        string
+	Hash        string
+	Prefix      string
+	Roles       []string
+	Remaining   int
+	ExpiresAt   time.Time
+	CreatedAt   time.Time
+	RevokedAt   *time.Time
+}
+
+// APIKeyStore persists digest-only API keys. It is optional.
+type APIKeyStore interface {
+	Create(context.Context, *APIKey) error
+	Consume(context.Context, string) (*APIKey, error)
+	List(context.Context, string) ([]*APIKey, error)
+	Revoke(context.Context, string) error
+}
+
+// Principal is the identity attached to a verified API key.
+type Principal struct {
+	OwnerUserID string
+	Roles       []string
+}
+
+// CreateAPIKeyInput describes a new API key.
+type CreateAPIKeyInput struct {
+	OwnerUserID string
+	Name        string
+	Roles       []string
+	Remaining   int
+	ExpiresAt   time.Time
+}
+
+// CreateAPIKeyResult carries the raw key once and its stored record.
+type CreateAPIKeyResult struct {
+	Raw string
+	Key *APIKey
+}
+
+// ListAPIKeysInput selects the keys owned by a User.
+type ListAPIKeysInput struct{ OwnerUserID string }
+
+// ListAPIKeysResult contains a User's API keys.
+type ListAPIKeysResult struct{ Keys []*APIKey }
+
+// RevokeAPIKeyInput identifies a key to revoke and its owner.
+type RevokeAPIKeyInput struct {
+	OwnerUserID string
+	ID          string
+}
+
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {
 	TTL         time.Duration
@@ -447,6 +502,7 @@ type Config struct {
 	AuditSink                AuditSink
 	Authorizer               Authorizer
 	RoleWriter               RoleWriter
+	APIKeyStore              APIKeyStore
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
