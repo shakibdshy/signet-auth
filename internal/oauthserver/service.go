@@ -172,7 +172,7 @@ func (s *Service) Exchange(ctx context.Context, in core.OAuthTokenInput) (*core.
 	if err != nil || json.Unmarshal([]byte(raw), &data) != nil {
 		return nil, core.ErrTokenInvalid
 	}
-	if data.ClientID != in.ClientID || data.RedirectURI == "" || in.RedirectURI != "" && in.RedirectURI != data.RedirectURI {
+	if data.ClientID != in.ClientID || data.RedirectURI == "" || in.RedirectURI != data.RedirectURI {
 		return nil, core.ErrTokenInvalid
 	}
 	if _, err := s.audience(data.Audience); err != nil {

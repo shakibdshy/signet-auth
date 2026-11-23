@@ -159,13 +159,13 @@ func TestOAuthServerCodeExchange(t *testing.T) {
 	}
 	tokens, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
 		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "verifier-1234567890",
-		ClientID: "app", ClientSecret: "secret",
+		ClientID: "app", ClientSecret: "secret", RedirectURI: "https://app.example.com/cb",
 	})
 	if err != nil || tokens.AccessToken == "" || tokens.Scope != "openid email" {
 		t.Fatalf("tokens = %+v err = %v", tokens, err)
 	}
 	if _, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
-		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "verifier-1234567890", ClientID: "app",
+		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "verifier-1234567890", ClientID: "app", RedirectURI: "https://app.example.com/cb",
 	}); !errors.Is(err, signet.ErrTokenInvalid) {
 		t.Fatalf("code replay error = %v", err)
 	}
@@ -184,7 +184,7 @@ func TestOAuthServerPKCEAndBinding(t *testing.T) {
 		t.Fatalf("authorize: %v", err)
 	}
 	if _, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
-		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "wrong", ClientID: "app",
+		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "wrong", ClientID: "app", RedirectURI: "https://app.example.com/cb",
 	}); !errors.Is(err, signet.ErrTokenInvalid) {
 		t.Fatalf("wrong verifier error = %v", err)
 	}
@@ -210,7 +210,7 @@ func TestOAuthServerRefreshRotation(t *testing.T) {
 		t.Fatalf("authorize: %v", err)
 	}
 	tokens, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
-		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "verifier-1234567890", ClientID: "app",
+		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: "verifier-1234567890", ClientID: "app", RedirectURI: "https://app.example.com/cb",
 	})
 	if err != nil {
 		t.Fatalf("exchange: %v", err)
@@ -327,7 +327,7 @@ func TestOAuthServerHTTPEndpoints(t *testing.T) {
 		t.Fatalf("decode = %v body = %s", err, rr.Body.String())
 	}
 	tokenReq := httptest.NewRequest(http.MethodPost, "/oauth/token",
-		strings.NewReader("grant_type=authorization_code&code="+result.Code+"&code_verifier=verifier-1234567890&client_id=app"))
+		strings.NewReader("grant_type=authorization_code&code="+result.Code+"&code_verifier=verifier-1234567890&client_id=app&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcb"))
 	tokenReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr = httptest.NewRecorder()
 	client.Handler().ServeHTTP(rr, tokenReq)
@@ -358,8 +358,15 @@ func TestOAuthServerClientSecretAndRedirectBinding(t *testing.T) {
 	}); !errors.Is(err, signet.ErrForbidden) {
 		t.Fatalf("wrong secret error = %v", err)
 	}
+	second, err := client.OAuthAuthorize(ctx, signet.OAuthAuthorizeInput{
+		ClientID: "app", RedirectURI: "https://app.example.com/cb", ResponseType: "code",
+		Scope: "openid", CodeChallenge: challenge(), Audience: "api.example.com", SessionToken: session,
+	})
+	if err != nil {
+		t.Fatalf("second authorize: %v", err)
+	}
 	if _, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
-		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: verifier,
+		GrantType: "authorization_code", Code: second.Code, CodeVerifier: verifier,
 		ClientID: "app", ClientSecret: "right-secret", RedirectURI: "https://evil.example.com",
 	}); !errors.Is(err, signet.ErrTokenInvalid) {
 		t.Fatalf("wrong redirect error = %v", err)
