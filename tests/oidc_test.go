@@ -6,9 +6,9 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/shakibdshy/signet"
@@ -164,6 +164,127 @@ func stringsPrefix(value, prefix string) bool {
 	return len(value) >= len(prefix) && value[:len(prefix)] == prefix
 }
 
+func TestOIDCAuthorizationURLHasNonceAndOpenID(t *testing.T) {
+	d := newDiscoveryServer(t, nil)
+	defer d.server.Close()
+	provider, err := oidc.NewProvider(context.Background(), d.config("acme"))
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	withNonce, ok := any(provider).(signet.AuthURLWithNonce)
+	if !ok {
+		t.Fatal("OIDC provider must implement AuthURLWithNonce")
+	}
+	raw := withNonce.AuthURLWithNonce("", "https://api.example.com/auth/oauth/callback", "state", "challenge", "nonce-value")
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse URL: %v", err)
+	}
+	query := parsed.Query()
+	for key, want := range map[string]string{
+		"nonce": "nonce-value", "code_challenge": "challenge",
+		"code_challenge_method": "S256", "scope": "openid",
+	} {
+		if query.Get(key) != want {
+			t.Fatalf("%s = %q, want %q", key, query.Get(key), want)
+		}
+	}
+}
+
+func TestOAuthStartSendsNonce(t *testing.T) {
+	d := newDiscoveryServer(t, nil)
+	defer d.server.Close()
+	provider, err := oidc.NewProvider(context.Background(), d.config("acme"))
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.OAuth = &signet.OAuthConfig{
+		Providers:        []signet.OAuthProvider{provider},
+		RedirectBaseURL:  "https://api.example.com",
+		AllowedRedirects: []string{"https://app.example.com/callback"},
+		StateKey:         make([]byte, 32),
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	result, err := client.OAuthStart(context.Background(), signet.OAuthStartInput{
+		Provider: "acme", Redirect: "https://app.example.com/callback",
+	})
+	if err != nil {
+		t.Fatalf("OAuthStart: %v", err)
+	}
+	parsed, err := url.Parse(result.URL)
+	if err != nil {
+		t.Fatalf("parse URL: %v", err)
+	}
+	if parsed.Query().Get("nonce") == "" {
+		t.Fatalf("authorization URL has no nonce: %q", result.URL)
+	}
+}
+
+type nonceRecordingProvider struct{ seen string }
+
+func (p *nonceRecordingProvider) Name() string { return "recording" }
+func (p *nonceRecordingProvider) AuthURL(_, _, state, _ string) string {
+	return "https://example.com/authorize?state=" + url.QueryEscape(state)
+}
+func (p *nonceRecordingProvider) Exchange(context.Context, string, string, string) (*signet.OAuthIdentity, error) {
+	return nil, errors.New("not used")
+}
+func (p *nonceRecordingProvider) ExchangeWithNonce(_ context.Context, _, _, _, nonce string) (*signet.OAuthIdentity, error) {
+	p.seen = nonce
+	return &signet.OAuthIdentity{
+		Provider: "recording", ProviderUserID: "user", Email: "user@example.com", EmailVerified: true,
+	}, nil
+}
+
+func TestOAuthCallbackPassesNonceToProvider(t *testing.T) {
+	recorder := &nonceRecordingProvider{}
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = store
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.OAuth = &signet.OAuthConfig{
+		Providers:        []signet.OAuthProvider{recorder},
+		RedirectBaseURL:  "https://api.example.com",
+		AllowedRedirects: []string{"https://app.example.com/callback"},
+		StateKey:         make([]byte, 32),
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	started, err := client.OAuthStart(ctx, signet.OAuthStartInput{
+		Provider: "recording", Redirect: "https://app.example.com/callback",
+	})
+	if err != nil {
+		t.Fatalf("OAuthStart: %v", err)
+	}
+	parsed, err := url.Parse(started.URL)
+	if err != nil {
+		t.Fatalf("parse URL: %v", err)
+	}
+	stateValue := parsed.Query().Get("state")
+	if stateValue == "" || len(store.Tokens) != 1 {
+		t.Fatalf("start did not issue a state token: %q, %d tokens", stateValue, len(store.Tokens))
+	}
+	if _, err := client.OAuthCallback(ctx, signet.OAuthCallbackInput{
+		Code: "code", State: stateValue,
+	}); err != nil {
+		t.Fatalf("OAuthCallback: %v", err)
+	}
+	if recorder.seen == "" {
+		t.Fatal("callback did not pass the nonce to the provider")
+	}
+}
+
 func TestOIDCProviderIDConflicts(t *testing.T) {
 	d := newDiscoveryServer(t, nil)
 	defer d.server.Close()
@@ -198,5 +319,3 @@ func TestOIDCReservedProviderNameRejected(t *testing.T) {
 		t.Fatal("reserved provider name should be rejected")
 	}
 }
-
-var _ = fmt.Sprintf

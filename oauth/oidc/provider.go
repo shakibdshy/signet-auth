@@ -138,6 +138,17 @@ func (p *Provider) Name() string { return p.cfg.ProviderID }
 
 // AuthURL builds the OIDC authorization URL with PKCE.
 func (p *Provider) AuthURL(_ string, redirectURI, state, challenge string) string {
+	return p.authURLWithNonce(clientIDFromConfig(p), redirectURI, state, challenge, "")
+}
+
+func clientIDFromConfig(p *Provider) string { return p.cfg.ClientID }
+
+// AuthURLWithNonce builds an authorization URL that binds an OIDC nonce.
+func (p *Provider) AuthURLWithNonce(_ string, redirectURI, state, challenge, nonce string) string {
+	return p.authURLWithNonce(p.cfg.ClientID, redirectURI, state, challenge, nonce)
+}
+
+func (p *Provider) authURLWithNonce(clientID, redirectURI, state, challenge, nonce string) string {
 	scopes := p.cfg.Scopes
 	hasOpenID := false
 	for _, scope := range scopes {
@@ -149,13 +160,16 @@ func (p *Provider) AuthURL(_ string, redirectURI, state, challenge string) strin
 		scopes = append([]string{"openid"}, scopes...)
 	}
 	query := url.Values{}
-	query.Set("client_id", p.cfg.ClientID)
+	query.Set("client_id", clientID)
 	query.Set("redirect_uri", redirectURI)
 	query.Set("response_type", "code")
 	query.Set("scope", strings.Join(scopes, " "))
 	query.Set("state", state)
 	query.Set("code_challenge", challenge)
 	query.Set("code_challenge_method", "S256")
+	if nonce != "" {
+		query.Set("nonce", nonce)
+	}
 	separator := "?"
 	if strings.Contains(p.authURL, "?") {
 		separator = "&"

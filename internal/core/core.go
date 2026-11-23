@@ -366,6 +366,16 @@ type OAuthProvider interface {
 	Exchange(context.Context, string, string, string) (*OAuthIdentity, error)
 }
 
+// AuthURLWithNonce is implemented by Providers that bind an OIDC nonce.
+type AuthURLWithNonce interface {
+	AuthURLWithNonce(clientID, redirectURI, state, pkceChallenge, nonce string) string
+}
+
+// ExchangeWithNonce is implemented by Providers that verify an OIDC nonce.
+type ExchangeWithNonce interface {
+	ExchangeWithNonce(context.Context, string, string, string, string) (*OAuthIdentity, error)
+}
+
 // Config is the complete set of options for a Client.
 type Config struct {
 	Store                    Store
