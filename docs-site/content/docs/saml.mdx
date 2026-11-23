@@ -45,4 +45,4 @@ Assertions must be signed and carry the configured issuer, SP audience, a valid 
 | `POST` | `/saml/start` | none | Start an SP-initiated ceremony |
 | `POST` | `/saml/acs` | none | Assertion consumer service |
 
-`SAMLStartResult` carries the IdP URL, tracking cookies and state Token; `SAMLACSResult` carries the Session and Organization. Connection management continues through `/sso/connections` with `protocol: "saml"`. SLO, artifact binding and IdP-initiated SSO are not included.
+`SAMLStartResult` carries the IdP URL, state Token and AuthnRequest ID; `SAMLACSResult` carries the Session and Organization. Connection management continues through `/sso/connections` with `protocol: "saml"`. SLO, artifact binding and IdP-initiated SSO are not included.

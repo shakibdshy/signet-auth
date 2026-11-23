@@ -142,6 +142,9 @@ func (s *Service) ACS(ctx context.Context, connection *core.SSOConnection, acsUR
 	}
 	parsed, err := provider.ValidateEncodedResponse(ctx, response)
 	if err != nil {
+		if errors.Is(err, saml2.ErrReplay) {
+			return nil, core.ErrSAMLReplay
+		}
 		return nil, fmt.Errorf("%w: %w", core.ErrSAMLInvalidAssertion, err)
 	}
 	if len(parsed.Assertions) == 0 || parsed.Assertions[0].Subject == nil || parsed.Assertions[0].Subject.NameID == nil {

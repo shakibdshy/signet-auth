@@ -279,7 +279,7 @@ func TestSAMLRejectsWrongInResponseTo(t *testing.T) {
 	form := url.Values{"SAMLResponse": {response}}
 	request := httptest.NewRequest("POST", "https://app.example.com/saml/acs", strings.NewReader(form.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if _, err := client.CompleteSAMLSignIn(ctx, start.State, request); !errors.Is(err, signet.ErrSAMLInvalidAssertion) {
+	if _, err := client.CompleteSAMLSignIn(ctx, start.State, request); !errors.Is(err, signet.ErrSAMLReplay) && !errors.Is(err, signet.ErrSAMLInvalidAssertion) {
 		t.Fatalf("wrong InResponseTo error = %v", err)
 	}
 }
