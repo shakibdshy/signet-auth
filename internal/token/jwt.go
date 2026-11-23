@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -93,6 +95,7 @@ type JWTDependencies struct {
 	RevokeSessions  func(context.Context, string) error
 	VerifyTwoFactor func(context.Context, core.VerifyTwoFactorInput) (*core.SignInResult, error)
 	AuditSink       core.AuditSink
+	Tokens          *Service
 }
 
 // JWTService implements Signet's optional bearer-token mode.
@@ -204,14 +207,21 @@ func (s *JWTService) VerifyAccessToken(ctx context.Context, raw string) (*core.U
 	return s.deps.Store.UserByID(ctx, claims.Subject)
 }
 
-// Issue signs a fresh Access token and stores a rotating Refresh proof.
-func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair, error) {
+// IssueWithScope signs an Access token carrying OAuth scope and audience
+// claims and stores a rotating Refresh proof carrying the same claims.
+func (s *JWTService) IssueWithScope(ctx context.Context, userID, audience string, scopes []string) (*core.TokenPair, error) {
 	now := s.deps.Clock.Now()
-	claims := jwt.RegisteredClaims{
-		Subject:   userID,
-		Issuer:    s.deps.Config.Issuer,
-		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(s.deps.Config.AccessTTL)),
+	claims := jwt.MapClaims{
+		"sub":   userID,
+		"iat":   now.Unix(),
+		"exp":   now.Add(s.deps.Config.AccessTTL).Unix(),
+		"scope": strings.Join(scopes, " "),
+	}
+	if audience != "" {
+		claims["aud"] = audience
+	}
+	if s.deps.Config.Issuer != "" {
+		claims["iss"] = s.deps.Config.Issuer
 	}
 	algorithm, ok := jwtAlgorithms[s.deps.Config.Algorithm]
 	if !ok {
@@ -230,16 +240,12 @@ func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair,
 	if err != nil {
 		return nil, err
 	}
-	raw := secret.NewToken()
-	token := &core.Token{
-		ID:        secret.NewID(),
-		UserID:    userID,
-		Kind:      core.TokenRefresh,
-		Hash:      secret.Digest(raw),
-		ExpiresAt: now.Add(s.deps.Config.RefreshTTL),
-		CreatedAt: now,
-	}
-	if err := s.deps.Store.CreateToken(ctx, token); err != nil {
+	data, _ := json.Marshal(struct {
+		Audience string   `json:"audience"`
+		Scopes   []string `json:"scopes"`
+	}{audience, scopes})
+	raw, _, err := s.deps.Tokens.IssueWithData(ctx, userID, core.TokenRefresh, s.deps.Config.RefreshTTL, string(data))
+	if err != nil {
 		return nil, err
 	}
 	return &core.TokenPair{
@@ -249,7 +255,8 @@ func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair,
 	}, nil
 }
 
-func (s *JWTService) refreshTokens(ctx context.Context, presented string) (*core.TokenPair, error) {
+// RefreshWithScope rotates a Refresh proof, preserving its scope and audience.
+func (s *JWTService) RefreshWithScope(ctx context.Context, presented string) (*core.TokenPair, error) {
 	digest := secret.Digest(presented)
 	token, err := s.deps.Store.TokenByHash(ctx, core.TokenRefresh, digest)
 	if errors.Is(err, core.ErrNotFound) {
@@ -278,12 +285,26 @@ func (s *JWTService) refreshTokens(ctx context.Context, presented string) (*core
 	if user.Disabled {
 		return nil, core.ErrInvalidCredentials
 	}
-	return s.Issue(ctx, user.ID)
+	var data struct {
+		Audience string   `json:"audience"`
+		Scopes   []string `json:"scopes"`
+	}
+	if raw, err := ParseData(presented); err == nil {
+		_ = json.Unmarshal([]byte(raw), &data)
+	}
+	return s.IssueWithScope(ctx, user.ID, data.Audience, data.Scopes)
+}
+
+// Issue signs a fresh Access token and stores a rotating Refresh proof.
+func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair, error) {
+	return s.IssueWithScope(ctx, userID, "", nil)
+}
+
+func (s *JWTService) refreshTokens(ctx context.Context, presented string) (*core.TokenPair, error) {
+	return s.RefreshWithScope(ctx, presented)
 }
 
 func (s *JWTService) handleRefreshReuse(ctx context.Context, userID string) (*core.TokenPair, error) {
-	// Security: a replayed Refresh token is treated as theft. Contain it by
-	// revoking every Session and Refresh token of that User.
 	_ = s.deps.RevokeSessions(ctx, userID)
 	for _, kind := range core.AllTokenKinds {
 		_ = s.deps.Store.DeleteTokensForUser(ctx, userID, kind)

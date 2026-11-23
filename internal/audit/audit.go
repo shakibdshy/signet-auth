@@ -47,6 +47,11 @@ const (
 	PasskeySignCountRegression = "passkey_sign_count_regression"
 	PasskeySignIn              = "passkey_sign_in"
 	PasskeyDeleted             = "passkey_deleted"
+	OAuthConsentDenied         = "oauth_consent_denied"
+	OAuthCodeIssued            = "oauth_code_issued"
+	//nolint:gosec // G101: event name, not a credential.
+	OAuthTokenIssued    = "oauth_token_issued"
+	OAuthDeviceApproved = "oauth_device_approved"
 )
 
 // Emit records an event when a sink is configured. A sink failure is logged

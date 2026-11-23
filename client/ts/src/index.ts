@@ -202,6 +202,36 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.GET("/passkeys"));
 		},
 
+		async oauthAuthorize(
+			body: RequestBody<"/oauth/authorize", "post">,
+		): Promise<SuccessBody<"/oauth/authorize", "post", 200>> {
+			return unwrap(await api.POST("/oauth/authorize", { body, headers: await csrfHeaders() }));
+		},
+
+		async oauthToken(
+			body: RequestBody<"/oauth/token", "post">,
+		): Promise<SuccessBody<"/oauth/token", "post", 200>> {
+			return unwrap(await api.POST("/oauth/token", { body }));
+		},
+
+		async beginDeviceAuthorization(
+			body: RequestBody<"/oauth/device/authorize", "post">,
+		): Promise<SuccessBody<"/oauth/device/authorize", "post", 200>> {
+			return unwrap(await api.POST("/oauth/device/authorize", { body }));
+		},
+
+		async deviceToken(
+			body: RequestBody<"/oauth/device/token", "post">,
+		): Promise<SuccessBody<"/oauth/device/token", "post", 200>> {
+			return unwrap(await api.POST("/oauth/device/token", { body }));
+		},
+
+		async approveDeviceAuthorization(
+			body: RequestBody<"/oauth/device/approve", "post">,
+		): Promise<SuccessBody<"/oauth/device/approve", "post", 200>> {
+			return unwrap(await api.POST("/oauth/device/approve", { body, headers: await csrfHeaders() }));
+		},
+
 		async deletePasskey(
 			body: RequestBody<"/passkeys/delete", "post">,
 		): Promise<SuccessBody<"/passkeys/delete", "post", 200>> {

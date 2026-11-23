@@ -69,6 +69,12 @@ type API interface {
 	FinishPasskeySignIn(context.Context, core.PasskeyFinishSignInInput) (*core.SignInResult, error)
 	ListPasskeys(context.Context, core.PasskeyListInput) (*core.PasskeyListResult, error)
 	DeletePasskey(context.Context, core.PasskeyDeleteInput) error
+	OAuthAuthorize(context.Context, core.OAuthAuthorizeInput) (*core.OAuthAuthorizeResult, error)
+	OAuthExchange(context.Context, core.OAuthTokenInput) (*core.OAuthTokenResult, error)
+	OAuthRefresh(context.Context, core.OAuthTokenInput) (*core.OAuthTokenResult, error)
+	BeginDeviceAuthorization(context.Context, core.DeviceAuthorizeInput) (*core.DeviceAuthorizeResult, error)
+	ApproveDeviceAuthorization(context.Context, core.DeviceApproveInput) error
+	ExchangeDeviceAuthorization(context.Context, string) (*core.OAuthTokenResult, error)
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -146,6 +152,11 @@ var Endpoints = []Endpoint{
 	{Name: "passkeys/signin-finish", Anonymous: true},
 	{Name: "passkeys"},
 	{Name: "passkeys/delete"},
+	{Name: "oauth/authorize"},
+	{Name: "oauth/token", Anonymous: true},
+	{Name: "oauth/device/authorize", Anonymous: true},
+	{Name: "oauth/device/token", Anonymous: true},
+	{Name: "oauth/device/approve"},
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -247,6 +258,16 @@ func (h *Handler) Handler() http.Handler {
 			h.handlePasskeys(w, r)
 		case "passkeys/delete":
 			h.handlePasskeyDelete(w, r)
+		case "oauth/authorize":
+			h.handleOAuthAuthorize(w, r)
+		case "oauth/token":
+			h.handleOAuthToken(w, r)
+		case "oauth/device/authorize":
+			h.handleDeviceAuthorize(w, r)
+		case "oauth/device/token":
+			h.handleDeviceToken(w, r)
+		case "oauth/device/approve":
+			h.handleDeviceApprove(w, r)
 		case "set-active-organization":
 			h.handleSetActiveOrganization(w, r)
 		case "active-organization":
@@ -1075,6 +1096,165 @@ func (h *Handler) handlePasskeyDelete(w http.ResponseWriter, r *http.Request) {
 	in.SessionToken = h.api.SessionTokenFromRequest(r)
 	if err := h.api.DeletePasskey(r.Context(), in); err != nil {
 		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// decodeOAuthRequest accepts form-encoded and JSON bodies.
+func decodeOAuthRequest(r *http.Request, out any) error {
+	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		return json.NewDecoder(r.Body).Decode(out)
+	}
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+	values := r.PostForm
+	set := func(name, value string) {
+		if values.Get(name) == "" {
+			values.Set(name, value)
+		}
+	}
+	set("client_id", r.URL.Query().Get("client_id"))
+	set("redirect_uri", r.URL.Query().Get("redirect_uri"))
+	set("response_type", r.URL.Query().Get("response_type"))
+	set("scope", r.URL.Query().Get("scope"))
+	set("state", r.URL.Query().Get("state"))
+	set("code_challenge", r.URL.Query().Get("code_challenge"))
+	set("audience", r.URL.Query().Get("audience"))
+	return decodeForm(values, out)
+}
+
+// decodeForm maps form values onto a struct's json-tagged string fields.
+func decodeForm(values url.Values, out any) error {
+	fields := make(map[string]string, len(values))
+	for key := range values {
+		fields[key] = values.Get(key)
+	}
+	raw, err := json.Marshal(fields)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, out)
+}
+
+func writeOAuthError(w http.ResponseWriter, code string, description string) {
+	writeJSON(w, http.StatusBadRequest, map[string]string{
+		"error": code, "error_description": description,
+	})
+}
+
+func (h *Handler) handleOAuthAuthorize(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.OAuthAuthorizeInput
+	if err := decodeOAuthRequest(r, &in); err != nil {
+		writeOAuthError(w, "invalid_request", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	result, err := h.api.OAuthAuthorize(r.Context(), in)
+	if err != nil {
+		writeOAuthError(w, "access_denied", "authorization denied")
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleOAuthToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.OAuthTokenInput
+	if err := decodeOAuthRequest(r, &in); err != nil {
+		writeOAuthError(w, "invalid_request", "invalid request")
+		return
+	}
+	var result *core.OAuthTokenResult
+	var err error
+	switch in.GrantType {
+	case "authorization_code":
+		result, err = h.api.OAuthExchange(r.Context(), in)
+	case "refresh_token":
+		result, err = h.api.OAuthRefresh(r.Context(), in)
+	default:
+		writeOAuthError(w, "unsupported_grant_type", "unsupported grant type")
+		return
+	}
+	if err != nil {
+		writeOAuthError(w, "invalid_grant", "grant rejected")
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleDeviceAuthorize(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.DeviceAuthorizeInput
+	if err := decodeOAuthRequest(r, &in); err != nil {
+		writeOAuthError(w, "invalid_request", "invalid request")
+		return
+	}
+	result, err := h.api.BeginDeviceAuthorization(r.Context(), in)
+	if err != nil {
+		writeOAuthError(w, "invalid_request", "device authorization rejected")
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleDeviceToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in struct {
+		GrantType  string `json:"grant_type"`
+		DeviceCode string `json:"device_code"`
+	}
+	if err := decodeOAuthRequest(r, &in); err != nil {
+		writeOAuthError(w, "invalid_request", "invalid request")
+		return
+	}
+	result, err := h.api.ExchangeDeviceAuthorization(r.Context(), in.DeviceCode)
+	if err != nil {
+		if errors.Is(err, core.ErrOAuthSlowDown) {
+			writeOAuthError(w, "slow_down", "polling too quickly")
+			return
+		}
+		writeOAuthError(w, "authorization_pending", "authorization pending")
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleDeviceApprove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.DeviceApproveInput
+	if err := decodeOAuthRequest(r, &in); err != nil {
+		writeOAuthError(w, "invalid_request", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	if err := h.api.ApproveDeviceAuthorization(r.Context(), in); err != nil {
+		writeOAuthError(w, "invalid_grant", "device code rejected")
 		return
 	}
 	w.WriteHeader(http.StatusOK)

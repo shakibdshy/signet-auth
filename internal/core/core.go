@@ -300,6 +300,127 @@ type PasskeyDeleteInput struct {
 	SessionToken string `json:"-"`
 }
 
+// OAuthScope is an exact permission requested by an OAuth client.
+type OAuthScope string
+
+// Published OAuth scopes. There is no wildcard expansion.
+const (
+	OAuthScopeOpenID  OAuthScope = "openid"
+	OAuthScopeProfile OAuthScope = "profile"
+	OAuthScopeEmail   OAuthScope = "email"
+	OAuthScopeOffline OAuthScope = "offline_access"
+)
+
+// OAuthClient is a registered application allowed to obtain tokens.
+type OAuthClient struct {
+	ID           string
+	Secret       string
+	RedirectURIs []string
+	Trusted      bool
+}
+
+// OAuthClientStore persists OAuth clients. It is optional.
+type OAuthClientStore interface {
+	Get(context.Context, string) (*OAuthClient, error)
+	Authenticate(context.Context, string, string) (*OAuthClient, error)
+	IsTrusted(context.Context, string) (bool, error)
+	AllowedRedirects(context.Context, string) ([]string, error)
+}
+
+// DeviceAuthorization is a pending or approved device authorization.
+type DeviceAuthorization struct {
+	DeviceCode string
+	UserCode   string
+	ClientID   string
+	UserID     string
+	Scopes     []string
+	Approved   bool
+	PollCount  int
+	ExpiresAt  time.Time
+	CreatedAt  time.Time
+}
+
+// DeviceStore persists device authorizations. It is optional.
+type DeviceStore interface {
+	Create(context.Context, *DeviceAuthorization) error
+	ByUserCode(context.Context, string) (*DeviceAuthorization, error)
+	ByDeviceCode(context.Context, string) (*DeviceAuthorization, error)
+	Approve(context.Context, string, string) error
+	IncrementPoll(context.Context, string) error
+	Consume(context.Context, string) error
+}
+
+// AuthorizationServerConfig enables Signet as an Authorization server.
+type AuthorizationServerConfig struct {
+	Clients       OAuthClientStore
+	StaticClients []OAuthClient
+	Devices       DeviceStore
+	Consent       func(context.Context, string, string, []string) bool
+	Audiences     []string
+	DeviceTTL     time.Duration
+}
+
+// OAuthAuthorizeInput starts an authorization code flow.
+type OAuthAuthorizeInput struct {
+	ClientID      string `json:"client_id"`
+	RedirectURI   string `json:"redirect_uri"`
+	ResponseType  string `json:"response_type"`
+	Scope         string `json:"scope"`
+	State         string `json:"state"`
+	CodeChallenge string `json:"code_challenge"`
+	Audience      string `json:"audience"`
+	UserID        string `json:"-"`
+	SessionToken  string `json:"-"`
+}
+
+// OAuthAuthorizeResult carries the issued authorization code.
+type OAuthAuthorizeResult struct {
+	Code  string `json:"code"`
+	State string `json:"state"`
+}
+
+// OAuthTokenInput exchanges a grant for tokens.
+type OAuthTokenInput struct {
+	GrantType    string `json:"grant_type"`
+	Code         string `json:"code"`
+	CodeVerifier string `json:"code_verifier"`
+	RedirectURI  string `json:"redirect_uri"`
+	RefreshToken string `json:"refresh_token"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+// OAuthTokenResult is the OAuth-standard token response.
+type OAuthTokenResult struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
+	Scope        string `json:"scope"`
+}
+
+// DeviceAuthorizeInput starts a Device authorization.
+type DeviceAuthorizeInput struct {
+	ClientID string `json:"client_id"`
+	Scope    string `json:"scope"`
+	Audience string `json:"audience"`
+}
+
+// DeviceAuthorizeResult carries the User code and verification URL.
+type DeviceAuthorizeResult struct {
+	DeviceCode      string `json:"device_code"`
+	UserCode        string `json:"user_code"`
+	VerificationURL string `json:"verification_uri"`
+	ExpiresIn       int64  `json:"expires_in"`
+}
+
+// DeviceApproveInput approves a User code from an authenticated Session.
+type DeviceApproveInput struct {
+	UserCode     string `json:"user_code"`
+	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
+}
+
 // AuditSink receives Audit events. Implementations own persistence and retention.
 type AuditSink interface {
 	Record(context.Context, AuditEvent) error
@@ -754,6 +875,7 @@ type Config struct {
 	CaptchaEndpoints         []string
 	AuditSink                AuditSink
 	AutoSignIn               *AutoSignInConfig
+	AuthorizationServer      *AuthorizationServerConfig
 	Passkeys                 *PasskeysConfig
 	Authorizer               Authorizer
 	AuthorizeIn              AuthorizeIn
@@ -1217,6 +1339,10 @@ var (
 	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
 	// ErrInvalidPasskeysConfig reports an invalid passkeys configuration.
 	ErrInvalidPasskeysConfig = errors.New("signet: invalid passkeys configuration")
+	// ErrInvalidAuthorizationServerConfig reports a misconfigured Authorization server.
+	ErrInvalidAuthorizationServerConfig = errors.New("signet: invalid authorization server configuration")
+	// ErrOAuthSlowDown reports that a device is polling too quickly.
+	ErrOAuthSlowDown = errors.New("signet: oauth slow down")
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = errors.New("signet: forbidden")
 )

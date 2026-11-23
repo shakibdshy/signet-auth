@@ -312,6 +312,53 @@ type PasskeyListResult = core.PasskeyListResult
 // PasskeyDeleteInput identifies a Passkey to revoke.
 type PasskeyDeleteInput = core.PasskeyDeleteInput
 
+// OAuthScope is an exact permission requested by an OAuth client.
+type OAuthScope = core.OAuthScope
+
+// Published OAuth scopes; there is no wildcard expansion.
+const (
+	OAuthScopeOpenID  = core.OAuthScopeOpenID
+	OAuthScopeProfile = core.OAuthScopeProfile
+	OAuthScopeEmail   = core.OAuthScopeEmail
+	OAuthScopeOffline = core.OAuthScopeOffline
+)
+
+// OAuthClient is a registered application allowed to obtain tokens.
+type OAuthClient = core.OAuthClient
+
+// OAuthClientStore persists OAuth clients.
+type OAuthClientStore = core.OAuthClientStore
+
+// DeviceAuthorization is a pending or approved device authorization.
+type DeviceAuthorization = core.DeviceAuthorization
+
+// DeviceStore persists device authorizations.
+type DeviceStore = core.DeviceStore
+
+// AuthorizationServerConfig enables Signet as an Authorization server.
+type AuthorizationServerConfig = core.AuthorizationServerConfig
+
+// OAuthAuthorizeInput starts an authorization code flow.
+type OAuthAuthorizeInput = core.OAuthAuthorizeInput
+
+// OAuthAuthorizeResult carries an authorization code.
+type OAuthAuthorizeResult = core.OAuthAuthorizeResult
+
+// OAuthTokenInput exchanges a grant for tokens.
+type OAuthTokenInput = core.OAuthTokenInput
+
+// OAuthTokenResult is the OAuth-standard token response.
+type OAuthTokenResult = core.OAuthTokenResult
+
+// DeviceAuthorizeInput starts a Device authorization.
+type DeviceAuthorizeInput = core.DeviceAuthorizeInput
+
+// DeviceAuthorizeResult carries the User code and verification URL.
+type DeviceAuthorizeResult = core.DeviceAuthorizeResult
+
+// DeviceApproveInput approves a User code.
+type DeviceApproveInput = core.DeviceApproveInput
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

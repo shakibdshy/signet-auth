@@ -13,6 +13,7 @@ import (
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/lastmethod"
 	"github.com/shakibdshy/signet/internal/oauth"
+	"github.com/shakibdshy/signet/internal/oauthserver"
 	"github.com/shakibdshy/signet/internal/orgadmin"
 	"github.com/shakibdshy/signet/internal/passkey"
 	"github.com/shakibdshy/signet/internal/ratelimit"
@@ -43,6 +44,7 @@ type Client struct {
 	authorization         *authorization.Service
 	orgadmin              *orgadmin.Service
 	passkeys              *passkey.Service
+	oauthserver           *oauthserver.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
@@ -122,6 +124,11 @@ func New(cfg Config) (*Client, error) {
 	dummy, err := cfg.PasswordHasher.Hash(context.Background(), dummyPassword)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.AuthorizationServer != nil {
+		if cfg.JWT == nil || cfg.AuthorizationServer.Devices == nil {
+			return nil, ErrInvalidAuthorizationServerConfig
+		}
 	}
 	if cfg.OAuth != nil {
 		if len(cfg.OAuth.Providers) == 0 || len(cfg.OAuth.StateKey) != 32 {
@@ -224,8 +231,11 @@ func New(cfg Config) (*Client, error) {
 		c.jwtService = token.NewJWT(token.JWTDependencies{
 			Config: jwtCfg, Store: cfg.Store, Clock: cfg.Clock,
 			Limiter: limiter, Logger: cfg.Logger, SignIn: c.SignIn, AuditSink: cfg.AuditSink,
-			RevokeSessions: c.sessions.RevokeAll,
+			RevokeSessions: c.sessions.RevokeAll, Tokens: c.tokens,
 		})
+	}
+	if cfg.AuthorizationServer != nil {
+		c.oauthserver = oauthserver.New(&cfg, c.tokens, c.jwtService, cfg.Logger, sessions.Resolve)
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
@@ -718,6 +728,54 @@ func (c *Client) DeletePasskey(ctx context.Context, in PasskeyDeleteInput) error
 	return c.passkeys.Delete(ctx, in)
 }
 
+// OAuthAuthorize issues an authorization code for a signed-in User.
+func (c *Client) OAuthAuthorize(ctx context.Context, in OAuthAuthorizeInput) (*OAuthAuthorizeResult, error) {
+	if c.oauthserver == nil {
+		return nil, ErrForbidden
+	}
+	return c.oauthserver.Authorize(ctx, in)
+}
+
+// OAuthExchange exchanges an authorization code for tokens.
+func (c *Client) OAuthExchange(ctx context.Context, in OAuthTokenInput) (*OAuthTokenResult, error) {
+	if c.oauthserver == nil {
+		return nil, ErrForbidden
+	}
+	return c.oauthserver.Exchange(ctx, in)
+}
+
+// OAuthRefresh rotates a Refresh token preserving its scopes and audience.
+func (c *Client) OAuthRefresh(ctx context.Context, in OAuthTokenInput) (*OAuthTokenResult, error) {
+	if c.oauthserver == nil {
+		return nil, ErrForbidden
+	}
+	return c.oauthserver.Refresh(ctx, in)
+}
+
+// BeginDeviceAuthorization starts a Device authorization.
+func (c *Client) BeginDeviceAuthorization(ctx context.Context, in DeviceAuthorizeInput) (*DeviceAuthorizeResult, error) {
+	if c.oauthserver == nil {
+		return nil, ErrForbidden
+	}
+	return c.oauthserver.BeginDevice(ctx, in)
+}
+
+// ApproveDeviceAuthorization approves a User code from an authenticated Session.
+func (c *Client) ApproveDeviceAuthorization(ctx context.Context, in DeviceApproveInput) error {
+	if c.oauthserver == nil {
+		return ErrForbidden
+	}
+	return c.oauthserver.ApproveDevice(ctx, in)
+}
+
+// ExchangeDeviceAuthorization polls for tokens after approval.
+func (c *Client) ExchangeDeviceAuthorization(ctx context.Context, deviceCode string) (*OAuthTokenResult, error) {
+	if c.oauthserver == nil {
+		return nil, ErrForbidden
+	}
+	return c.oauthserver.DeviceToken(ctx, deviceCode)
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -906,6 +964,24 @@ func (a httpAdapter) ListPasskeys(ctx context.Context, in PasskeyListInput) (*Pa
 }
 func (a httpAdapter) DeletePasskey(ctx context.Context, in PasskeyDeleteInput) error {
 	return a.Client.DeletePasskey(ctx, in)
+}
+func (a httpAdapter) OAuthAuthorize(ctx context.Context, in OAuthAuthorizeInput) (*OAuthAuthorizeResult, error) {
+	return a.Client.OAuthAuthorize(ctx, in)
+}
+func (a httpAdapter) OAuthExchange(ctx context.Context, in OAuthTokenInput) (*OAuthTokenResult, error) {
+	return a.Client.OAuthExchange(ctx, in)
+}
+func (a httpAdapter) OAuthRefresh(ctx context.Context, in OAuthTokenInput) (*OAuthTokenResult, error) {
+	return a.Client.OAuthRefresh(ctx, in)
+}
+func (a httpAdapter) BeginDeviceAuthorization(ctx context.Context, in DeviceAuthorizeInput) (*DeviceAuthorizeResult, error) {
+	return a.Client.BeginDeviceAuthorization(ctx, in)
+}
+func (a httpAdapter) ApproveDeviceAuthorization(ctx context.Context, in DeviceApproveInput) error {
+	return a.Client.ApproveDeviceAuthorization(ctx, in)
+}
+func (a httpAdapter) ExchangeDeviceAuthorization(ctx context.Context, code string) (*OAuthTokenResult, error) {
+	return a.Client.ExchangeDeviceAuthorization(ctx, code)
 }
 func (a httpAdapter) CookieName() string { return a.cookies.Name() }
 
