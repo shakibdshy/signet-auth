@@ -67,6 +67,7 @@ auth, err := signet.New(cfg)
 | OrganizationStore | OrganizationStore | nil = disabled | Organizations and memberships. See [Organizations](/docs/organizations). |
 | AdminUserStore | AdminUserStore | nil = user listing disabled | Lists Users for guarded admin management. See [Admin management](/docs/admin-management). |
 | Passkeys | *PasskeysConfig | nil = disabled | WebAuthn first factor. Requires `RPID` and `RPOrigins`. See [Passkeys](/docs/passkeys). |
+| AutoSignIn | *AutoSignInConfig | nil = disabled | Issue a Session after Sign-up and/or email verification. See [Verification and reset](/docs/verification-and-reset). |
 | CSRFKey | []byte | exactly 32 bytes unless `JWTOnly` | HMAC key for CSRF tokens. |
 | CSRFKeys | [][]byte | empty = use CSRFKey | Ordered key ring; first signs, all verify. Each key must be 32 bytes. |
 | SessionCache | SessionCache | nil = disabled | Optional short-lived Session lookup cache; the Store stays authoritative. |

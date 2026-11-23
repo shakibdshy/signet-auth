@@ -243,6 +243,12 @@ func New(cfg Config) (*Client, error) {
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		RedirectPatterns: cfg.AllowedRedirectPatterns,
 		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
+		OnSignIn: func(ctx context.Context, user *User) {
+			if cfg.OnSignIn != nil {
+				cfg.OnSignIn(ctx, user)
+			}
+		},
+		AutoSignIn:     cfg.AutoSignIn != nil && cfg.AutoSignIn.AfterVerification,
 		FlushSessions:  c.sessions.Flush,
 		DeletePasskeys: c.passkeys.DeleteForUser,
 		FreshSession: func(ctx context.Context, raw string) bool {
@@ -256,7 +262,8 @@ func New(cfg Config) (*Client, error) {
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password, Username: cfg.Username,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
-		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
+		AutoSignInAfterSignUp: cfg.AutoSignIn != nil && cfg.AutoSignIn.AfterSignUp,
+		SendVerification:      c.verification.SendVerificationForUser, CreateSession: c.createSession,
 		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
 		FlushSessions:  c.sessions.Flush,
 		IsSessionFresh: c.sessions.IsFreshWithin,
@@ -480,6 +487,12 @@ func (c *Client) VerifyEmailChange(ctx context.Context, in VerifyEmailChangeInpu
 // ChangePassword replaces an authenticated User's password and revokes their Sessions and Tokens.
 func (c *Client) ChangePassword(ctx context.Context, in ChangePasswordInput) error {
 	return c.verification.ChangePassword(ctx, in)
+}
+
+// VerifyEmailAndSignIn consumes a verification Token and issues a Session when
+// automatic sign-in after verification is enabled.
+func (c *Client) VerifyEmailAndSignIn(ctx context.Context, in VerifyEmailInput) (*VerifyEmailAndSignInResult, error) {
+	return c.verification.VerifyEmailAndSignIn(ctx, in)
 }
 
 // SendVerification sends a verification email. It succeeds for unknown emails

@@ -44,6 +44,8 @@ type VerificationDependencies struct {
 	AuditSink        core.AuditSink
 	FreshSession     func(context.Context, string) bool
 	DeletePasskeys   func(context.Context, string) error
+	OnSignIn         func(context.Context, *core.User)
+	AutoSignIn       bool
 }
 
 // VerificationService implements email verification, password reset and
@@ -118,27 +120,58 @@ func (s *VerificationService) SendVerificationForUser(ctx context.Context, user 
 
 // VerifyEmail consumes a verification Token and marks its User verified.
 func (s *VerificationService) VerifyEmail(ctx context.Context, in core.VerifyEmailInput) error {
+	_, err := s.verify(ctx, in, false)
+	return err
+}
+
+// VerifyEmailAndSignIn verifies a User and issues a Session when configured.
+func (s *VerificationService) VerifyEmailAndSignIn(ctx context.Context, in core.VerifyEmailInput) (*core.VerifyEmailAndSignInResult, error) {
+	return s.verify(ctx, in, true)
+}
+
+func (s *VerificationService) verify(ctx context.Context, in core.VerifyEmailInput, allowAutomatic bool) (*core.VerifyEmailAndSignInResult, error) {
 	if in.Token == "" {
-		return core.ErrTokenInvalid
+		return nil, core.ErrTokenInvalid
 	}
 	if err := allow(ctx, s.deps.Limiter, "verify-email", in.RateLimitKey); err != nil {
-		return err
+		return nil, err
 	}
 	proof, err := s.deps.Tokens.Consume(ctx, core.TokenVerifyEmail, in.Token)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	user, err := s.deps.Store.UserByID(ctx, proof.UserID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	user.EmailVerified = true
 	if err := s.deps.Store.UpdateUser(ctx, user); err != nil {
-		return err
+		return nil, err
 	}
 	s.logInfo("email_verified", "user_id", user.ID)
 	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.EmailVerified, UserID: user.ID, Outcome: "success"})
-	return nil
+	result := &core.VerifyEmailAndSignInResult{User: user}
+	if allowAutomatic && s.deps.AutoSignIn {
+		token, err := s.issueAutomaticSession(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		result.SessionToken = token
+	}
+	return result, nil
+}
+
+func (s *VerificationService) issueAutomaticSession(ctx context.Context, user *core.User) (string, error) {
+	token, err := s.deps.CreateSession(ctx, user.ID)
+	if err != nil {
+		return "", err
+	}
+	s.deps.OnSignIn(ctx, redacted(user))
+	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{
+		Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success",
+		Metadata: map[string]string{"method": "email"},
+	})
+	return token, nil
 }
 
 // SendPasswordReset sends a reset email. It succeeds for unknown emails so

@@ -42,6 +42,7 @@ type Dependencies struct {
 	OnSignIn                 func(context.Context, *core.User)
 	SendVerification         func(context.Context, *core.User) error
 	CreateSession            func(context.Context, string) (string, error)
+	AutoSignInAfterSignUp    bool
 	RevokeSession            func(context.Context, string) error
 	FlushSessions            func(context.Context)
 	IsSessionFresh           func(context.Context, string, time.Duration) (bool, error)
@@ -191,7 +192,20 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 			return nil, err
 		}
 	}
-	return &core.SignUpResult{User: user}, nil
+	result := &core.SignUpResult{User: user}
+	if s.deps.AutoSignInAfterSignUp && (user.EmailVerified || !s.deps.RequireVerifiedEmail) {
+		token, err := s.deps.CreateSession(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		result.SessionToken = token
+		s.deps.OnSignIn(ctx, redacted(user))
+		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{
+			Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success",
+			Metadata: map[string]string{"method": "email"},
+		})
+	}
+	return result, nil
 }
 
 // SignIn verifies a password, rehashes if needed and creates a Session.

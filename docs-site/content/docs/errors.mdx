@@ -24,6 +24,7 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrInsecureConfig | 500 internal_error | Cookies are not secure. Use `DefaultConfig()` or the explicit `Insecure*` opt-in. |
 | ErrInvalidCSRFConfig | 500 internal_error | `CSRFKey` is not 32 bytes and `JWTOnly` is false. |
 | ErrInvalidPasskeysConfig | 500 internal_error | `Passkeys` is configured with a missing or invalid Relying party ID or origins. |
+| `forbidden` from automatic sign-in | 403 forbidden | Sign-up did not issue a Session because the email is unverified and verification is required. |
 | ErrInvalidOAuthConfig | 500 internal_error | OAuth providers, redirects or `StateKey` are invalid. |
 | ErrInvalidPasswordlessConfig | 500 internal_error | `Passwordless.MagicLinkTTL` or `Passwordless.OTPTTL` is negative. |
 | ErrInvalidJWTAlgorithm | 500 internal_error | Algorithm is outside the allowlist, or a token used a different one. |

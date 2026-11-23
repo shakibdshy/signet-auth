@@ -153,3 +153,10 @@ optional application-supplied adapters described in [Authorization](/docs/author
 ## Passkey types
 
 `PasskeysConfig`, `PasskeyStore`, `PasskeyProtocol`, `WebAuthnCredential`, `PasskeyInfo`, `PasskeyRegistrationInput`, `PasskeyCeremonyResult`, `PasskeyFinishInput`, `PasskeySignInInput`, `PasskeyFinishSignInInput`, `PasskeyListInput`, `PasskeyListResult`, `PasskeyDeleteInput`, `TokenPasskeyRegistration` and `TokenPasskeyAuthentication`.
+
+## Automatic sign-in
+
+| Method | Purpose |
+| --- | --- |
+| `VerifyEmailAndSignIn(ctx, VerifyEmailInput) (*VerifyEmailAndSignInResult, error)` | Verify the email and issue a Session when configured. |
+| `SignUpResult.SessionToken` | Additive field carrying the Session issued at Sign-up when configured. |

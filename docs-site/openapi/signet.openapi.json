@@ -5187,15 +5187,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "user": {
-                      "$ref": "#/components/schemas/User"
-                    }
-                  },
-                  "required": [
-                    "user"
-                  ],
-                  "type": "object"
+                  "$ref": "#/components/schemas/SignUpResult"
                 }
               }
             }
@@ -5858,7 +5850,14 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyEmailAndSignInResult"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -7167,6 +7166,21 @@
         ],
         "type": "object"
       },
+      "SignUpResult": {
+        "properties": {
+          "User": {
+            "$ref": "#/components/schemas/User",
+            "nullable": true
+          },
+          "session_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "User"
+        ],
+        "type": "object"
+      },
       "StopImpersonatingInput": {
         "properties": {
           "token": {
@@ -7310,6 +7324,21 @@
           "Email",
           "Name",
           "Disabled"
+        ],
+        "type": "object"
+      },
+      "VerifyEmailAndSignInResult": {
+        "properties": {
+          "session_token": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User",
+            "nullable": true
+          }
+        },
+        "required": [
+          "user"
         ],
         "type": "object"
       },

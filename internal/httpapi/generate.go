@@ -30,6 +30,8 @@ var namedTypes = map[string]reflect.Type{
 	"PasskeyCeremonyResult":         reflect.TypeOf(core.PasskeyCeremonyResult{}),
 	"PasskeyListResult":             reflect.TypeOf(core.PasskeyListResult{}),
 	"SignInResult":                  reflect.TypeOf(core.SignInResult{}),
+	"SignUpResult":                  reflect.TypeOf(core.SignUpResult{}),
+	"VerifyEmailAndSignInResult":    reflect.TypeOf(core.VerifyEmailAndSignInResult{}),
 }
 
 type oasDocument struct {

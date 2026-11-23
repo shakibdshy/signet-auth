@@ -95,6 +95,33 @@ when it is not implemented.
 
 `POST /request-account-deletion` sends a single-use proof to the current email.
 `POST /confirm-account-deletion` consumes it and removes Sessions, all Tokens, Accounts and
-the User row in that order, as recorded in ADR 0006. A failure at any step is returned and
+the User row in that order. A failure at any step is returned and
 leaves no live Session. The optional `DeleteUserTemplates` interface supplies the message,
 with a built-in default for existing `EmailTemplates` implementations.
+
+## Automatic sign-in
+
+Normally verifying an email only marks the User verified. Applications can opt into issuing a Session at the same time:
+
+```go
+cfg.AutoSignIn = &signet.AutoSignInConfig{
+    AfterSignUp:       false,
+    AfterVerification: true,
+}
+```
+
+With `AfterVerification` enabled, use `VerifyEmailAndSignIn` instead of `VerifyEmail`:
+
+```go
+result, err := auth.VerifyEmailAndSignIn(ctx, signet.VerifyEmailInput{Token: token})
+// result.SessionToken is a normal Session; result.User is the verified User.
+```
+
+Automatic sign-in fires the normal sign-in hook and audit event with method `email`, records the Last sign-in method as `email`, and keeps the verification Token single-use. It never bypasses `RequireVerifiedEmail`: set `AfterSignUp` only when the email is already verified or verification is not required.
+
+```go
+cfg.AutoSignIn = &signet.AutoSignInConfig{AfterSignUp: true}
+cfg.RequireVerifiedEmail = signet.BoolPtr(false) // or send no verification email
+result, err := auth.SignUp(ctx, signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
+// result.SessionToken is set when the gate permits it.
+```

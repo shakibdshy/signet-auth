@@ -68,6 +68,12 @@ type SessionStore = core.SessionStore
 // TokenStore persists Tokens.
 type TokenStore = core.TokenStore
 
+// AutoSignInConfig opts into issuing a Session at Sign-up or verification.
+type AutoSignInConfig = core.AutoSignInConfig
+
+// VerifyEmailAndSignInResult carries the User and Session from verification.
+type VerifyEmailAndSignInResult = core.VerifyEmailAndSignInResult
+
 // User is the person whose identity Signet manages. A User is the stable
 // subject that Accounts and Sessions belong to.
 type User = core.User

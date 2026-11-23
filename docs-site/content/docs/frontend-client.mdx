@@ -367,3 +367,21 @@ await auth.deletePasskey({ credential_id: passkeys[0].id });
 ```
 
 Do not persist the ceremony token or the raw credential response in local storage — they are single-use. If a ceremony fails, call `beginPasskeyRegistration` or `beginPasskeySignIn` again to get a fresh challenge. The typed client clears its cached CSRF token after a passkey sign-in because the Session changes. See [Passkeys](/docs/passkeys) for the backend setup.
+
+## Automatic sign-in
+
+The typed client already returns the optional session token from Sign-up and email verification. When the backend enables automatic sign-in, no second `signIn` call is needed:
+
+```ts
+const signedUp = await auth.signUp({ email, password, name });
+if (signedUp.session_token) {
+  // A Session cookie is already set; proceed straight into the app.
+}
+
+const verified = await auth.verifyEmail({ token });
+if (verified.session_token) {
+  // Verification issued a Session and set the cookie.
+}
+```
+
+The token is optional: it is absent whenever the matching automatic sign-in switch is off. See [Verification and reset](/docs/verification-and-reset) for the backend setup.

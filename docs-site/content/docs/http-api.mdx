@@ -117,3 +117,13 @@ See [API keys](/docs/api-keys), [Organizations](/docs/organizations) and
 | POST `/passkeys/delete` | yes | required | 200 | `forbidden` 403 | Revoke a passkey. |
 
 See [Passkeys](/docs/passkeys) for the complete flow.
+
+## Automatic sign-in
+
+| Method + path | Auth | CSRF | Success | Notes |
+| --- | --- | --- | --- | --- |
+| POST `/signup` | no | exempt | 201 `SignUpResult` | Includes an optional `session_token` when `AutoSignIn.AfterSignUp` is enabled and the verification gate permits it. |
+| POST `/verify-email` | no | required | 200 `VerifyEmailAndSignInResult` | Includes an optional `session_token` when `AutoSignIn.AfterVerification` is enabled. |
+
+Both endpoints set Session and CSRF cookies only when a Session was issued. See
+[Verification and reset](/docs/verification-and-reset).
