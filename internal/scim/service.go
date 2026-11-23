@@ -56,7 +56,7 @@ func (s *Service) Enabled() bool { return s.cfg.SCIM != nil && s.cfg.SCIM.Store 
 // Handler returns the SCIM HTTP handler with bearer-token authentication.
 func (s *Service) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !s.Enabled() || !s.authorized(r) {
+		if !s.Enabled() || s.tokenError(bearerToken(r)) != nil {
 			s.emitDenied(r.Context())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -71,17 +71,26 @@ func (s *Service) Handler() http.Handler {
 	})
 }
 
-func (s *Service) authorized(r *http.Request) bool {
+func bearerToken(r *http.Request) string {
 	header := r.Header.Get("Authorization")
 	if !strings.HasPrefix(header, "Bearer ") {
-		return false
+		return ""
 	}
-	presented := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
-	if s.cfg.SCIM.Token == "" || presented == "" {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(presented), []byte(s.cfg.SCIM.Token)) == 1
+	return strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
 }
+
+// ValidateToken reports whether a presented token authorizes SCIM provisioning.
+func (s *Service) ValidateToken(presented string) error {
+	if !s.Enabled() || s.cfg.SCIM.Token == "" || presented == "" {
+		return core.ErrSCIMUnauthorized
+	}
+	if subtle.ConstantTimeCompare([]byte(presented), []byte(s.cfg.SCIM.Token)) != 1 {
+		return core.ErrSCIMUnauthorized
+	}
+	return nil
+}
+
+func (s *Service) tokenError(presented string) error { return s.ValidateToken(presented) }
 
 func (s *Service) emitDenied(ctx context.Context) {
 	if !s.Enabled() {

@@ -873,6 +873,14 @@ func (c *Client) deleteUserAndChildren(ctx context.Context, userID string) error
 	return c.cfg.Store.DeleteUser(ctx, userID)
 }
 
+// ValidateSCIMToken reports whether a token authorizes SCIM provisioning.
+func (c *Client) ValidateSCIMToken(token string) error {
+	if c.scim == nil {
+		return ErrSCIMUnauthorized
+	}
+	return c.scim.ValidateToken(token)
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)

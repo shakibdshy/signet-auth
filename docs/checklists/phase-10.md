@@ -30,3 +30,4 @@ Source: accepted design decisions from the enterprise identity plan. Tests live 
 - [x] generated artifacts and typed client rebuilt
 - [x] backend code only in backend guides
 - [x] no internal ADR references on public docs pages
+- [x] exported sentinel has an errors.Is test

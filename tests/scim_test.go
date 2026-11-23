@@ -299,7 +299,11 @@ func TestSCIMGroupPatchProjectsAndAudits(t *testing.T) {
 }
 
 func TestSCIMUnauthorizedSentinel(t *testing.T) {
-	if signet.ErrSCIMUnauthorized.Error() != "signet: scim unauthorized" {
-		t.Fatalf("sentinel = %v", signet.ErrSCIMUnauthorized)
+	client, _, _ := scimClient(t)
+	if err := client.ValidateSCIMToken("wrong-token"); !errors.Is(err, signet.ErrSCIMUnauthorized) {
+		t.Fatalf("wrong token error = %v", err)
+	}
+	if err := client.ValidateSCIMToken("scim-secret"); err != nil {
+		t.Fatalf("valid token error = %v", err)
 	}
 }

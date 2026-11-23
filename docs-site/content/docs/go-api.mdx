@@ -193,4 +193,4 @@ Types: `AuthorizationServerConfig`, `OAuthClient`, `OAuthClientStore`, `DeviceAu
 
 ## SCIM provisioning
 
-`SCIMHandler() http.Handler` exposes the mounted SCIM server. Types: `SCIMConfig`, `SCIMStore`, `SCIMGroup`, `SCIMGroupProjector`.
+`SCIMHandler() http.Handler` exposes the mounted SCIM server; `ValidateSCIMToken(token) error` checks a bearer token with `ErrSCIMUnauthorized` on failure. Types: `SCIMConfig`, `SCIMStore`, `SCIMGroup`, `SCIMGroupProjector`.
