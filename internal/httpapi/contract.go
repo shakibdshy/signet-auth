@@ -177,6 +177,25 @@ func ContractFor() Contract {
 			{Name: "passkeys/delete", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.PasskeyDeleteInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "oauth/authorize", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.OAuthAuthorizeInput{}),
+				Response: ResponseSpec{Ref: "OAuthAuthorizeResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "oauth/token", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.OAuthTokenInput{}),
+				Response: ResponseSpec{Ref: "OAuthTokenResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "oauth/device/authorize", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.DeviceAuthorizeInput{}),
+				Response: ResponseSpec{Ref: "DeviceAuthorizeResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "oauth/device/token", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.OAuthTokenInput{}),
+				Response: ResponseSpec{Ref: "OAuthTokenResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "oauth/device/approve", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.DeviceApproveInput{}), Status: http.StatusOK,
+			}}},
 			{Name: "set-active-organization", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SetActiveOrganizationInput{}), Status: http.StatusOK,
 			}}},

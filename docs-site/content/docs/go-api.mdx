@@ -160,3 +160,16 @@ optional application-supplied adapters described in [Authorization](/docs/author
 | --- | --- |
 | `VerifyEmailAndSignIn(ctx, VerifyEmailInput) (*VerifyEmailAndSignInResult, error)` | Verify the email and issue a Session when configured. |
 | `SignUpResult.SessionToken` | Additive field carrying the Session issued at Sign-up when configured. |
+
+## Authorization server
+
+| Method | Purpose |
+| --- | --- |
+| `OAuthAuthorize(ctx, OAuthAuthorizeInput) (*OAuthAuthorizeResult, error)` | Issue an authorization code with PKCE. |
+| `OAuthExchange(ctx, OAuthTokenInput) (*OAuthTokenResult, error)` | Exchange a code for tokens. |
+| `OAuthRefresh(ctx, OAuthTokenInput) (*OAuthTokenResult, error)` | Rotate a Refresh token. |
+| `BeginDeviceAuthorization(ctx, DeviceAuthorizeInput) (*DeviceAuthorizeResult, error)` | Start device authorization. |
+| `ApproveDeviceAuthorization(ctx, DeviceApproveInput) error` | Approve a User code. |
+| `ExchangeDeviceAuthorization(ctx, string) (*OAuthTokenResult, error)` | Poll for device tokens. |
+
+Types: `AuthorizationServerConfig`, `OAuthClient`, `OAuthClientStore`, `DeviceAuthorization`, `DeviceStore`, `OAuthScope`, `OAuthAuthorizeInput`, `OAuthAuthorizeResult`, `OAuthTokenInput`, `OAuthTokenResult`, `DeviceAuthorizeInput`, `DeviceAuthorizeResult`, `DeviceApproveInput`.

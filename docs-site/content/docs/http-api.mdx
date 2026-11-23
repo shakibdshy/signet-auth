@@ -127,3 +127,15 @@ See [Passkeys](/docs/passkeys) for the complete flow.
 
 Both endpoints set Session and CSRF cookies only when a Session was issued. See
 [Verification and reset](/docs/verification-and-reset).
+
+## Authorization server endpoints
+
+| Method + path | Auth | CSRF | Description |
+| --- | --- | --- | --- |
+| POST `/oauth/authorize` | Session | required | Issue an authorization code. |
+| POST `/oauth/token` | none | exempt | Exchange a code or refresh token. |
+| POST `/oauth/device/authorize` | none | exempt | Start device authorization. |
+| POST `/oauth/device/token` | none | exempt | Poll for device tokens. |
+| POST `/oauth/device/approve` | Session | required | Approve a User code. |
+
+All five accept form-encoded or JSON bodies and return OAuth-standard errors. See [Authorization server](/docs/authorization-server).

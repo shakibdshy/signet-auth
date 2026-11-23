@@ -1,0 +1,102 @@
+---
+title: Authorization server
+description: Issue OAuth tokens to your own clients, with PKCE, refresh rotation and device authorization.
+---
+
+Signet is a relying party by default. An opt-in **Authorization server** lets it issue Access and Refresh tokens to registered **OAuth clients** — CLIs, first-party apps and integrations — without a second token system.
+
+All new state stays behind optional application-owned adapters, so no schema migration is required.
+
+## Configure it
+
+```go
+cfg.JWT = &signet.JWTConfig{Algorithm: "RS256", Key: privateKey}
+cfg.AuthorizationServer = &signet.AuthorizationServerConfig{
+    Clients:   myOAuthClientStore, // or use StaticClients
+    Devices:   myDeviceStore,
+    Audiences: []string{"api.example.com"},
+    // Consent is optional; trusted clients skip it.
+    Consent: func(ctx context.Context, clientID, userID string, scopes []string) bool {
+        return myPolicy.Approve(clientID, userID, scopes)
+    },
+}
+```
+
+`JWT` is required — the server reuses Signet's existing JWT key rings, JWKS and refresh rotation. With no `AuthorizationServer` config, all new endpoints deny.
+
+## Clients
+
+A client can be declared statically or loaded through the optional `OAuthClientStore`:
+
+```go
+cfg.AuthorizationServer.StaticClients = []signet.OAuthClient{{
+    ID: "cli", RedirectURIs: []string{"http://localhost:8080/callback"}, Trusted: true,
+}}
+```
+
+Client secrets, redirect allowlists and the trusted flag come from the store when one is configured. Trusted clients skip consent.
+
+## Authorization code with PKCE
+
+```go
+challenge := myPKCEChallenge // base64url(SHA256(verifier))
+authz, err := auth.OAuthAuthorize(ctx, signet.OAuthAuthorizeInput{
+    ClientID: "cli", RedirectURI: "http://localhost:8080/callback",
+    ResponseType: "code", Scope: "openid email",
+    CodeChallenge: challenge, Audience: "api.example.com",
+    SessionToken: sessionToken,
+})
+
+tokens, err := auth.OAuthExchange(ctx, signet.OAuthTokenInput{
+    GrantType: "authorization_code", Code: authz.Code,
+    CodeVerifier: verifier, ClientID: "cli",
+})
+// tokens.AccessToken, tokens.RefreshToken, tokens.Scope
+```
+
+The code is bound to its client, redirect URI, PKCE challenge, Scope set and User. A wrong verifier, wrong client, wrong redirect or replay is rejected. Scopes are published exact strings (`openid`, `profile`, `email`, `offline_access`) and are never wildcard-expanded.
+
+## Refresh and audiences
+
+```go
+refreshed, err := auth.OAuthRefresh(ctx, signet.OAuthTokenInput{
+    GrantType: "refresh_token", RefreshToken: tokens.RefreshToken,
+})
+```
+
+Refresh tokens rotate on use; replaying an old one revokes the token family. Issued tokens carry `aud`, `scope`, `sub` and `kid`. An audience outside the configured allowlist is rejected.
+
+## Device authorization
+
+```go
+device, err := auth.BeginDeviceAuthorization(ctx, signet.DeviceAuthorizeInput{
+    ClientID: "tv", Scope: "openid", Audience: "api.example.com",
+})
+// Show device.UserCode and device.VerificationURL to the User.
+
+// The User approves in a browser with a normal Session:
+err = auth.ApproveDeviceAuthorization(ctx, signet.DeviceApproveInput{
+    UserCode: device.UserCode, SessionToken: sessionToken,
+})
+
+// The device polls until approved:
+tokens, err := auth.ExchangeDeviceAuthorization(ctx, device.DeviceCode)
+```
+
+Pending device codes live in the optional store and expire after ten minutes. Polling returns `authorization_pending` / `slow_down` until approval.
+
+## HTTP endpoints
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/oauth/authorize` | Session | Issue an authorization code |
+| `POST` | `/oauth/token` | none | Exchange a code or refresh token |
+| `POST` | `/oauth/device/authorize` | none | Start device authorization |
+| `POST` | `/oauth/device/token` | none | Poll for device tokens |
+| `POST` | `/oauth/device/approve` | Session | Approve a User code |
+
+All five accept form-encoded bodies (the OAuth default) and JSON. Errors on these endpoints use OAuth-standard `error` and `error_description` fields. Browser examples are in [Frontend client](/docs/frontend-client).
+
+## Types
+
+`OAuthScope` and the constants `OAuthScopeOpenID`, `OAuthScopeProfile`, `OAuthScopeEmail` and `OAuthScopeOffline` name the exact Scopes. `OAuthAuthorizeResult` carries the code and state; `OAuthTokenResult` is the standard token response; `DeviceAuthorizeResult` carries the device code, User code and verification URL. Invalid configuration at startup returns `ErrInvalidAuthorizationServerConfig`.

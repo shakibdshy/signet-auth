@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -93,6 +95,7 @@ type JWTDependencies struct {
 	RevokeSessions  func(context.Context, string) error
 	VerifyTwoFactor func(context.Context, core.VerifyTwoFactorInput) (*core.SignInResult, error)
 	AuditSink       core.AuditSink
+	Tokens          *Service
 }
 
 // JWTService implements Signet's optional bearer-token mode.
@@ -202,6 +205,94 @@ func (s *JWTService) VerifyAccessToken(ctx context.Context, raw string) (*core.U
 		return nil, core.ErrTokenInvalid
 	}
 	return s.deps.Store.UserByID(ctx, claims.Subject)
+}
+
+// IssueWithScope signs an Access token carrying OAuth scope and audience
+// claims and stores a rotating Refresh proof carrying the same claims.
+func (s *JWTService) IssueWithScope(ctx context.Context, userID, audience string, scopes []string) (*core.TokenPair, error) {
+	now := s.deps.Clock.Now()
+	claims := jwt.MapClaims{
+		"sub":   userID,
+		"iat":   now.Unix(),
+		"exp":   now.Add(s.deps.Config.AccessTTL).Unix(),
+		"scope": strings.Join(scopes, " "),
+	}
+	if audience != "" {
+		claims["aud"] = audience
+	}
+	if s.deps.Config.Issuer != "" {
+		claims["iss"] = s.deps.Config.Issuer
+	}
+	algorithm, ok := jwtAlgorithms[s.deps.Config.Algorithm]
+	if !ok {
+		return nil, core.ErrInvalidJWTAlgorithm
+	}
+	signed := jwt.NewWithClaims(algorithm.method, claims)
+	switch s.deps.Config.Key.(type) {
+	case *rsa.PrivateKey, ed25519.PrivateKey:
+		kid, err := keyID(s.deps.Config.Key)
+		if err != nil {
+			return nil, err
+		}
+		signed.Header["kid"] = kid
+	}
+	access, err := signed.SignedString(s.deps.Config.Key)
+	if err != nil {
+		return nil, err
+	}
+	data, _ := json.Marshal(struct {
+		Audience string   `json:"audience"`
+		Scopes   []string `json:"scopes"`
+	}{audience, scopes})
+	raw, _, err := s.deps.Tokens.IssueWithData(ctx, userID, core.TokenRefresh, s.deps.Config.RefreshTTL, string(data))
+	if err != nil {
+		return nil, err
+	}
+	return &core.TokenPair{
+		AccessToken:  access,
+		RefreshToken: raw,
+		ExpiresIn:    int64(s.deps.Config.AccessTTL / time.Second),
+	}, nil
+}
+
+// RefreshWithScope rotates a Refresh proof, preserving its scope and audience.
+func (s *JWTService) RefreshWithScope(ctx context.Context, presented string) (*core.TokenPair, error) {
+	digest := secret.Digest(presented)
+	token, err := s.deps.Store.TokenByHash(ctx, core.TokenRefresh, digest)
+	if errors.Is(err, core.ErrNotFound) {
+		return nil, core.ErrTokenInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	if token.UsedAt != nil {
+		return s.handleRefreshReuse(ctx, token.UserID)
+	}
+	if !s.deps.Clock.Now().Before(token.ExpiresAt) {
+		return nil, core.ErrTokenExpired
+	}
+	consumed, err := s.deps.Store.ConsumeToken(ctx, core.TokenRefresh, digest)
+	if errors.Is(err, core.ErrNotFound) {
+		return s.handleRefreshReuse(ctx, token.UserID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.deps.Store.UserByID(ctx, consumed.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user.Disabled {
+		return nil, core.ErrInvalidCredentials
+	}
+	var data struct {
+		Audience string   `json:"audience"`
+		Scopes   []string `json:"scopes"`
+	}
+	if raw, err := ParseData(presented); err == nil {
+		_ = json.Unmarshal([]byte(raw), &data)
+	}
+	return s.IssueWithScope(ctx, user.ID, data.Audience, data.Scopes)
 }
 
 // Issue signs a fresh Access token and stores a rotating Refresh proof.

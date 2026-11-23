@@ -8,6 +8,7 @@
     "---Sign-in methods---",
     "sessions",
     "oauth",
+    "authorization-server",
     "jwt",
     "passwordless",
     "magic-link",

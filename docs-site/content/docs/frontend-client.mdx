@@ -385,3 +385,34 @@ if (verified.session_token) {
 ```
 
 The token is optional: it is absent whenever the matching automatic sign-in switch is off. See [Verification and reset](/docs/verification-and-reset) for the backend setup.
+
+
+## Authorization server
+
+The typed client exposes the new OAuth endpoints. Authorization code and device flows are described fully in [Authorization server](/docs/authorization-server).
+
+```ts
+// Authorization code with PKCE (the User must have a Session).
+const authz = await auth.oauthAuthorize({
+  client_id: 'cli',
+  redirect_uri: 'http://localhost:8080/callback',
+  response_type: 'code',
+  scope: 'openid email',
+  code_challenge: challenge,
+});
+const tokens = await auth.oauthToken({
+  grant_type: 'authorization_code',
+  code: authz.code,
+  code_verifier: verifier,
+  client_id: 'cli',
+});
+
+// Device flow: display the user code, then poll until approval.
+const device = await auth.beginDeviceAuthorization({
+  client_id: 'tv', scope: 'openid',
+});
+const deviceTokens = await auth.oauthToken({
+  grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+  code: device.device_code,
+});
+```

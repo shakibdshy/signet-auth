@@ -115,3 +115,8 @@ var (
 	// ErrInvalidPasskeysConfig reports an invalid passkeys configuration.
 	ErrInvalidPasskeysConfig = core.ErrInvalidPasskeysConfig
 )
+
+var (
+	// ErrInvalidAuthorizationServerConfig reports a misconfigured Authorization server.
+	ErrInvalidAuthorizationServerConfig = core.ErrInvalidAuthorizationServerConfig
+)
