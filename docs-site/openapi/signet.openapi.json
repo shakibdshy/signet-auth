@@ -224,6 +224,16 @@
       "get": {
         "operationId": "admin-user-sessions_get",
         "summary": "GET /admin-user-sessions",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -2317,6 +2327,16 @@
       "get": {
         "operationId": "organization-members_get",
         "summary": "GET /organization-members",
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -4963,6 +4983,16 @@
       "post": {
         "operationId": "verify-api-key_post",
         "summary": "POST /verify-api-key",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",

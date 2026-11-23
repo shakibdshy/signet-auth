@@ -111,7 +111,11 @@ func ContractFor() Contract {
 				Response: ResponseSpec{Ref: "CreateOrganizationResult"}, Status: http.StatusCreated,
 			}}},
 			{Name: "organization-members", Methods: []Method{{
-				Verb: "GET", Response: ResponseSpec{Ref: "ListOrganizationMembersResult"}, Status: http.StatusOK,
+				Verb: "GET",
+				Parameters: []Parameter{
+					{Name: "organization_id", In: "query", Required: true, Type: "string"},
+				},
+				Response: ResponseSpec{Ref: "ListOrganizationMembersResult"}, Status: http.StatusOK,
 			}}},
 			{Name: "organization-members/add", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.AddOrganizationMemberInput{}), Status: http.StatusOK,
@@ -138,7 +142,11 @@ func ContractFor() Contract {
 				Verb: "POST", Request: reflect.TypeOf(core.UnbanUserInput{}), Status: http.StatusOK,
 			}}},
 			{Name: "admin-user-sessions", Methods: []Method{{
-				Verb: "GET", Response: ResponseSpec{Ref: "ListSessionsResult"}, Status: http.StatusOK,
+				Verb: "GET",
+				Parameters: []Parameter{
+					{Name: "user_id", In: "query", Required: true, Type: "string"},
+				},
+				Response: ResponseSpec{Ref: "ListSessionsResult"}, Status: http.StatusOK,
 			}}},
 			{Name: "admin-user-sessions/revoke", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.RevokeSessionInput{}), Status: http.StatusOK,
@@ -273,7 +281,11 @@ func ContractFor() Contract {
 				Response: ResponseSpec{Ref: "CreateAPIKeyResult"}, Status: http.StatusCreated,
 			}}},
 			{Name: "verify-api-key", Anonymous: true, Methods: []Method{{
-				Verb: "POST", Response: ResponseSpec{Ref: "Principal"}, Status: http.StatusOK,
+				Verb: "POST",
+				Parameters: []Parameter{
+					{Name: "X-API-Key", In: "header", Required: true, Type: "string"},
+				},
+				Response: ResponseSpec{Ref: "Principal"}, Status: http.StatusOK,
 			}}},
 			{Name: "revoke-api-key", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.RevokeAPIKeyInput{}), Status: http.StatusOK,
