@@ -110,6 +110,14 @@ func New(cfg Config) (*Client, error) {
 		if len(cfg.OAuth.Providers) == 0 || len(cfg.OAuth.StateKey) != 32 {
 			return nil, ErrInvalidOAuthConfig
 		}
+		seen := make(map[string]bool, len(cfg.OAuth.Providers))
+		for _, provider := range cfg.OAuth.Providers {
+			name := provider.Name()
+			if seen[name] {
+				return nil, ErrOAuthProviderConflict
+			}
+			seen[name] = true
+		}
 	}
 	csrfKeys := cfg.CSRFKeys
 	if len(csrfKeys) == 0 && len(cfg.CSRFKey) > 0 {
