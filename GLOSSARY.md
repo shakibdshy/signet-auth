@@ -104,6 +104,14 @@ _Avoid_: session token
 A provider's assertion about a User's external identity: a provider user ID, an email and whether that email is verified.
 _Avoid_: profile, user info
 
+**Provider discovery**:
+The process of fetching a Provider's endpoints and issuer metadata from its published well-known document.
+_Avoid_: OIDC discovery, discovery document
+
+**ID token**:
+A signed assertion from a Provider about the authenticated User's identity.
+_Avoid_: identity token, id_token
+
 **CSRF token**:
 A signed value that proves a browser request is same-origin. It is not single-use and is distinct from a Token.
 _Avoid_: anti-CSRF value
