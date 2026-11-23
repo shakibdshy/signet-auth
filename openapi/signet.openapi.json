@@ -5188,12 +5188,16 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "session_token": {
+                      "type": "string"
+                    },
                     "user": {
                       "$ref": "#/components/schemas/User"
                     }
                   },
                   "required": [
-                    "user"
+                    "user",
+                    "session_token"
                   ],
                   "type": "object"
                 }
@@ -5858,7 +5862,22 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "session_token": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_token"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",

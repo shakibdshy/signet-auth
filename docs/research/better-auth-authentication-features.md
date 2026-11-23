@@ -256,7 +256,7 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | Email/password sign-up, sign-in, sign-out | [Email & Password](https://better-auth.com/docs/authentication/email-password) | already | Go API plus `/signup`, `/signin`, `/signout` HTTP endpoints. |
 | Pluggable password hashing (default scrypt) | [Security](https://better-auth.com/docs/reference/security) | already | Argon2id default + bcrypt adapter, transparent rehash; different default algorithm. |
 | Email verification with opt-in requirement | [Email](https://better-auth.com/docs/concepts/email) | already | `RequireVerifiedEmail` / `SendVerificationOnSignUp`; hashed single-use tokens. |
-| Auto sign-in after sign-up / after verification | [Options](https://better-auth.com/docs/reference/options) | missing | `SignUp` returns only a User; verification does not create a session. |
+| Auto sign-in after sign-up / after verification | [Options](https://better-auth.com/docs/reference/options) | already | Opt-in Session issuance at Sign-up or verification; the original `SignUp`/`VerifyEmail` signatures are unchanged. |
 | Email enumeration protection | [Security](https://better-auth.com/docs/reference/security) | already | Generic failures + dummy-hash timing parity; no synthetic-user response builder. |
 | Password reset | [Email & Password](https://better-auth.com/docs/authentication/email-password) | already | Signet also revokes *all* sessions on reset (Better Auth's option is off by default). |
 | Change password / set password / verify password | [Users & Accounts](https://better-auth.com/docs/concepts/users-accounts) | partial | `ChangePassword` is public, password-verified and revokes Sessions/Tokens; server-only `setPassword` and `verifyPassword` are not implemented. |
@@ -306,7 +306,7 @@ first factors, then provider/enterprise surfaces, then defensive and operational
 relative for a small Go library that already has the Store and token primitives.
 
 As of 2026-11-23, all six original phases below are **shipped** (PRs #53, #58, #65, #70, #76, #81,
-#87 and #88), and passkeys shipped as Phase 7. i18n and anomaly detection remain explicitly out of scope.
+#87 and #88), passkeys shipped as Phase 7, and automatic sign-in as Phase 8a. i18n and anomaly detection remain explicitly out of scope.
 
 1. **Foundation — user lifecycle and session controls (shipped).**
    `ChangePassword`/`SetPassword`, `ChangeEmail`, `DeleteUser` with re-verification, and

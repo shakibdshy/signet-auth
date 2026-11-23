@@ -5708,6 +5708,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        session_token: string;
                         user: components["schemas"]["User"];
                     };
                 };
@@ -6284,7 +6285,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        session_token: string;
+                    };
+                };
             };
             /** @description Bad Request */
             400: {

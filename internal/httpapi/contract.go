@@ -89,7 +89,7 @@ func ContractFor() Contract {
 		Endpoints: []ContractEndpoint{
 			{Name: "signup", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignUpInput{}),
-				Response: ResponseSpec{Fields: []Field{user}}, Status: http.StatusCreated,
+				Response: ResponseSpec{Fields: []Field{user, strField("session_token")}}, Status: http.StatusCreated,
 			}}},
 			{Name: "signin", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignInInput{}),
@@ -256,7 +256,8 @@ func ContractFor() Contract {
 				Verb: "POST", Request: reflect.TypeOf(core.SendVerificationInput{}), Status: http.StatusOK,
 			}}},
 			{Name: "verify-email", Methods: []Method{{
-				Verb: "POST", Request: reflect.TypeOf(core.VerifyEmailInput{}), Status: http.StatusOK,
+				Verb: "POST", Request: reflect.TypeOf(core.VerifyEmailInput{}),
+				Response: ResponseSpec{Fields: []Field{strField("session_token")}}, Status: http.StatusOK,
 			}}},
 			{Name: "send-password-reset", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SendPasswordResetInput{}), Status: http.StatusOK,
@@ -314,6 +315,7 @@ func ContractFor() Contract {
 			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
 			"SignUpInput":        {"username"},
 			"SignInInput":        {"username"},
+			"SignUpResult":       {"session_token"},
 			"SignOutInput":       {"session_token"},
 			"SendMagicLinkInput": {"name", "callback_url"},
 			"SendEmailOTPInput":  {"name"},

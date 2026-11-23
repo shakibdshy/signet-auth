@@ -77,6 +77,7 @@ type API interface {
 	ExchangeToken(context.Context, core.TokenInput) (*core.TokenPair, error)
 	SendVerification(context.Context, core.SendVerificationInput) error
 	VerifyEmail(context.Context, core.VerifyEmailInput) error
+	VerifyEmailAndSignIn(context.Context, core.VerifyEmailInput) (*core.VerifyEmailAndSignInResult, error)
 	SendPasswordReset(context.Context, core.SendPasswordResetInput) error
 	ResetPassword(context.Context, core.ResetPasswordInput) error
 	OAuthStart(context.Context, core.OAuthStartInput) (*core.OAuthStartResult, error)
@@ -407,7 +408,16 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"user": result.User})
+	body := map[string]any{"user": result.User}
+	if result.SessionToken != "" {
+		if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		h.api.SetLastMethodCookie(w, "email")
+		body["session_token"] = result.SessionToken
+	}
+	writeJSON(w, http.StatusCreated, body)
 }
 
 func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
@@ -1235,11 +1245,21 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
-	if err := h.api.VerifyEmail(r.Context(), in); err != nil {
+	result, err := h.api.VerifyEmailAndSignIn(r.Context(), in)
+	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	body := map[string]any{}
+	if result.SessionToken != "" {
+		if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		h.api.SetLastMethodCookie(w, "email")
+		body["session_token"] = result.SessionToken
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSendPasswordReset(w http.ResponseWriter, r *http.Request) {

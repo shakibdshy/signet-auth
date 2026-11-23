@@ -753,6 +753,7 @@ type Config struct {
 	CaptchaVerifier          CaptchaVerifier
 	CaptchaEndpoints         []string
 	AuditSink                AuditSink
+	AutoSignIn               *AutoSignInConfig
 	Passkeys                 *PasskeysConfig
 	Authorizer               Authorizer
 	AuthorizeIn              AuthorizeIn
@@ -843,7 +844,10 @@ type SignUpInput struct {
 }
 
 // SignUpResult is the outcome of a successful sign-up.
-type SignUpResult struct{ User *User }
+type SignUpResult struct {
+	User         *User
+	SessionToken string `json:"session_token,omitempty"`
+}
 
 // SignInInput is the input to a sign-in.
 type SignInInput struct {
@@ -972,6 +976,18 @@ type SignOutInput struct {
 type SendVerificationInput struct {
 	Email        string `json:"email"`
 	RateLimitKey string `json:"-"`
+}
+
+// AutoSignInConfig opts into issuing a Session at Sign-up or verification.
+type AutoSignInConfig struct {
+	AfterSignUp       bool
+	AfterVerification bool
+}
+
+// VerifyEmailAndSignInResult carries the User and Session from verification.
+type VerifyEmailAndSignInResult struct {
+	User         *User  `json:"user"`
+	SessionToken string `json:"session_token"`
 }
 
 // VerifyEmailInput carries a verification Token.
