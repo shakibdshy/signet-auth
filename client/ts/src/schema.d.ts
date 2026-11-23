@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /accounts */
+        /** /accounts */
         get: operations["accounts_get"];
         put?: never;
         post?: never;
@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /active-organization */
+        /** /active-organization */
         get: operations["active-organization_get"];
         put?: never;
         post?: never;
@@ -45,7 +45,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /admin-user-sessions */
+        /** /admin-user-sessions */
         get: operations["admin-user-sessions_get"];
         put?: never;
         post?: never;
@@ -64,7 +64,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /admin-user-sessions/revoke */
+        /** /admin-user-sessions/revoke */
         post: operations["admin-user-sessions/revoke_post"];
         delete?: never;
         options?: never;
@@ -79,7 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /admin-users */
+        /** /admin-users */
         get: operations["admin-users_get"];
         put?: never;
         post?: never;
@@ -98,7 +98,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /admin-users/ban */
+        /** /admin-users/ban */
         post: operations["admin-users/ban_post"];
         delete?: never;
         options?: never;
@@ -115,7 +115,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /admin-users/role */
+        /** /admin-users/role */
         post: operations["admin-users/role_post"];
         delete?: never;
         options?: never;
@@ -132,7 +132,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /admin-users/unban */
+        /** /admin-users/unban */
         post: operations["admin-users/unban_post"];
         delete?: never;
         options?: never;
@@ -147,10 +147,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /api-keys */
+        /** /api-keys */
         get: operations["api-keys_get"];
         put?: never;
-        /** POST /api-keys */
+        /** /api-keys */
         post: operations["api-keys_post"];
         delete?: never;
         options?: never;
@@ -167,7 +167,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /change-email */
+        /** /change-email */
         post: operations["change-email_post"];
         delete?: never;
         options?: never;
@@ -184,7 +184,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /change-password */
+        /** /change-password */
         post: operations["change-password_post"];
         delete?: never;
         options?: never;
@@ -201,7 +201,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /clear-active-organization */
+        /** /clear-active-organization */
         post: operations["clear-active-organization_post"];
         delete?: never;
         options?: never;
@@ -218,7 +218,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /confirm-account-deletion */
+        /** /confirm-account-deletion */
         post: operations["confirm-account-deletion_post"];
         delete?: never;
         options?: never;
@@ -233,7 +233,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /csrf-token */
+        /** /csrf-token */
         get: operations["csrf-token_get"];
         put?: never;
         post?: never;
@@ -252,7 +252,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /disable-two-factor */
+        /** /disable-two-factor */
         post: operations["disable-two-factor_post"];
         delete?: never;
         options?: never;
@@ -269,7 +269,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /enable-two-factor */
+        /** /enable-two-factor */
         post: operations["enable-two-factor_post"];
         delete?: never;
         options?: never;
@@ -286,7 +286,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /impersonate */
+        /** /impersonate */
         post: operations["impersonate_post"];
         delete?: never;
         options?: never;
@@ -301,7 +301,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /last-sign-in-method */
+        /** /last-sign-in-method */
         get: operations["last-sign-in-method_get"];
         put?: never;
         post?: never;
@@ -318,7 +318,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /oauth/callback */
+        /** /oauth/callback */
         get: operations["oauth/callback_get"];
         put?: never;
         post?: never;
@@ -337,7 +337,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /oauth/start */
+        /** /oauth/start */
         post: operations["oauth/start_post"];
         delete?: never;
         options?: never;
@@ -352,7 +352,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /organization-members */
+        /** /organization-members */
         get: operations["organization-members_get"];
         put?: never;
         post?: never;
@@ -371,7 +371,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /organization-members/add */
+        /** /organization-members/add */
         post: operations["organization-members/add_post"];
         delete?: never;
         options?: never;
@@ -388,7 +388,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /organization-members/remove */
+        /** /organization-members/remove */
         post: operations["organization-members/remove_post"];
         delete?: never;
         options?: never;
@@ -405,7 +405,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /organization-members/role */
+        /** /organization-members/role */
         post: operations["organization-members/role_post"];
         delete?: never;
         options?: never;
@@ -420,10 +420,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /organizations */
+        /** /organizations */
         get: operations["organizations_get"];
         put?: never;
-        /** POST /organizations */
+        /** /organizations */
         post: operations["organizations_post"];
         delete?: never;
         options?: never;
@@ -438,7 +438,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /passkeys */
+        /** /passkeys */
         get: operations["passkeys_get"];
         put?: never;
         post?: never;
@@ -457,7 +457,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /passkeys/delete */
+        /** /passkeys/delete */
         post: operations["passkeys/delete_post"];
         delete?: never;
         options?: never;
@@ -474,7 +474,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /passkeys/register-begin */
+        /** /passkeys/register-begin */
         post: operations["passkeys/register-begin_post"];
         delete?: never;
         options?: never;
@@ -491,7 +491,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /passkeys/register-finish */
+        /** /passkeys/register-finish */
         post: operations["passkeys/register-finish_post"];
         delete?: never;
         options?: never;
@@ -508,7 +508,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /passkeys/signin-begin */
+        /** /passkeys/signin-begin */
         post: operations["passkeys/signin-begin_post"];
         delete?: never;
         options?: never;
@@ -525,7 +525,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /passkeys/signin-finish */
+        /** /passkeys/signin-finish */
         post: operations["passkeys/signin-finish_post"];
         delete?: never;
         options?: never;
@@ -542,7 +542,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /regenerate-backup-codes */
+        /** /regenerate-backup-codes */
         post: operations["regenerate-backup-codes_post"];
         delete?: never;
         options?: never;
@@ -559,7 +559,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /request-account-deletion */
+        /** /request-account-deletion */
         post: operations["request-account-deletion_post"];
         delete?: never;
         options?: never;
@@ -576,7 +576,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /reset-password */
+        /** /reset-password */
         post: operations["reset-password_post"];
         delete?: never;
         options?: never;
@@ -593,7 +593,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /revoke-api-key */
+        /** /revoke-api-key */
         post: operations["revoke-api-key_post"];
         delete?: never;
         options?: never;
@@ -610,7 +610,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /send-magic-link */
+        /** /send-magic-link */
         post: operations["send-magic-link_post"];
         delete?: never;
         options?: never;
@@ -627,7 +627,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /send-otp */
+        /** /send-otp */
         post: operations["send-otp_post"];
         delete?: never;
         options?: never;
@@ -644,7 +644,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /send-password-reset */
+        /** /send-password-reset */
         post: operations["send-password-reset_post"];
         delete?: never;
         options?: never;
@@ -661,7 +661,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /send-verification */
+        /** /send-verification */
         post: operations["send-verification_post"];
         delete?: never;
         options?: never;
@@ -679,7 +679,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** DELETE /session */
+        /** /session */
         delete: operations["session_delete"];
         options?: never;
         head?: never;
@@ -693,11 +693,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /sessions */
+        /** /sessions */
         get: operations["sessions_get"];
         put?: never;
         post?: never;
-        /** DELETE /sessions */
+        /** /sessions */
         delete: operations["sessions_delete"];
         options?: never;
         head?: never;
@@ -713,7 +713,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /set-active-organization */
+        /** /set-active-organization */
         post: operations["set-active-organization_post"];
         delete?: never;
         options?: never;
@@ -730,7 +730,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /signin */
+        /** /signin */
         post: operations["signin_post"];
         delete?: never;
         options?: never;
@@ -747,7 +747,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /signout */
+        /** /signout */
         post: operations["signout_post"];
         delete?: never;
         options?: never;
@@ -764,7 +764,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /signup */
+        /** /signup */
         post: operations["signup_post"];
         delete?: never;
         options?: never;
@@ -781,7 +781,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /stop-impersonating */
+        /** /stop-impersonating */
         post: operations["stop-impersonating_post"];
         delete?: never;
         options?: never;
@@ -798,7 +798,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /token */
+        /** /token */
         post: operations["token_post"];
         delete?: never;
         options?: never;
@@ -815,7 +815,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /unlink-account */
+        /** /unlink-account */
         post: operations["unlink-account_post"];
         delete?: never;
         options?: never;
@@ -832,7 +832,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /verify-api-key */
+        /** /verify-api-key */
         post: operations["verify-api-key_post"];
         delete?: never;
         options?: never;
@@ -849,7 +849,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /verify-change-email */
+        /** /verify-change-email */
         post: operations["verify-change-email_post"];
         delete?: never;
         options?: never;
@@ -866,7 +866,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /verify-email */
+        /** /verify-email */
         post: operations["verify-email_post"];
         delete?: never;
         options?: never;
@@ -881,7 +881,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /verify-magic-link */
+        /** /verify-magic-link */
         get: operations["verify-magic-link_get"];
         put?: never;
         post?: never;
@@ -900,7 +900,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /verify-otp */
+        /** /verify-otp */
         post: operations["verify-otp_post"];
         delete?: never;
         options?: never;
@@ -917,7 +917,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** POST /verify-two-factor */
+        /** /verify-two-factor */
         post: operations["verify-two-factor_post"];
         delete?: never;
         options?: never;

@@ -8,7 +8,7 @@
     "/accounts": {
       "get": {
         "operationId": "accounts_get",
-        "summary": "GET /accounts",
+        "summary": "/accounts",
         "responses": {
           "200": {
             "description": "Success",
@@ -117,7 +117,7 @@
     "/active-organization": {
       "get": {
         "operationId": "active-organization_get",
-        "summary": "GET /active-organization",
+        "summary": "/active-organization",
         "responses": {
           "200": {
             "description": "Success",
@@ -223,7 +223,7 @@
     "/admin-user-sessions": {
       "get": {
         "operationId": "admin-user-sessions_get",
-        "summary": "GET /admin-user-sessions",
+        "summary": "/admin-user-sessions",
         "parameters": [
           {
             "name": "user_id",
@@ -331,7 +331,7 @@
     "/admin-user-sessions/revoke": {
       "post": {
         "operationId": "admin-user-sessions/revoke_post",
-        "summary": "POST /admin-user-sessions/revoke",
+        "summary": "/admin-user-sessions/revoke",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -442,7 +442,7 @@
     "/admin-users": {
       "get": {
         "operationId": "admin-users_get",
-        "summary": "GET /admin-users",
+        "summary": "/admin-users",
         "responses": {
           "200": {
             "description": "Success",
@@ -540,7 +540,7 @@
     "/admin-users/ban": {
       "post": {
         "operationId": "admin-users/ban_post",
-        "summary": "POST /admin-users/ban",
+        "summary": "/admin-users/ban",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -651,7 +651,7 @@
     "/admin-users/role": {
       "post": {
         "operationId": "admin-users/role_post",
-        "summary": "POST /admin-users/role",
+        "summary": "/admin-users/role",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -762,7 +762,7 @@
     "/admin-users/unban": {
       "post": {
         "operationId": "admin-users/unban_post",
-        "summary": "POST /admin-users/unban",
+        "summary": "/admin-users/unban",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -873,7 +873,7 @@
     "/api-keys": {
       "get": {
         "operationId": "api-keys_get",
-        "summary": "GET /api-keys",
+        "summary": "/api-keys",
         "responses": {
           "200": {
             "description": "Success",
@@ -969,7 +969,7 @@
       },
       "post": {
         "operationId": "api-keys_post",
-        "summary": "POST /api-keys",
+        "summary": "/api-keys",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1087,7 +1087,7 @@
     "/change-email": {
       "post": {
         "operationId": "change-email_post",
-        "summary": "POST /change-email",
+        "summary": "/change-email",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1203,7 +1203,7 @@
     "/change-password": {
       "post": {
         "operationId": "change-password_post",
-        "summary": "POST /change-password",
+        "summary": "/change-password",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1319,7 +1319,7 @@
     "/clear-active-organization": {
       "post": {
         "operationId": "clear-active-organization_post",
-        "summary": "POST /clear-active-organization",
+        "summary": "/clear-active-organization",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1420,7 +1420,7 @@
     "/confirm-account-deletion": {
       "post": {
         "operationId": "confirm-account-deletion_post",
-        "summary": "POST /confirm-account-deletion",
+        "summary": "/confirm-account-deletion",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1531,7 +1531,7 @@
     "/csrf-token": {
       "get": {
         "operationId": "csrf-token_get",
-        "summary": "GET /csrf-token",
+        "summary": "/csrf-token",
         "responses": {
           "200": {
             "description": "Success",
@@ -1637,7 +1637,7 @@
     "/disable-two-factor": {
       "post": {
         "operationId": "disable-two-factor_post",
-        "summary": "POST /disable-two-factor",
+        "summary": "/disable-two-factor",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1748,7 +1748,7 @@
     "/enable-two-factor": {
       "post": {
         "operationId": "enable-two-factor_post",
-        "summary": "POST /enable-two-factor",
+        "summary": "/enable-two-factor",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -1885,7 +1885,7 @@
     "/impersonate": {
       "post": {
         "operationId": "impersonate_post",
-        "summary": "POST /impersonate",
+        "summary": "/impersonate",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -2003,7 +2003,7 @@
     "/last-sign-in-method": {
       "get": {
         "operationId": "last-sign-in-method_get",
-        "summary": "GET /last-sign-in-method",
+        "summary": "/last-sign-in-method",
         "responses": {
           "200": {
             "description": "Success",
@@ -2109,7 +2109,7 @@
     "/oauth/callback": {
       "get": {
         "operationId": "oauth/callback_get",
-        "summary": "GET /oauth/callback",
+        "summary": "/oauth/callback",
         "parameters": [
           {
             "name": "code",
@@ -2218,7 +2218,7 @@
     "/oauth/start": {
       "post": {
         "operationId": "oauth/start_post",
-        "summary": "POST /oauth/start",
+        "summary": "/oauth/start",
         "requestBody": {
           "required": true,
           "content": {
@@ -2326,7 +2326,7 @@
     "/organization-members": {
       "get": {
         "operationId": "organization-members_get",
-        "summary": "GET /organization-members",
+        "summary": "/organization-members",
         "parameters": [
           {
             "name": "organization_id",
@@ -2434,7 +2434,7 @@
     "/organization-members/add": {
       "post": {
         "operationId": "organization-members/add_post",
-        "summary": "POST /organization-members/add",
+        "summary": "/organization-members/add",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -2545,7 +2545,7 @@
     "/organization-members/remove": {
       "post": {
         "operationId": "organization-members/remove_post",
-        "summary": "POST /organization-members/remove",
+        "summary": "/organization-members/remove",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -2656,7 +2656,7 @@
     "/organization-members/role": {
       "post": {
         "operationId": "organization-members/role_post",
-        "summary": "POST /organization-members/role",
+        "summary": "/organization-members/role",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -2767,7 +2767,7 @@
     "/organizations": {
       "get": {
         "operationId": "organizations_get",
-        "summary": "GET /organizations",
+        "summary": "/organizations",
         "responses": {
           "200": {
             "description": "Success",
@@ -2863,7 +2863,7 @@
       },
       "post": {
         "operationId": "organizations_post",
-        "summary": "POST /organizations",
+        "summary": "/organizations",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -2981,7 +2981,7 @@
     "/passkeys": {
       "get": {
         "operationId": "passkeys_get",
-        "summary": "GET /passkeys",
+        "summary": "/passkeys",
         "responses": {
           "200": {
             "description": "Success",
@@ -3079,7 +3079,7 @@
     "/passkeys/delete": {
       "post": {
         "operationId": "passkeys/delete_post",
-        "summary": "POST /passkeys/delete",
+        "summary": "/passkeys/delete",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -3190,7 +3190,7 @@
     "/passkeys/register-begin": {
       "post": {
         "operationId": "passkeys/register-begin_post",
-        "summary": "POST /passkeys/register-begin",
+        "summary": "/passkeys/register-begin",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -3298,7 +3298,7 @@
     "/passkeys/register-finish": {
       "post": {
         "operationId": "passkeys/register-finish_post",
-        "summary": "POST /passkeys/register-finish",
+        "summary": "/passkeys/register-finish",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -3409,7 +3409,7 @@
     "/passkeys/signin-begin": {
       "post": {
         "operationId": "passkeys/signin-begin_post",
-        "summary": "POST /passkeys/signin-begin",
+        "summary": "/passkeys/signin-begin",
         "responses": {
           "200": {
             "description": "Success",
@@ -3507,7 +3507,7 @@
     "/passkeys/signin-finish": {
       "post": {
         "operationId": "passkeys/signin-finish_post",
-        "summary": "POST /passkeys/signin-finish",
+        "summary": "/passkeys/signin-finish",
         "requestBody": {
           "required": true,
           "content": {
@@ -3615,7 +3615,7 @@
     "/regenerate-backup-codes": {
       "post": {
         "operationId": "regenerate-backup-codes_post",
-        "summary": "POST /regenerate-backup-codes",
+        "summary": "/regenerate-backup-codes",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -3744,7 +3744,7 @@
     "/request-account-deletion": {
       "post": {
         "operationId": "request-account-deletion_post",
-        "summary": "POST /request-account-deletion",
+        "summary": "/request-account-deletion",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -3850,7 +3850,7 @@
     "/reset-password": {
       "post": {
         "operationId": "reset-password_post",
-        "summary": "POST /reset-password",
+        "summary": "/reset-password",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -3961,7 +3961,7 @@
     "/revoke-api-key": {
       "post": {
         "operationId": "revoke-api-key_post",
-        "summary": "POST /revoke-api-key",
+        "summary": "/revoke-api-key",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4072,7 +4072,7 @@
     "/send-magic-link": {
       "post": {
         "operationId": "send-magic-link_post",
-        "summary": "POST /send-magic-link",
+        "summary": "/send-magic-link",
         "requestBody": {
           "required": true,
           "content": {
@@ -4173,7 +4173,7 @@
     "/send-otp": {
       "post": {
         "operationId": "send-otp_post",
-        "summary": "POST /send-otp",
+        "summary": "/send-otp",
         "requestBody": {
           "required": true,
           "content": {
@@ -4274,7 +4274,7 @@
     "/send-password-reset": {
       "post": {
         "operationId": "send-password-reset_post",
-        "summary": "POST /send-password-reset",
+        "summary": "/send-password-reset",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4385,7 +4385,7 @@
     "/send-verification": {
       "post": {
         "operationId": "send-verification_post",
-        "summary": "POST /send-verification",
+        "summary": "/send-verification",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4496,7 +4496,7 @@
     "/session": {
       "delete": {
         "operationId": "session_delete",
-        "summary": "DELETE /session",
+        "summary": "/session",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4602,7 +4602,7 @@
     "/sessions": {
       "delete": {
         "operationId": "sessions_delete",
-        "summary": "DELETE /sessions",
+        "summary": "/sessions",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4706,7 +4706,7 @@
       },
       "get": {
         "operationId": "sessions_get",
-        "summary": "GET /sessions",
+        "summary": "/sessions",
         "security": [
           {
             "sessionCookie": []
@@ -4820,7 +4820,7 @@
     "/set-active-organization": {
       "post": {
         "operationId": "set-active-organization_post",
-        "summary": "POST /set-active-organization",
+        "summary": "/set-active-organization",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4931,7 +4931,7 @@
     "/signin": {
       "post": {
         "operationId": "signin_post",
-        "summary": "POST /signin",
+        "summary": "/signin",
         "requestBody": {
           "required": true,
           "content": {
@@ -5059,7 +5059,7 @@
     "/signout": {
       "post": {
         "operationId": "signout_post",
-        "summary": "POST /signout",
+        "summary": "/signout",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -5170,7 +5170,7 @@
     "/signup": {
       "post": {
         "operationId": "signup_post",
-        "summary": "POST /signup",
+        "summary": "/signup",
         "requestBody": {
           "required": true,
           "content": {
@@ -5286,7 +5286,7 @@
     "/stop-impersonating": {
       "post": {
         "operationId": "stop-impersonating_post",
-        "summary": "POST /stop-impersonating",
+        "summary": "/stop-impersonating",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -5397,7 +5397,7 @@
     "/token": {
       "post": {
         "operationId": "token_post",
-        "summary": "POST /token",
+        "summary": "/token",
         "requestBody": {
           "required": true,
           "content": {
@@ -5505,7 +5505,7 @@
     "/unlink-account": {
       "post": {
         "operationId": "unlink-account_post",
-        "summary": "POST /unlink-account",
+        "summary": "/unlink-account",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -5616,7 +5616,7 @@
     "/verify-api-key": {
       "post": {
         "operationId": "verify-api-key_post",
-        "summary": "POST /verify-api-key",
+        "summary": "/verify-api-key",
         "parameters": [
           {
             "name": "X-API-Key",
@@ -5724,7 +5724,7 @@
     "/verify-change-email": {
       "post": {
         "operationId": "verify-change-email_post",
-        "summary": "POST /verify-change-email",
+        "summary": "/verify-change-email",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -5835,7 +5835,7 @@
     "/verify-email": {
       "post": {
         "operationId": "verify-email_post",
-        "summary": "POST /verify-email",
+        "summary": "/verify-email",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -5946,7 +5946,7 @@
     "/verify-magic-link": {
       "get": {
         "operationId": "verify-magic-link_get",
-        "summary": "GET /verify-magic-link",
+        "summary": "/verify-magic-link",
         "parameters": [
           {
             "name": "token",
@@ -6074,7 +6074,7 @@
     "/verify-otp": {
       "post": {
         "operationId": "verify-otp_post",
-        "summary": "POST /verify-otp",
+        "summary": "/verify-otp",
         "requestBody": {
           "required": true,
           "content": {
@@ -6194,7 +6194,7 @@
     "/verify-two-factor": {
       "post": {
         "operationId": "verify-two-factor_post",
-        "summary": "POST /verify-two-factor",
+        "summary": "/verify-two-factor",
         "requestBody": {
           "required": true,
           "content": {

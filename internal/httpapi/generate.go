@@ -230,8 +230,10 @@ func Generate(contract Contract) ([]byte, error) {
 		for _, method := range endpoint.Methods {
 			op := oasOp{
 				OperationID: endpoint.Name + "_" + strings.ToLower(method.Verb),
-				Summary:     strings.ToUpper(method.Verb) + " /" + endpoint.Name,
-				Responses:   make(map[string]oasResponse),
+				// The HTTP method is already shown as a colour-coded badge in
+				// the reference UI, so the title carries only the route.
+				Summary:   "/" + endpoint.Name,
+				Responses: make(map[string]oasResponse),
 			}
 			if method.Request != nil {
 				op.RequestBody = &oasRequestBody{
