@@ -17,10 +17,10 @@ Tests live in `tests/authorization_test.go` and `tests/api_key_test.go`.
 | "API keys are digest-only" | `TestAPIKeyRawNotStored`, `TestAPIKeyPrefixIsNotRaw` |
 | "one atomic ConsumeAPIKey(ctx, digest) call" | `TestAPIKeyVerifyUsesSingleAtomicStoreCall`, `TestAPIKeyCreateVerifyRevoke`, `TestAPIKeyExpiredAndMissing` |
 | "API key permission and owner scoping" | `TestAPIKeyRequiresPermission`, `TestAPIKeyOwnerScoping` |
-| "HTTP endpoints for create, list, revoke and verification" | `TestAPIKeyHTTPEndpoints`, `TestAPIKeyRevokeHTTPEndpoint` |
+| "HTTP endpoints for create, list, revoke and verification" | `TestAPIKeyHTTPEndpoints`, `TestAPIKeyListAndVerifyHTTPEndpoints`, `TestAPIKeyRevokeHTTPEndpoint` |
 | "opt-in per-route middleware; session cookie ignored" | `TestAPIKeyMiddleware`, `TestAPIKeyProtectedRouteIgnoresSession` |
 | "state-changing operations need a fresh Session and emit audits" | `TestAPIKeyRequiresFreshSession`, `TestAPIKeySuccessAudit` |
-| "read-only listing needs a valid Session plus a grant" | `TestAPIKeyListingRequiresSession` |
+| "read-only listing needs a valid Session plus a grant" | `TestAPIKeyListingRequiresSession`, `TestAPIKeyListingRequiresGrant` |
 | "system key with no owner uses a published sentinel ID" | `TestSystemAPIKeyUsesSentinelOwner` |
 
 ## Security requirements → tests
@@ -52,6 +52,7 @@ Tests live in `tests/authorization_test.go` and `tests/api_key_test.go`.
 | Success audit | create and revoke emit `outcome: success` events | `TestAPIKeySuccessAudit` |
 | Key middleware | missing key rejected, valid key accepted, session ignored | `TestAPIKeyMiddleware`, `TestAPIKeyProtectedRouteIgnoresSession` |
 | Freshness | stale session token rejected for writes and listing | `TestAPIKeyRequiresFreshSession`, `TestAPIKeyListingRequiresSession` |
+| Listing grant | missing grant denies listing | `TestAPIKeyListingRequiresGrant` |
 | Sentinel | empty owner authorized under `SystemOwnerID` | `TestSystemAPIKeyUsesSentinelOwner` |
 | ErrForbidden | distinct sentinel with `signet: forbidden` text | `TestForbiddenSentinelIsDistinct` |
 

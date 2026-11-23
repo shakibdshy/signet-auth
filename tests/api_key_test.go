@@ -422,3 +422,57 @@ func TestAPIKeyListingRequiresSession(t *testing.T) {
 		t.Fatalf("listing error = %v", err)
 	}
 }
+
+func TestAPIKeyListAndVerifyHTTPEndpoints(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
+	cookies := &http.Cookie{Name: "__Host-signet_session", Value: session, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
+	createRec := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"ci","remaining":5}`))
+	createReq.AddCookie(cookies)
+	createReq.AddCookie(csrfCookie)
+	createReq.Header.Set("X-CSRF-Token", csrfToken)
+	client.Handler().ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d body = %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct {
+		Raw string `json:"raw"`
+		Key struct {
+			ID string `json:"id"`
+		} `json:"key"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	// GET /api-keys lists the signed-in User's keys.
+	listRec := httptest.NewRecorder()
+	listReq := httptest.NewRequest(http.MethodGet, "/api-keys", nil)
+	listReq.AddCookie(cookies)
+	client.Handler().ServeHTTP(listRec, listReq)
+	if listRec.Code != http.StatusOK || !strings.Contains(listRec.Body.String(), created.Key.ID) {
+		t.Fatalf("list status = %d body = %s", listRec.Code, listRec.Body.String())
+	}
+
+	// POST /verify-api-key returns a Principal for a valid key.
+	verifyRec := httptest.NewRecorder()
+	verifyReq := httptest.NewRequest(http.MethodPost, "/verify-api-key", nil)
+	verifyReq.Header.Set("X-API-Key", created.Raw)
+	client.Handler().ServeHTTP(verifyRec, verifyReq)
+	if verifyRec.Code != http.StatusOK || !strings.Contains(verifyRec.Body.String(), "owner_user_id") {
+		t.Fatalf("verify status = %d body = %s", verifyRec.Code, verifyRec.Body.String())
+	}
+}
+
+func TestAPIKeyListingRequiresGrant(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{})
+	_, err := client.ListAPIKeys(context.Background(), signet.ListAPIKeysInput{
+		OwnerUserID: "user-1", SessionToken: session,
+	})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("listing error = %v", err)
+	}
+}
