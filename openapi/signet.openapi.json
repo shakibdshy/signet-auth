@@ -52,7 +52,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -168,7 +168,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -284,7 +284,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -395,7 +395,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -501,7 +501,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -612,7 +612,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -749,7 +749,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -855,7 +855,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -964,7 +964,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1072,7 +1072,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1201,7 +1201,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1307,7 +1307,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1418,7 +1418,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1519,7 +1519,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1620,7 +1620,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1731,7 +1731,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1842,7 +1842,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1948,7 +1948,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2054,7 +2054,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2166,7 +2166,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2294,7 +2294,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2405,7 +2405,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2521,7 +2521,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2629,7 +2629,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2740,7 +2740,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2851,7 +2851,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2962,7 +2962,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3090,7 +3090,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3210,7 +3210,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3330,7 +3330,7 @@
             }
           },
           "403": {
-            "description": "email_not_verified",
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3436,6 +3436,7 @@
               "csrf",
               "email_exists",
               "email_not_verified",
+              "forbidden",
               "internal_error",
               "invalid_code",
               "invalid_credentials",

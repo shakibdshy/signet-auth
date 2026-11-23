@@ -35,9 +35,9 @@ func (s *fakeAPIKeyStore) Consume(_ context.Context, raw string) (*signet.APIKey
 	for _, record := range s.keys {
 		if record.Hash == digest && record.remaining > 0 {
 			record.remaining--
-			copy := record.APIKey
-			copy.Remaining = record.remaining
-			return &copy, nil
+			clone := record.APIKey
+			clone.Remaining = record.remaining
+			return &clone, nil
 		}
 	}
 	return nil, signet.ErrNotFound
@@ -47,8 +47,8 @@ func (s *fakeAPIKeyStore) List(_ context.Context, owner string) ([]*signet.APIKe
 	ids := s.ownerKeys[owner]
 	out := make([]*signet.APIKey, 0, len(ids))
 	for _, id := range ids {
-		copy := s.keys[id].APIKey
-		out = append(out, &copy)
+		clone := s.keys[id].APIKey
+		out = append(out, &clone)
 	}
 	return out, nil
 }

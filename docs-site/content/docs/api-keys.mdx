@@ -1,0 +1,25 @@
+---
+title: API keys
+description: Issue and verify digest-only credentials for non-human clients.
+---
+
+An API key is a credential for a non-human client. It is not an Account and creates no Session.
+You supply an `APIKeyStore`; without one, the feature is disabled. The raw key is returned once
+and never stored — only its digest is persisted. The `Principal` returned by verification carries
+the owner ID and roles. A key with no owner uses `SystemOwnerID`.
+
+```go
+cfg.APIKeyStore = myAPIKeyStore
+cfg.Authorizer = myAuthorizer // must grant api-keys:create and api-keys:revoke
+created, err := auth.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
+    OwnerUserID: "user-1", Name: "ci", Roles: []string{"ci"}, Remaining: 10,
+})
+principal, err := auth.VerifyAPIKey(ctx, created.Raw)
+listed, _ := auth.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1"})
+err = auth.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "user-1", ID: created.Key.ID})
+```
+
+`CreateAPIKeyResult` carries the raw value once and its stored digest record; `ListAPIKeysResult`
+and `RevokeAPIKeyInput` cover management. `VerifyAPIKey` uses one atomic store operation combining
+lookup, expiry, remaining-check and decrement. A missing, expired or exhausted key returns
+`ErrTokenInvalid`. Issuance and revocation require the published permissions and are owner-scoped.

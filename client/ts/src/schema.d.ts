@@ -513,7 +513,7 @@ export interface components {
         };
         ApiError: {
             /** @enum {string} */
-            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
+            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
             message: string;
         };
         ChangeEmailInput: {
@@ -678,7 +678,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -774,7 +774,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -870,7 +870,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -966,7 +966,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1060,7 +1060,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1156,7 +1156,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1258,7 +1258,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1352,7 +1352,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1445,7 +1445,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1541,7 +1541,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1641,7 +1641,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1733,7 +1733,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1829,7 +1829,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1923,7 +1923,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2017,7 +2017,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2113,7 +2113,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2209,7 +2209,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2301,7 +2301,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2395,7 +2395,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2487,7 +2487,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2589,7 +2589,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2685,7 +2685,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2783,7 +2783,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2879,7 +2879,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2975,7 +2975,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3071,7 +3071,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3167,7 +3167,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3265,7 +3265,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3364,7 +3364,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3463,7 +3463,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;

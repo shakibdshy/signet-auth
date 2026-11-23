@@ -61,9 +61,13 @@ type User = core.User
 // have several provider Accounts.
 type Account = core.Account
 
+// SystemOwnerID scopes API keys with no owning User.
+const SystemOwnerID = core.SystemOwnerID
+
 // Permission is an exact resource:action authorization string.
 type Permission = core.Permission
 
+// Published permission strings used by guarded operations.
 const (
 	PermissionUsersBan         = core.PermissionUsersBan
 	PermissionUsersSetRole     = core.PermissionUsersSetRole

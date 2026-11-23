@@ -525,7 +525,16 @@ func (c *Client) authorizePermission(ctx context.Context, userID string, permiss
 	if !ok {
 		return false
 	}
-	return c.Authorize(ctx, userID, resource, action)
+	if c.Authorize(ctx, userID, resource, action) {
+		return true
+	}
+	if c.cfg.AuditSink != nil {
+		_ = c.cfg.AuditSink.Record(ctx, AuditEvent{
+			Name: "authorization_denied", UserID: userID, Outcome: "denied",
+			Metadata: map[string]string{"permission": string(permission)},
+		})
+	}
+	return false
 }
 
 // CreateAPIKey issues a digest-only API key for a non-human client.
@@ -537,8 +546,12 @@ func (c *Client) CreateAPIKey(ctx context.Context, in CreateAPIKeyInput) (*Creat
 		return nil, ErrForbidden
 	}
 	raw := secret.NewToken()
+	owner := in.OwnerUserID
+	if owner == "" {
+		owner = SystemOwnerID
+	}
 	key := &APIKey{
-		ID: secret.NewID(), OwnerUserID: in.OwnerUserID, Name: in.Name,
+		ID: secret.NewID(), OwnerUserID: owner, Name: in.Name,
 		Hash: secret.Digest(raw), Prefix: raw[:6], Roles: in.Roles,
 		Remaining: in.Remaining, ExpiresAt: in.ExpiresAt, CreatedAt: c.cfg.Clock.Now(),
 	}
@@ -555,9 +568,6 @@ func (c *Client) VerifyAPIKey(ctx context.Context, raw string) (*Principal, erro
 	}
 	key, err := c.cfg.APIKeyStore.Consume(ctx, raw)
 	if err != nil {
-		return nil, ErrTokenInvalid
-	}
-	if !key.ExpiresAt.IsZero() && !c.cfg.Clock.Now().Before(key.ExpiresAt) {
 		return nil, ErrTokenInvalid
 	}
 	return &Principal{OwnerUserID: key.OwnerUserID, Roles: key.Roles}, nil

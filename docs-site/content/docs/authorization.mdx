@@ -1,0 +1,30 @@
+---
+title: Authorization
+description: Roles, permissions and the optional adapters that back them.
+---
+
+Signet provides the authorization vocabulary; your application owns the state through optional
+adapters. Nothing here is required unless you enable it.
+
+```go
+type Authorizer interface {
+    Roles(context.Context, string) []string
+    Authorize(ctx context.Context, userID, resource, action string) bool
+}
+
+type RoleWriter interface {
+    SetRoles(context.Context, string, []string) error
+}
+```
+
+Register them on `Config`. With no `Authorizer`, every check denies. `Client.Authorize` is the
+public read-only check; `Client.SetRoles` writes global roles through the `RoleWriter`.
+
+A Permission is an exact `resource:action` string. Signet publishes the strings it checks:
+PermissionUsersBan (`users:ban`), PermissionUsersSetRole (`users:set-role`),
+PermissionUsersImpersonate (`users:impersonate`), PermissionSessionsRevoke (`sessions:revoke`),
+PermissionAPIKeysCreate (`api-keys:create`), PermissionAPIKeysRevoke (`api-keys:revoke`),
+PermissionOrgsCreate (`organizations:create`), PermissionOrgsMemberAdd (`organizations:member-add`),
+PermissionOrgsMemberRemove (`organizations:member-remove`) and PermissionOrgsMemberRole
+(`organizations:member-role`). No wildcard expansion is performed. Denials return `ErrForbidden`
+with wire code `forbidden` (403), and guarded actions emit an Audit event with `outcome: denied`.

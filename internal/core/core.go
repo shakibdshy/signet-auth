@@ -204,6 +204,9 @@ type AuditSink interface {
 	Record(context.Context, AuditEvent) error
 }
 
+// SystemOwnerID scopes API keys with no owning User.
+const SystemOwnerID = "signet:system"
+
 // Permission is an exact resource:action authorization string.
 type Permission string
 
