@@ -335,6 +335,7 @@ type DeviceAuthorization struct {
 	UserID     string
 	Scopes     []string
 	Approved   bool
+	PollCount  int
 	ExpiresAt  time.Time
 	CreatedAt  time.Time
 }
@@ -345,6 +346,8 @@ type DeviceStore interface {
 	ByUserCode(context.Context, string) (*DeviceAuthorization, error)
 	ByDeviceCode(context.Context, string) (*DeviceAuthorization, error)
 	Approve(context.Context, string, string) error
+	IncrementPoll(context.Context, string) error
+	Consume(context.Context, string) error
 }
 
 // AuthorizationServerConfig enables Signet as an Authorization server.
@@ -381,6 +384,7 @@ type OAuthTokenInput struct {
 	GrantType    string `json:"grant_type"`
 	Code         string `json:"code"`
 	CodeVerifier string `json:"code_verifier"`
+	RedirectURI  string `json:"redirect_uri"`
 	RefreshToken string `json:"refresh_token"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
@@ -1337,6 +1341,8 @@ var (
 	ErrInvalidPasskeysConfig = errors.New("signet: invalid passkeys configuration")
 	// ErrInvalidAuthorizationServerConfig reports a misconfigured Authorization server.
 	ErrInvalidAuthorizationServerConfig = errors.New("signet: invalid authorization server configuration")
+	// ErrOAuthSlowDown reports that a device is polling too quickly.
+	ErrOAuthSlowDown = errors.New("signet: oauth slow down")
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = errors.New("signet: forbidden")
 )

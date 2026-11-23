@@ -1228,6 +1228,10 @@ func (h *Handler) handleDeviceToken(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.api.ExchangeDeviceAuthorization(r.Context(), in.DeviceCode)
 	if err != nil {
+		if errors.Is(err, core.ErrOAuthSlowDown) {
+			writeOAuthError(w, "slow_down", "polling too quickly")
+			return
+		}
 		writeOAuthError(w, "authorization_pending", "authorization pending")
 		return
 	}

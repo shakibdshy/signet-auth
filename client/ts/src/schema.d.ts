@@ -1164,6 +1164,7 @@ export interface components {
             code: string;
             code_verifier: string;
             grant_type: string;
+            redirect_uri: string;
             refresh_token: string;
         };
         OAuthTokenResult: {

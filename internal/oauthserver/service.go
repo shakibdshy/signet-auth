@@ -3,7 +3,6 @@ package oauthserver
 
 import (
 	"context"
-	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -131,9 +130,9 @@ func (s *Service) Authorize(ctx context.Context, in core.OAuthAuthorizeInput) (*
 		return nil, err
 	}
 	if !s.trusted(ctx, client.ID) {
-		if s.cfg.AuthorizationServer.Consent != nil &&
+		if s.cfg.AuthorizationServer.Consent == nil ||
 			!s.cfg.AuthorizationServer.Consent(ctx, client.ID, in.UserID, scopes) {
-			s.emit(ctx, "oauth_consent_denied", in.UserID, client.ID, "denied")
+			s.emit(ctx, audit.OAuthConsentDenied, in.UserID, client.ID, "denied")
 			return nil, core.ErrForbidden
 		}
 	}
@@ -149,7 +148,7 @@ func (s *Service) Authorize(ctx context.Context, in core.OAuthAuthorizeInput) (*
 	if err != nil {
 		return nil, err
 	}
-	s.emit(ctx, "oauth_code_issued", in.UserID, client.ID, "success")
+	s.emit(ctx, audit.OAuthCodeIssued, in.UserID, client.ID, "success")
 	return &core.OAuthAuthorizeResult{Code: code, State: in.State}, nil
 }
 
@@ -173,8 +172,14 @@ func (s *Service) Exchange(ctx context.Context, in core.OAuthTokenInput) (*core.
 	if err != nil || json.Unmarshal([]byte(raw), &data) != nil {
 		return nil, core.ErrTokenInvalid
 	}
-	if data.ClientID != in.ClientID || data.RedirectURI == "" {
+	if data.ClientID != in.ClientID || data.RedirectURI == "" || in.RedirectURI != "" && in.RedirectURI != data.RedirectURI {
 		return nil, core.ErrTokenInvalid
+	}
+	if _, err := s.audience(data.Audience); err != nil {
+		return nil, core.ErrForbidden
+	}
+	if err := s.authenticateClient(ctx, in.ClientID, in.ClientSecret); err != nil {
+		return nil, core.ErrForbidden
 	}
 	sum := sha256.Sum256([]byte(in.CodeVerifier))
 	if data.Challenge != base64.RawURLEncoding.EncodeToString(sum[:]) {
@@ -184,7 +189,7 @@ func (s *Service) Exchange(ctx context.Context, in core.OAuthTokenInput) (*core.
 	if err != nil {
 		return nil, err
 	}
-	s.emit(ctx, "oauth_token_issued", data.UserID, data.ClientID, "success")
+	s.emit(ctx, audit.OAuthTokenIssued, data.UserID, data.ClientID, "success")
 	return &core.OAuthTokenResult{
 		AccessToken: pair.AccessToken, RefreshToken: pair.RefreshToken,
 		TokenType: "Bearer", ExpiresIn: pair.ExpiresIn, Scope: strings.Join(data.Scopes, " "),
@@ -219,6 +224,23 @@ func parseScope(raw string) ([]string, error) {
 		return nil, err
 	}
 	return parsed.Scopes, nil
+}
+
+func (s *Service) authenticateClient(ctx context.Context, id, secret string) error {
+	if secret == "" {
+		return nil
+	}
+	if s.cfg.AuthorizationServer.Clients != nil {
+		if _, err := s.cfg.AuthorizationServer.Clients.Authenticate(ctx, id, secret); err == nil {
+			return nil
+		}
+		return core.ErrForbidden
+	}
+	client, err := s.client(ctx, id)
+	if err != nil || client.Secret != secret {
+		return core.ErrForbidden
+	}
+	return nil
 }
 
 // BeginDevice starts a Device authorization.
@@ -272,7 +294,7 @@ func (s *Service) ApproveDevice(ctx context.Context, in core.DeviceApproveInput)
 	if err := s.cfg.AuthorizationServer.Devices.Approve(ctx, device.UserCode, in.UserID); err != nil {
 		return err
 	}
-	s.emit(ctx, "oauth_device_approved", in.UserID, device.ClientID, "success")
+	s.emit(ctx, audit.OAuthDeviceApproved, in.UserID, device.ClientID, "success")
 	return nil
 }
 
@@ -289,13 +311,20 @@ func (s *Service) DeviceToken(ctx context.Context, deviceCode string) (*core.OAu
 		return nil, core.ErrTokenExpired
 	}
 	if !device.Approved || device.UserID == "" {
+		_ = s.cfg.AuthorizationServer.Devices.IncrementPoll(ctx, deviceCode)
+		if device.PollCount > 0 {
+			return nil, core.ErrOAuthSlowDown
+		}
 		return nil, core.ErrForbidden
+	}
+	if err := s.cfg.AuthorizationServer.Devices.Consume(ctx, deviceCode); err != nil {
+		return nil, core.ErrTokenInvalid
 	}
 	pair, err := s.jwt.IssueWithScope(ctx, device.UserID, "", device.Scopes)
 	if err != nil {
 		return nil, err
 	}
-	s.emit(ctx, "oauth_token_issued", device.UserID, device.ClientID, "success")
+	s.emit(ctx, audit.OAuthTokenIssued, device.UserID, device.ClientID, "success")
 	return &core.OAuthTokenResult{
 		AccessToken: pair.AccessToken, RefreshToken: pair.RefreshToken,
 		TokenType: "Bearer", ExpiresIn: pair.ExpiresIn, Scope: strings.Join(device.Scopes, " "),
@@ -305,12 +334,6 @@ func (s *Service) DeviceToken(ctx context.Context, deviceCode string) (*core.OAu
 func userCode() string {
 	sum := sha256.Sum256([]byte(secret.NewToken()))
 	return strings.ToUpper(hex.EncodeToString(sum[:4]))[:4] + "-" + strings.ToUpper(hex.EncodeToString(sum[4:8]))[:4]
-}
-
-// VerifyPKCE is exposed for contract tests that check S256 behaviour.
-func VerifyPKCE(challenge, verifier string) bool {
-	sum := sha256.Sum256([]byte(verifier))
-	return hmac.Equal([]byte(challenge), []byte(base64.RawURLEncoding.EncodeToString(sum[:])))
 }
 
 func (s *Service) emit(ctx context.Context, name, userID, clientID, outcome string) {

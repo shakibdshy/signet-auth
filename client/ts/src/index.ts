@@ -220,6 +220,12 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.POST("/oauth/device/authorize", { body }));
 		},
 
+		async deviceToken(
+			body: RequestBody<"/oauth/device/token", "post">,
+		): Promise<SuccessBody<"/oauth/device/token", "post", 200>> {
+			return unwrap(await api.POST("/oauth/device/token", { body }));
+		},
+
 		async approveDeviceAuthorization(
 			body: RequestBody<"/oauth/device/approve", "post">,
 		): Promise<SuccessBody<"/oauth/device/approve", "post", 200>> {

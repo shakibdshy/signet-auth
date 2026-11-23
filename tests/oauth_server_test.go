@@ -83,6 +83,16 @@ func (s *fakeDeviceStore) ByDeviceCode(_ context.Context, code string) (*signet.
 	clone := *d
 	return &clone, nil
 }
+func (s *fakeDeviceStore) IncrementPoll(_ context.Context, code string) error {
+	if d, ok := s.devices[code]; ok {
+		d.PollCount++
+	}
+	return nil
+}
+func (s *fakeDeviceStore) Consume(_ context.Context, code string) error {
+	delete(s.devices, code)
+	return nil
+}
 func (s *fakeDeviceStore) Approve(_ context.Context, userCode, userID string) error {
 	for _, d := range s.devices {
 		if d.UserCode == userCode {
@@ -325,4 +335,98 @@ func TestOAuthServerHTTPEndpoints(t *testing.T) {
 		t.Fatalf("token status = %d body = %s", rr.Code, rr.Body.String())
 	}
 	_ = ctx
+}
+
+func TestOAuthServerClientSecretAndRedirectBinding(t *testing.T) {
+	clients := newFakeOAuthClientStore()
+	clients.clients["app"] = &signet.OAuthClient{
+		ID: "app", Secret: "right-secret", RedirectURIs: []string{"https://app.example.com/cb"}, Trusted: true,
+	}
+	client, session := oauthServerClient(t, clients, newFakeDeviceStore(), nil, nil)
+	ctx := context.Background()
+	verifier := "verifier-1234567890"
+	auth, err := client.OAuthAuthorize(ctx, signet.OAuthAuthorizeInput{
+		ClientID: "app", RedirectURI: "https://app.example.com/cb", ResponseType: "code",
+		Scope: "openid", CodeChallenge: challenge(), Audience: "api.example.com", SessionToken: session,
+	})
+	if err != nil {
+		t.Fatalf("authorize: %v", err)
+	}
+	if _, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
+		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: verifier,
+		ClientID: "app", ClientSecret: "wrong-secret", RedirectURI: "https://app.example.com/cb",
+	}); !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("wrong secret error = %v", err)
+	}
+	if _, err := client.OAuthExchange(ctx, signet.OAuthTokenInput{
+		GrantType: "authorization_code", Code: auth.Code, CodeVerifier: verifier,
+		ClientID: "app", ClientSecret: "right-secret", RedirectURI: "https://evil.example.com",
+	}); !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("wrong redirect error = %v", err)
+	}
+}
+
+func TestOAuthServerSlowDownAndDeviceConsume(t *testing.T) {
+	clients := newFakeOAuthClientStore()
+	clients.clients["app"] = &signet.OAuthClient{ID: "app", Trusted: true}
+	devices := newFakeDeviceStore()
+	client, session := oauthServerClient(t, clients, devices, nil, nil)
+	ctx := context.Background()
+	begin, err := client.BeginDeviceAuthorization(ctx, signet.DeviceAuthorizeInput{
+		ClientID: "app", Scope: "openid", Audience: "api.example.com",
+	})
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	if err := client.ApproveDeviceAuthorization(ctx, signet.DeviceApproveInput{UserCode: begin.UserCode, SessionToken: session}); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if _, err := client.ExchangeDeviceAuthorization(ctx, begin.DeviceCode); err != nil {
+		t.Fatalf("first exchange: %v", err)
+	}
+	if _, err := client.ExchangeDeviceAuthorization(ctx, begin.DeviceCode); !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("replayed device code error = %v", err)
+	}
+}
+
+func TestOAuthServerUntrustedWithoutConsentDenied(t *testing.T) {
+	clients := newFakeOAuthClientStore()
+	clients.clients["app"] = &signet.OAuthClient{ID: "app", RedirectURIs: []string{"https://app.example.com/cb"}}
+	client, session := oauthServerClient(t, clients, newFakeDeviceStore(), nil, nil)
+	_, err := client.OAuthAuthorize(context.Background(), signet.OAuthAuthorizeInput{
+		ClientID: "app", RedirectURI: "https://app.example.com/cb", ResponseType: "code",
+		Scope: "openid", CodeChallenge: challenge(), SessionToken: session,
+	})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("missing consent error = %v", err)
+	}
+}
+
+func TestOAuthServerSlowDownError(t *testing.T) {
+	clients := newFakeOAuthClientStore()
+	clients.clients["app"] = &signet.OAuthClient{ID: "app", Trusted: true}
+	devices := newFakeDeviceStore()
+	client, _ := oauthServerClient(t, clients, devices, nil, nil)
+	ctx := context.Background()
+	begin, err := client.BeginDeviceAuthorization(ctx, signet.DeviceAuthorizeInput{ClientID: "app", Scope: "openid"})
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	if _, err := client.ExchangeDeviceAuthorization(ctx, begin.DeviceCode); !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("first poll error = %v", err)
+	}
+	if _, err := client.ExchangeDeviceAuthorization(ctx, begin.DeviceCode); !errors.Is(err, signet.ErrOAuthSlowDown) {
+		t.Fatalf("second poll error = %v", err)
+	}
+}
+
+func TestOAuthServerConfigValidation(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.AuthorizationServer = &signet.AuthorizationServerConfig{}
+	if _, err := signet.New(cfg); !errors.Is(err, signet.ErrInvalidAuthorizationServerConfig) {
+		t.Fatalf("validation error = %v", err)
+	}
 }

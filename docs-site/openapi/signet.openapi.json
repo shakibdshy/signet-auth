@@ -7467,6 +7467,9 @@
           "grant_type": {
             "type": "string"
           },
+          "redirect_uri": {
+            "type": "string"
+          },
           "refresh_token": {
             "type": "string"
           }
@@ -7475,6 +7478,7 @@
           "grant_type",
           "code",
           "code_verifier",
+          "redirect_uri",
           "refresh_token",
           "client_id",
           "client_secret"

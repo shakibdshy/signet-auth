@@ -10,6 +10,12 @@ Source: issue #102; tickets #103–#107. Tests live in `tests/oauth_server_test.
 | "client registry static or store" | `TestOAuthServerCodeExchange`, `TestOAuthServerHTTPEndpoints` |
 | "PKCE S256 and allowlisted redirect" | `TestOAuthServerPKCEAndBinding` |
 | "replayed code rejected" | `TestOAuthServerCodeExchange` |
+| "client secrets authenticated" | `TestOAuthServerClientSecretAndRedirectBinding` |
+| "redirect bound to code" | `TestOAuthServerClientSecretAndRedirectBinding` |
+| "slow_down when polling quickly" | `TestOAuthServerSlowDownError` |
+| "device code single-use" | `TestOAuthServerSlowDownAndDeviceConsume` |
+| "untrusted client without consent denied" | `TestOAuthServerUntrustedWithoutConsentDenied` |
+| "config validated at startup" | `TestOAuthServerConfigValidation` |
 | "refresh rotation and reuse containment" | `TestOAuthServerRefreshRotation` |
 | "exact-string Scopes and audience allowlist" | `TestOAuthServerConsentAndScopes` |
 | "trusted skip / untrusted consent + denial audit" | `TestOAuthServerConsentAndScopes` |
@@ -20,12 +26,12 @@ Source: issue #102; tickets #103–#107. Tests live in `tests/oauth_server_test.
 
 | Requirement | Test |
 | --- | --- |
-| Code bound to client, redirect, challenge, Scope and User | `TestOAuthServerPKCEAndBinding` |
+| Code bound to client, redirect, challenge, Scope and User | `TestOAuthServerPKCEAndBinding`, `TestOAuthServerClientSecretAndRedirectBinding` |
 | Single-use code | `TestOAuthServerCodeExchange` |
 | Refresh reuse revokes family | `TestOAuthServerRefreshRotation` |
 | Scope and audience rejection | `TestOAuthServerConsentAndScopes` |
 | Consent denial audited | `TestOAuthServerConsentAndScopes` |
-| Device code expiry and approval binding | `TestOAuthServerDeviceFlow` |
+| Device code expiry, approval binding and single use | `TestOAuthServerDeviceFlow`, `TestOAuthServerSlowDownAndDeviceConsume` |
 
 ## Security mechanisms → effect tests
 

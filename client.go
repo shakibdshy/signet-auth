@@ -125,8 +125,10 @@ func New(cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.AuthorizationServer != nil && cfg.JWT == nil {
-		return nil, ErrInvalidAuthorizationServerConfig
+	if cfg.AuthorizationServer != nil {
+		if cfg.JWT == nil || cfg.AuthorizationServer.Devices == nil {
+			return nil, ErrInvalidAuthorizationServerConfig
+		}
 	}
 	if cfg.OAuth != nil {
 		if len(cfg.OAuth.Providers) == 0 || len(cfg.OAuth.StateKey) != 32 {
@@ -237,16 +239,10 @@ func New(cfg Config) (*Client, error) {
 	}
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp
-	if cfg.AuthorizationServer != nil && cfg.JWT == nil {
-		return nil, ErrInvalidAuthorizationServerConfig
-	}
 	if cfg.OAuth != nil {
 		c.oauth = oauth.New(cfg.OAuth, cfg.AllowedRedirectPatterns, cfg.Store, cfg.Clock, limiter, cfg.Logger, c.tokens, c.sessions, cfg.AuditSink)
 	}
 	var oauthRedirects []string
-	if cfg.AuthorizationServer != nil && cfg.JWT == nil {
-		return nil, ErrInvalidAuthorizationServerConfig
-	}
 	if cfg.OAuth != nil {
 		oauthRedirects = cfg.OAuth.AllowedRedirects
 	}

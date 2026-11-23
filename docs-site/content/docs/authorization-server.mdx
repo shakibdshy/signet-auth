@@ -54,7 +54,7 @@ tokens, err := auth.OAuthExchange(ctx, signet.OAuthTokenInput{
 // tokens.AccessToken, tokens.RefreshToken, tokens.Scope
 ```
 
-The code is bound to its client, redirect URI, PKCE challenge, Scope set and User. A wrong verifier, wrong client, wrong redirect or replay is rejected. Scopes are published exact strings (`openid`, `profile`, `email`, `offline_access`) and are never wildcard-expanded.
+The code is bound to its client, redirect URI, PKCE challenge, Scope set and User. A wrong verifier, wrong client, wrong redirect, wrong client secret or replay is rejected. An untrusted client without a consent callback is denied. Scopes are published exact strings (`openid`, `profile`, `email`, `offline_access`) and are never wildcard-expanded.
 
 ## Refresh and audiences
 
@@ -83,7 +83,7 @@ err = auth.ApproveDeviceAuthorization(ctx, signet.DeviceApproveInput{
 tokens, err := auth.ExchangeDeviceAuthorization(ctx, device.DeviceCode)
 ```
 
-Pending device codes live in the optional store and expire after ten minutes. Polling returns `authorization_pending` / `slow_down` until approval.
+Pending device codes live in the optional store and expire after ten minutes. Polling returns `authorization_pending` / `slow_down` until approval; an approved device code is single-use.
 
 ## HTTP endpoints
 

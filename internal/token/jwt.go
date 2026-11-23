@@ -297,84 +297,14 @@ func (s *JWTService) RefreshWithScope(ctx context.Context, presented string) (*c
 
 // Issue signs a fresh Access token and stores a rotating Refresh proof.
 func (s *JWTService) Issue(ctx context.Context, userID string) (*core.TokenPair, error) {
-	now := s.deps.Clock.Now()
-	claims := jwt.RegisteredClaims{
-		Subject:   userID,
-		Issuer:    s.deps.Config.Issuer,
-		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(s.deps.Config.AccessTTL)),
-	}
-	algorithm, ok := jwtAlgorithms[s.deps.Config.Algorithm]
-	if !ok {
-		return nil, core.ErrInvalidJWTAlgorithm
-	}
-	signed := jwt.NewWithClaims(algorithm.method, claims)
-	switch s.deps.Config.Key.(type) {
-	case *rsa.PrivateKey, ed25519.PrivateKey:
-		kid, err := keyID(s.deps.Config.Key)
-		if err != nil {
-			return nil, err
-		}
-		signed.Header["kid"] = kid
-	}
-	access, err := signed.SignedString(s.deps.Config.Key)
-	if err != nil {
-		return nil, err
-	}
-	raw := secret.NewToken()
-	token := &core.Token{
-		ID:        secret.NewID(),
-		UserID:    userID,
-		Kind:      core.TokenRefresh,
-		Hash:      secret.Digest(raw),
-		ExpiresAt: now.Add(s.deps.Config.RefreshTTL),
-		CreatedAt: now,
-	}
-	if err := s.deps.Store.CreateToken(ctx, token); err != nil {
-		return nil, err
-	}
-	return &core.TokenPair{
-		AccessToken:  access,
-		RefreshToken: raw,
-		ExpiresIn:    int64(s.deps.Config.AccessTTL / time.Second),
-	}, nil
+	return s.IssueWithScope(ctx, userID, "", nil)
 }
 
 func (s *JWTService) refreshTokens(ctx context.Context, presented string) (*core.TokenPair, error) {
-	digest := secret.Digest(presented)
-	token, err := s.deps.Store.TokenByHash(ctx, core.TokenRefresh, digest)
-	if errors.Is(err, core.ErrNotFound) {
-		return nil, core.ErrTokenInvalid
-	}
-	if err != nil {
-		return nil, err
-	}
-	if token.UsedAt != nil {
-		return s.handleRefreshReuse(ctx, token.UserID)
-	}
-	if !s.deps.Clock.Now().Before(token.ExpiresAt) {
-		return nil, core.ErrTokenExpired
-	}
-	consumed, err := s.deps.Store.ConsumeToken(ctx, core.TokenRefresh, digest)
-	if errors.Is(err, core.ErrNotFound) {
-		return s.handleRefreshReuse(ctx, token.UserID)
-	}
-	if err != nil {
-		return nil, err
-	}
-	user, err := s.deps.Store.UserByID(ctx, consumed.UserID)
-	if err != nil {
-		return nil, err
-	}
-	if user.Disabled {
-		return nil, core.ErrInvalidCredentials
-	}
-	return s.Issue(ctx, user.ID)
+	return s.RefreshWithScope(ctx, presented)
 }
 
 func (s *JWTService) handleRefreshReuse(ctx context.Context, userID string) (*core.TokenPair, error) {
-	// Security: a replayed Refresh token is treated as theft. Contain it by
-	// revoking every Session and Refresh token of that User.
 	_ = s.deps.RevokeSessions(ctx, userID)
 	for _, kind := range core.AllTokenKinds {
 		_ = s.deps.Store.DeleteTokensForUser(ctx, userID, kind)

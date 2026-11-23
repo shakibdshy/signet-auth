@@ -119,4 +119,6 @@ var (
 var (
 	// ErrInvalidAuthorizationServerConfig reports a misconfigured Authorization server.
 	ErrInvalidAuthorizationServerConfig = core.ErrInvalidAuthorizationServerConfig
+	// ErrOAuthSlowDown reports that a device is polling too quickly.
+	ErrOAuthSlowDown = core.ErrOAuthSlowDown
 )
