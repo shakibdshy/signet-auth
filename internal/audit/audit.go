@@ -40,6 +40,13 @@ const (
 	UserSessionRevoked        = "user_session_revoked"
 	UserImpersonated          = "user_impersonated"
 	ImpersonationStopped      = "impersonation_stopped"
+	PasskeyRegistrationFailed = "passkey_registration_failed"
+	PasskeyEnrolled           = "passkey_enrolled"
+	PasskeyAssertionFailed    = "passkey_assertion_failed"
+	//nolint:gosec // G101: event name, not a credential.
+	PasskeySignCountRegression = "passkey_sign_count_regression"
+	PasskeySignIn              = "passkey_sign_in"
+	PasskeyDeleted             = "passkey_deleted"
 )
 
 // Emit records an event when a sink is configured. A sink failure is logged

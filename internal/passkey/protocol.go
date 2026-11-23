@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	wa "github.com/go-webauthn/webauthn/webauthn"
@@ -15,19 +17,14 @@ import (
 
 // Protocol implements core.PasskeyProtocol with go-webauthn.
 type Protocol struct {
-	wa *wa.WebAuthn
+	wa     *wa.WebAuthn
+	Lookup func(context.Context, string) (*core.WebAuthnCredential, error)
 }
 
 // NewProtocol returns a verifier for the given Relying party configuration.
 func NewProtocol(cfg *core.PasskeysConfig) (*Protocol, error) {
 	uv := protocol.VerificationRequired
-	if cfg != nil && !cfg.UserVerification {
-		uv = protocol.VerificationPreferred
-	}
 	attestation := protocol.ConveyancePreference("none")
-	if cfg != nil && cfg.Attestation {
-		attestation = protocol.ConveyancePreference("direct")
-	}
 	name := "Signet"
 	origins := []string{}
 	if cfg != nil {
@@ -160,12 +157,23 @@ func (p *Protocol) FinishLogin(_ context.Context, data string, response []byte) 
 	if err := json.Unmarshal([]byte(data), &session); err != nil {
 		return "", nil, err
 	}
-	handler := func(_ []byte, userHandle []byte) (wa.User, error) {
-		id := string(userHandle)
-		if id == "" {
-			id = "unknown"
+	handler := func(rawID, userHandle []byte) (wa.User, error) {
+		userID := string(userHandle)
+		credentials := []*core.WebAuthnCredential{}
+		if p.Lookup != nil {
+			if credential, err := p.Lookup(context.Background(), hex.EncodeToString(rawID)); err == nil && credential != nil {
+				userID = credential.UserID
+				credentials = append(credentials, credential)
+			}
 		}
-		return &webUser{id: id, name: id, displayName: id}, nil
+		if userID == "" {
+			userID = "unknown"
+		}
+		user := &webUser{id: userID, name: userID, displayName: userID}
+		for _, c := range credentials {
+			user.credentials = append(user.credentials, toCredential(c))
+		}
+		return user, nil
 	}
 	req, err := http.NewRequest(http.MethodPost, "/", bytes.NewReader(response))
 	if err != nil {
@@ -185,4 +193,19 @@ var _ core.PasskeyProtocol = (*Protocol)(nil)
 func decodedID(value string) []byte {
 	b, _ := hex.DecodeString(value)
 	return b
+}
+
+// Validate checks a Relying party configuration without retaining the verifier.
+func Validate(cfg *core.PasskeysConfig) error {
+	if cfg == nil {
+		return nil
+	}
+	for _, raw := range cfg.RPOrigins {
+		u, err := url.Parse(raw)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("invalid relying party origin %q", raw)
+		}
+	}
+	_, err := NewProtocol(cfg)
+	return err
 }

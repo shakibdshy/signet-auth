@@ -71,7 +71,7 @@ type Session struct {
 // silently omitted.
 var AllTokenKinds = []TokenKind{
 	TokenVerifyEmail, TokenChangeEmail, TokenDeleteUser, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
-	TokenMagicLink, TokenEmailOTP, TokenTwoFactor,
+	TokenMagicLink, TokenEmailOTP, TokenTwoFactor, TokenPasskeyRegistration, TokenPasskeyAuthentication,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -1008,6 +1008,7 @@ type ChangePasswordInput struct {
 // RequestDeleteUserInput identifies the User requesting account deletion.
 type RequestDeleteUserInput struct {
 	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
 	RateLimitKey string `json:"-"`
 }
 

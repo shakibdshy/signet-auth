@@ -193,6 +193,9 @@ func (s *VerificationService) RequestUserDeletion(ctx context.Context, in core.R
 	if in.UserID == "" {
 		return core.ErrInvalidCredentials
 	}
+	if in.SessionToken != "" && !s.freshProof(in.SessionToken) {
+		return core.ErrForbidden
+	}
 	if err := allow(ctx, s.deps.Limiter, "request-account-deletion", in.RateLimitKey); err != nil {
 		return err
 	}
@@ -480,7 +483,7 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 	if errors.Is(err, core.ErrNotFound) {
 		// A passkey-only User has no credential Account; the emailed proof
 		// creates the first one so recovery works after losing every passkey.
-		account = &core.Account{ID: proof.ID, UserID: user.ID, Provider: credentialProvider, ProviderUserID: user.ID}
+		account = &core.Account{ID: secret.NewID(), UserID: user.ID, Provider: credentialProvider, ProviderUserID: user.ID}
 		newAccount = true
 	} else if err != nil {
 		return err

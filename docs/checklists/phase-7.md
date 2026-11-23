@@ -8,16 +8,18 @@ Source: issue #90; tickets #91–#95. Tests live in `tests/passkey_test.go`.
 | --- | --- |
 | "enroll a discoverable Passkey" | `TestPasskeyEnrollmentAndListing`, `TestPasskeyHTTPEndpoints` |
 | "registration ceremony state in single-use Token kinds" | `TestPasskeyRegistrationReplayRejected`, `TestPasskeyCeremonyExpiry` |
-| "enrollment requires fresh Session and verified email" | `TestPasskeyEnrollmentRequiresFreshSession`, `TestPasskeyEnrollmentRequiresVerifiedEmail` |
+| "enrollment requires fresh Session and verified email" | `TestPasskeyEnrollmentRequiresFreshSession`, `TestPasskeyEnrollmentRequiresVerifiedEmail`, `TestPasskeyRegistrationBindsSessionUser` |
 | "sign in without a username" | `TestPasskeySignInCreatesSession`, `TestPasskeyHTTPEndpoints` |
+| "records passkey as Last sign-in method" | `TestPasskeySignInRecordsLastMethod` |
 | "replayed assertion rejected" | `TestPasskeySignInReplayRejected` |
 | "sign count stored and regression audited" | `TestPasskeySignCountRegressionAudit` |
 | "list and delete passkeys, owner-scoped and fresh" | `TestPasskeyDeleteOwnerScoped`, `TestPasskeyHTTPEndpoints` |
 | "deleting a User removes credentials" | `TestUserDeletionRemovesPasskeys` |
 | "passkey-only User can set initial password" | `TestPasskeyOnlyUserCanSetPassword` |
 | "fresh passkey Session substitutes for current password" | `TestEmailChangeAcceptsFreshPasskeySession`, `TestEmailChangeRejectsStaleSession` |
+| "go-webauthn verifier is used by default" | `TestPasskeyRealProtocolWiring` |
 | "passkeys disabled by default" | `TestPasskeyDisabled` |
-| "RP config validated at startup" | `TestPasskeysConfigValidation` |
+| "RP config validated at startup" | `TestPasskeysConfigValidation`, `TestPasskeyInvalidOriginRejectedAtStartup` |
 
 ## Security requirements → tests
 
@@ -40,6 +42,8 @@ Source: issue #90; tickets #91–#95. Tests live in `tests/passkey_test.go`.
 | Single-use ceremony token | second finish returns `ErrTokenInvalid` | `TestPasskeyRegistrationReplayRejected`, `TestPasskeySignInReplayRejected` |
 | Ceremony expiry | expired proof rejected with injected Clock | `TestPasskeyCeremonyExpiry` |
 | Freshness | stale session token denied | `TestPasskeyEnrollmentRequiresFreshSession`, `TestPasskeyDeleteOwnerScoped` |
+| Session binding | fresh session cannot enroll another User | `TestPasskeyRegistrationBindsSessionUser` |
+| Ceremony revocation | kinds joined to `AllTokenKinds` so revoke-all invalidates them | design: kinds added to the canonical list |
 | Verified email gate | unverified User denied enrollment | `TestPasskeyEnrollmentRequiresVerifiedEmail` |
 | Owner scoping | other User cannot delete credential | `TestPasskeyDeleteOwnerScoped` |
 | Child record deletion | store empty after User deletion | `TestUserDeletionRemovesPasskeys` |

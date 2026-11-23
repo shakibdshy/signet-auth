@@ -20,6 +20,7 @@ type Deps struct {
 	Store   core.Store
 	Tokens  tokenService
 	Session *session.Service
+	Resolve func(context.Context, string) (*core.User, error)
 	Logger  *slog.Logger
 }
 
@@ -43,6 +44,9 @@ func New(deps Deps) *Service {
 		if protocol == nil {
 			p, err := NewProtocol(deps.Config.Passkeys)
 			if err == nil {
+				p.Lookup = func(ctx context.Context, id string) (*core.WebAuthnCredential, error) {
+					return deps.Config.Passkeys.Store.CredentialByID(ctx, id)
+				}
 				protocol = p
 			}
 		}
@@ -72,6 +76,7 @@ func (s *Service) emit(ctx context.Context, name, userID string, metadata map[st
 func (s *Service) deny(ctx context.Context, userID, name string) {
 	audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
 		Name: name, UserID: userID, Outcome: "denied",
+		Metadata: map[string]string{"check": name},
 	})
 }
 
@@ -79,6 +84,12 @@ func (s *Service) deny(ctx context.Context, userID, name string) {
 func (s *Service) BeginRegistration(ctx context.Context, in core.PasskeyRegistrationInput) (*core.PasskeyCeremonyResult, error) {
 	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) {
 		return nil, core.ErrForbidden
+	}
+	if s.deps.Resolve != nil {
+		sessionUser, err := s.deps.Resolve(ctx, in.SessionToken)
+		if err != nil || sessionUser == nil || sessionUser.ID != in.UserID {
+			return nil, core.ErrForbidden
+		}
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
 	if err != nil {
@@ -111,10 +122,10 @@ func (s *Service) FinishRegistration(ctx context.Context, in core.PasskeyFinishI
 	if err != nil {
 		return core.ErrTokenInvalid
 	}
-	data := ceremonyData(ctx, in.Token, ceremony, s)
+	data := ceremonyData(in.Token)
 	credential, err := s.protocol.FinishRegistration(ctx, data, in.Response)
 	if err != nil {
-		s.deny(ctx, ceremony.UserID, "passkey_registration_failed")
+		s.deny(ctx, ceremony.UserID, audit.PasskeyRegistrationFailed)
 		return core.ErrTokenInvalid
 	}
 	credential.UserID = ceremony.UserID
@@ -122,7 +133,7 @@ func (s *Service) FinishRegistration(ctx context.Context, in core.PasskeyFinishI
 	if err := s.deps.Config.Passkeys.Store.CreateCredential(ctx, credential); err != nil {
 		return err
 	}
-	s.emit(ctx, "passkey_enrolled", ceremony.UserID, map[string]string{"credential_id": credential.ID})
+	s.emit(ctx, audit.PasskeyEnrolled, ceremony.UserID, map[string]string{"credential_id": credential.ID})
 	return nil
 }
 
@@ -147,14 +158,13 @@ func (s *Service) FinishLogin(ctx context.Context, in core.PasskeyFinishSignInIn
 	if !s.Enabled() {
 		return nil, core.ErrForbidden
 	}
-	ceremony, err := s.deps.Tokens.Consume(ctx, core.TokenPasskeyAuthentication, in.Token)
-	if err != nil {
+	if _, err := s.deps.Tokens.Consume(ctx, core.TokenPasskeyAuthentication, in.Token); err != nil {
 		return nil, core.ErrTokenInvalid
 	}
-	data := ceremonyData(ctx, in.Token, ceremony, s)
+	data := ceremonyData(in.Token)
 	userID, credential, err := s.protocol.FinishLogin(ctx, data, in.Response)
 	if err != nil {
-		s.deny(ctx, "", "passkey_assertion_failed")
+		s.deny(ctx, "", audit.PasskeyAssertionFailed)
 		return nil, core.ErrTokenInvalid
 	}
 	if _, err := s.deps.Store.UserByID(ctx, userID); err != nil {
@@ -162,7 +172,7 @@ func (s *Service) FinishLogin(ctx context.Context, in core.PasskeyFinishSignInIn
 	}
 	stored, err := s.deps.Config.Passkeys.Store.CredentialByID(ctx, credential.ID)
 	if err == nil && stored.SignCount > credential.SignCount {
-		s.emit(ctx, "passkey_sign_count_regression", userID, map[string]string{"credential_id": credential.ID})
+		s.emit(ctx, audit.PasskeySignCountRegression, userID, map[string]string{"credential_id": credential.ID})
 	}
 	credential.UserID = userID
 	if err := s.deps.Config.Passkeys.Store.UpdateCredential(ctx, credential); err != nil {
@@ -174,7 +184,7 @@ func (s *Service) FinishLogin(ctx context.Context, in core.PasskeyFinishSignInIn
 	}
 	user, _ := s.deps.Store.UserByID(ctx, userID)
 	result := &core.SignInResult{SessionToken: token, LastSignInMethod: "passkey", User: user}
-	s.emit(ctx, "passkey_sign_in", userID, map[string]string{"credential_id": credential.ID})
+	s.emit(ctx, audit.PasskeySignIn, userID, map[string]string{"credential_id": credential.ID})
 	return result, nil
 }
 
@@ -208,7 +218,7 @@ func (s *Service) Delete(ctx context.Context, in core.PasskeyDeleteInput) error 
 	if err := s.deps.Config.Passkeys.Store.DeleteCredential(ctx, in.CredentialID); err != nil {
 		return err
 	}
-	s.emit(ctx, "passkey_deleted", in.UserID, map[string]string{"credential_id": in.CredentialID})
+	s.emit(ctx, audit.PasskeyDeleted, in.UserID, map[string]string{"credential_id": in.CredentialID})
 	return nil
 }
 
@@ -230,7 +240,7 @@ func (s *Service) DeleteForUser(ctx context.Context, userID string) error {
 }
 
 // ceremonyData returns the opaque data carried by a ceremony Token.
-func ceremonyData(_ context.Context, raw string, _ *core.Token, _ *Service) string {
+func ceremonyData(raw string) string {
 	data, err := token.ParseData(raw)
 	if err != nil {
 		return ""

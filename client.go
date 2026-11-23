@@ -86,8 +86,15 @@ func New(cfg Config) (*Client, error) {
 	if cfg.TOTPStore != nil && len(cfg.TOTPKey) != 32 {
 		return nil, ErrTOTPNotConfigured
 	}
-	if cfg.Passkeys != nil && (cfg.Passkeys.RPID == "" || len(cfg.Passkeys.RPOrigins) == 0) {
-		return nil, ErrInvalidPasskeysConfig
+	if cfg.Passkeys != nil {
+		if cfg.Passkeys.RPID == "" || len(cfg.Passkeys.RPOrigins) == 0 {
+			return nil, ErrInvalidPasskeysConfig
+		}
+		if cfg.Passkeys.Protocol == nil {
+			if err := passkey.Validate(cfg.Passkeys); err != nil {
+				return nil, ErrInvalidPasskeysConfig
+			}
+		}
 	}
 	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
 		return nil, ErrInvalidPasswordlessConfig
@@ -188,7 +195,7 @@ func New(cfg Config) (*Client, error) {
 		lastMethod: lastMethodManager,
 		passkeys: passkey.New(passkey.Deps{
 			Config: &cfg, Store: cfg.Store, Tokens: token.New(cfg.Store, cfg.Clock),
-			Session: sessions, Logger: cfg.Logger,
+			Session: sessions, Resolve: sessions.Resolve, Logger: cfg.Logger,
 		}),
 		orgadmin: orgadmin.New(orgadmin.Deps{
 			Config: &cfg, Store: cfg.Store, Clock: cfg.Clock, Sessions: sessions,

@@ -15,12 +15,10 @@ cfg.Passkeys = &signet.PasskeysConfig{
     RPDisplayName: "Example",
     RPOrigins:     []string{"https://example.com"},
     Store:         myPasskeyStore,
-    // UserVerification defaults to true; Attestation defaults to false.
-    UserVerification: true,
 }
 ```
 
-`RPID` and `RPOrigins` are required; `New` returns `ErrInvalidPasskeysConfig` when they are missing. The Relying party ID must match the domain the browser sees, and origins are checked exactly on every ceremony.
+`RPID` and `RPOrigins` are required; `New` returns `ErrInvalidPasskeysConfig` when they are missing or invalid. User verification is always required and attestation is never requested. The Relying party ID must match the domain the browser sees, and origins are checked exactly on every ceremony.
 
 Your `PasskeyStore` implements five methods: `CreateCredential`, `CredentialsByUser`, `CredentialByID`, `UpdateCredential` and `DeleteCredential`. Store the public key as opaque bytes; Signet never asks you to store a private key. Deleting a User removes their credentials explicitly.
 

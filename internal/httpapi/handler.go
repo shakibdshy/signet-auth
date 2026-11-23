@@ -1024,6 +1024,7 @@ func (h *Handler) handlePasskeySignInFinish(w http.ResponseWriter, r *http.Reque
 		writeAuthError(w, err)
 		return
 	}
+	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	writeJSON(w, http.StatusOK, result)
 }
 

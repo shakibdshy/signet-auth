@@ -559,3 +559,87 @@ func TestPasskeyEnrollmentRequiresVerifiedEmail(t *testing.T) {
 		t.Fatalf("unverified enrollment error = %v", err)
 	}
 }
+
+func TestPasskeyRealProtocolWiring(t *testing.T) {
+	// With no injected protocol the service must construct the pinned go-webauthn
+	// verifier and produce browser options for both ceremonies.
+	client, _ := passkeyClient(t, newFakePasskeyStore(), nil)
+	userID, token := passkeyUser(t, client)
+	ctx := context.Background()
+	registration, err := client.BeginPasskeyRegistration(ctx, signet.PasskeyRegistrationInput{
+		UserID: userID, SessionToken: token,
+	})
+	if err != nil || len(registration.Options) == 0 || !strings.Contains(string(registration.Options), "challenge") {
+		t.Fatalf("registration options = %s err = %v", registration.Options, err)
+	}
+	login, err := client.BeginPasskeySignIn(ctx)
+	if err != nil || len(login.Options) == 0 || !strings.Contains(string(login.Options), "challenge") {
+		t.Fatalf("login options = %s err = %v", login.Options, err)
+	}
+}
+
+func TestPasskeyInvalidOriginRejectedAtStartup(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.Passkeys = &signet.PasskeysConfig{
+		RPID: "example.com", RPOrigins: []string{"not-an-origin"},
+		Store: newFakePasskeyStore(),
+	}
+	if _, err := signet.New(cfg); !errors.Is(err, signet.ErrInvalidPasskeysConfig) {
+		t.Fatalf("invalid origin error = %v", err)
+	}
+}
+
+func TestPasskeyRegistrationBindsSessionUser(t *testing.T) {
+	client, _ := passkeyClient(t, newFakePasskeyStore(), &fakePasskeyProtocol{})
+	userID, token := passkeyUser(t, client)
+	_, err := client.BeginPasskeyRegistration(context.Background(), signet.PasskeyRegistrationInput{
+		UserID: "some-other-user", SessionToken: token,
+	})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("mismatched session user error = %v", err)
+	}
+	_ = userID
+}
+
+func TestPasskeySignInRecordsLastMethod(t *testing.T) {
+	protocol := &fakePasskeyProtocol{}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
+	cfg.Passkeys = &signet.PasskeysConfig{
+		RPID: "example.com", RPOrigins: []string{"https://example.com"},
+		Store: newFakePasskeyStore(), Protocol: protocol,
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	userID, _ := passkeyUser(t, client)
+	protocol.userID = userID
+	ctx := context.Background()
+	begin, err := client.BeginPasskeySignIn(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/passkeys/signin-finish",
+		strings.NewReader(`{"token":"`+begin.Token+`","response":{}}`))
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", rec.Code, rec.Body.String())
+	}
+	found := false
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == "signet_last_method" && cookie.Value != "" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("last method cookie missing: %+v", rec.Result().Cookies())
+	}
+}
