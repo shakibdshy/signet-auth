@@ -50,4 +50,5 @@ Each shipped phase has a filled copy of this template, named for the phase rathe
 - `passwordless.md`
 - `session-hardening.md`
 - `phase3-sign-in-2fa.md`
+- `phase4-oidc-provider.md`
 - `phase6-defensive-controls.md`

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/shakibdshy/signet"
@@ -114,6 +115,38 @@ func TestOIDCDiscoveryRejectsHTTPAndRedirect(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("redirecting discovery should be rejected")
+	}
+}
+
+func TestOIDCDiscoveryURLKeepsTenantPath(t *testing.T) {
+	var requestedPath string
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/.well-known/openid-configuration") {
+			http.NotFound(w, r)
+			return
+		}
+		requestedPath = r.URL.Path
+		base := "https://idp.example.com"
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"issuer":                                base,
+			"authorization_endpoint":                base + "/authorize",
+			"token_endpoint":                        base + "/token",
+			"jwks_uri":                              base + "/jwks",
+			"id_token_signing_alg_values_supported": []string{"RS256"},
+		})
+	}))
+	defer server.Close()
+	_, err := oidc.NewProvider(context.Background(), oidc.Config{
+		ProviderID: "acme", ClientID: "client-id",
+		Issuer:       "https://idp.example.com",
+		DiscoveryURL: server.URL + "/tenant/.well-known/openid-configuration",
+		HTTPClient:   server.Client(),
+	})
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	if requestedPath != "/tenant/.well-known/openid-configuration" {
+		t.Fatalf("discovery path = %q", requestedPath)
 	}
 }
 
@@ -233,6 +266,10 @@ func (p *nonceRecordingProvider) Name() string { return "recording" }
 func (p *nonceRecordingProvider) AuthURL(_, _, state, _ string) string {
 	return "https://example.com/authorize?state=" + url.QueryEscape(state)
 }
+
+func (p *nonceRecordingProvider) AuthURLWithNonce(_, _, state, _, nonce string) string {
+	return "https://example.com/authorize?state=" + url.QueryEscape(state) + "&nonce=" + url.QueryEscape(nonce)
+}
 func (p *nonceRecordingProvider) Exchange(context.Context, string, string, string) (*signet.OAuthIdentity, error) {
 	return nil, errors.New("not used")
 }
@@ -272,16 +309,17 @@ func TestOAuthCallbackPassesNonceToProvider(t *testing.T) {
 		t.Fatalf("parse URL: %v", err)
 	}
 	stateValue := parsed.Query().Get("state")
-	if stateValue == "" || len(store.Tokens) != 1 {
-		t.Fatalf("start did not issue a state token: %q, %d tokens", stateValue, len(store.Tokens))
+	nonceValue := parsed.Query().Get("nonce")
+	if stateValue == "" || nonceValue == "" || len(store.Tokens) != 1 {
+		t.Fatalf("start did not issue state and nonce: %q, %q, %d tokens", stateValue, nonceValue, len(store.Tokens))
 	}
 	if _, err := client.OAuthCallback(ctx, signet.OAuthCallbackInput{
 		Code: "code", State: stateValue,
 	}); err != nil {
 		t.Fatalf("OAuthCallback: %v", err)
 	}
-	if recorder.seen == "" {
-		t.Fatal("callback did not pass the nonce to the provider")
+	if recorder.seen != nonceValue {
+		t.Fatalf("callback nonce = %q, want the sealed nonce %q", recorder.seen, nonceValue)
 	}
 }
 
@@ -313,7 +351,7 @@ func TestOIDCReservedProviderNameRejected(t *testing.T) {
 	d := newDiscoveryServer(t, nil)
 	defer d.server.Close()
 	cfg := d.config("google")
-	if _, err := oidc.NewProvider(context.Background(), cfg); err == nil {
-		t.Fatal("reserved provider name should be rejected")
+	if _, err := oidc.NewProvider(context.Background(), cfg); !errors.Is(err, signet.ErrOAuthProviderConflict) {
+		t.Fatalf("reserved provider error = %v", err)
 	}
 }

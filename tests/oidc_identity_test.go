@@ -21,14 +21,16 @@ import (
 )
 
 type oidcFixture struct {
-	server    *httptest.Server
-	key       *rsa.PrivateKey
-	claims    map[string]any
-	nonce     string
-	badNonce  bool
-	userInfo  map[string]any
-	jwks      map[string]any
-	sendToken bool
+	server       *httptest.Server
+	key          *rsa.PrivateKey
+	claims       map[string]any
+	nonce        string
+	badNonce     bool
+	authHeader   string
+	omitUserInfo bool
+	userInfo     map[string]any
+	jwks         map[string]any
+	sendToken    bool
 }
 
 func newOIDCFixture(t *testing.T) *oidcFixture {
@@ -50,16 +52,20 @@ func newOIDCFixture(t *testing.T) *oidcFixture {
 		base := f.server.URL
 		switch r.URL.Path {
 		case "/.well-known/openid-configuration":
-			_ = json.NewEncoder(w).Encode(map[string]any{
+			doc := map[string]any{
 				"issuer":                                base,
 				"authorization_endpoint":                base + "/authorize",
 				"token_endpoint":                        base + "/token",
-				"userinfo_endpoint":                     base + "/userinfo",
 				"jwks_uri":                              base + "/jwks",
 				"id_token_signing_alg_values_supported": []string{"RS256"},
 				"token_endpoint_auth_methods_supported": []string{"client_secret_basic"},
-			})
+			}
+			if !f.omitUserInfo {
+				doc["userinfo_endpoint"] = base + "/userinfo"
+			}
+			_ = json.NewEncoder(w).Encode(doc)
 		case "/token":
+			f.authHeader = r.Header.Get("Authorization")
 			body := map[string]any{"access_token": "access", "token_type": "Bearer"}
 			if f.sendToken {
 				claims := map[string]any{}
@@ -239,5 +245,59 @@ func TestOIDCIdentityJWKSFailureIsHardError(t *testing.T) {
 	client := f.client(t, provider)
 	if _, err := f.signIn(t, client); err == nil || strings.Contains(err.Error(), "verification") {
 		t.Fatalf("JWKS fetch failure must be a hard error: %v", err)
+	}
+}
+
+func TestOIDCTokenAuthPrefersBasic(t *testing.T) {
+	f := newOIDCFixture(t)
+	defer f.server.Close()
+	provider, err := oidc.NewProvider(context.Background(), f.providerConfig())
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	client := f.client(t, provider)
+	if _, err := f.signIn(t, client); err != nil {
+		t.Fatalf("OAuthCallback: %v", err)
+	}
+	if !strings.HasPrefix(f.authHeader, "Basic ") {
+		t.Fatalf("token auth header = %q", f.authHeader)
+	}
+}
+
+func TestOIDCIdentityVerifiedTokenAlone(t *testing.T) {
+	f := newOIDCFixture(t)
+	defer f.server.Close()
+	f.omitUserInfo = true
+	provider, err := oidc.NewProvider(context.Background(), f.providerConfig())
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	client := f.client(t, provider)
+	result, err := f.signIn(t, client)
+	if err != nil {
+		t.Fatalf("OAuthCallback: %v", err)
+	}
+	if result.User.Email != "user@example.com" || !result.User.EmailVerified {
+		t.Fatalf("user = %+v", result.User)
+	}
+}
+
+func TestOIDCPerFieldEmailFallback(t *testing.T) {
+	f := newOIDCFixture(t)
+	defer f.server.Close()
+	f.claims = map[string]any{"sub": "user-1", "email": "token@example.com"}
+	f.userInfo["email"] = "userinfo@example.com"
+	f.userInfo["email_verified"] = true
+	provider, err := oidc.NewProvider(context.Background(), f.providerConfig())
+	if err != nil {
+		t.Fatalf("NewProvider: %v", err)
+	}
+	client := f.client(t, provider)
+	result, err := f.signIn(t, client)
+	if err != nil {
+		t.Fatalf("OAuthCallback: %v", err)
+	}
+	if result.User.Email != "token@example.com" || !result.User.EmailVerified {
+		t.Fatalf("user = %+v", result.User)
 	}
 }

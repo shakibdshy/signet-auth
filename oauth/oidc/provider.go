@@ -14,6 +14,11 @@ import (
 	"github.com/shakibdshy/signet/internal/oidc"
 )
 
+const (
+	authStyleBasic = "basic"
+	authStylePost  = "post"
+)
+
 var allowedAlgorithms = []string{"RS256", "PS256", "ES256", "ES384", "ES512", "EdDSA"}
 
 // Config describes a generic OIDC Provider.
@@ -52,22 +57,14 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		return nil, errors.New("oidc: ProviderID and ClientID are required")
 	}
 	if cfg.ProviderID == "google" || cfg.ProviderID == "github" {
-		return nil, errors.New("oidc: reserved provider ID")
+		return nil, signet.ErrOAuthProviderConflict
 	}
 	client := cfg.HTTPClient
 	if client == nil {
 		client = http.DefaultClient
 	}
 	client = oidc.SafeHTTP(client)
-	issuer := cfg.Issuer
-	if issuer == "" && cfg.DiscoveryURL != "" {
-		parsed, err := url.Parse(cfg.DiscoveryURL)
-		if err != nil || parsed.Scheme != "https" || parsed.Path == "" {
-			return nil, errors.New("oidc: DiscoveryURL must be an https URL with a path")
-		}
-		issuer = parsed.Scheme + "://" + parsed.Host
-	}
-	doc, err := oidc.Discover(ctx, client, issuer)
+	doc, err := oidc.Discover(ctx, client, cfg.Issuer, cfg.DiscoveryURL)
 	if err != nil {
 		return nil, err
 	}
@@ -79,29 +76,29 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		return nil, errors.New("oidc: no supported signing algorithms")
 	}
 	authURL := firstNonEmpty(cfg.AuthorizationURL, doc.AuthorizationEndpoint)
-	if err := requireHTTPS(authURL, "authorization endpoint"); err != nil {
+	if err := oidc.RequireHTTPS(authURL, "authorization endpoint"); err != nil {
 		return nil, err
 	}
 	tokenURL := firstNonEmpty(cfg.TokenURL, doc.TokenEndpoint)
-	if err := requireHTTPS(tokenURL, "token endpoint"); err != nil {
+	if err := oidc.RequireHTTPS(tokenURL, "token endpoint"); err != nil {
 		return nil, err
 	}
 	userInfoURL := firstNonEmpty(cfg.UserInfoURL, doc.UserInfoEndpoint)
 	if userInfoURL != "" {
-		if err := requireHTTPS(userInfoURL, "userinfo endpoint"); err != nil {
+		if err := oidc.RequireHTTPS(userInfoURL, "userinfo endpoint"); err != nil {
 			return nil, err
 		}
 	}
 	jwksURI := firstNonEmpty(cfg.JWKSURI, doc.JWKSURI)
 	keys := (*oidc.KeySet)(nil)
 	if jwksURI != "" {
-		if err := requireHTTPS(jwksURI, "jwks URI"); err != nil {
+		if err := oidc.RequireHTTPS(jwksURI, "jwks URI"); err != nil {
 			return nil, err
 		}
 		keys = oidc.NewKeySet(client, jwksURI)
 	}
 	provider := &Provider{
-		cfg: cfg, doc: doc, client: client, keys: keys,
+		cfg: cfg, client: client, keys: keys,
 		issuer: doc.Issuer, algs: algorithms, authURL: authURL,
 		tokenURL: tokenURL, userInfoURL: userInfoURL, authMethods: doc.AuthMethods,
 	}
@@ -130,23 +127,13 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func requireHTTPS(raw, field string) error {
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
-		return fmt.Errorf("oidc: %s must be an absolute https URL", field)
-	}
-	return nil
-}
-
 // Name returns the configured Provider ID.
 func (p *Provider) Name() string { return p.cfg.ProviderID }
 
 // AuthURL builds the OIDC authorization URL with PKCE.
 func (p *Provider) AuthURL(_ string, redirectURI, state, challenge string) string {
-	return p.authURLWithNonce(clientIDFromConfig(p), redirectURI, state, challenge, "")
+	return p.authURLWithNonce(p.cfg.ClientID, redirectURI, state, challenge, "")
 }
-
-func clientIDFromConfig(p *Provider) string { return p.cfg.ClientID }
 
 // AuthURLWithNonce builds an authorization URL that binds an OIDC nonce.
 func (p *Provider) AuthURLWithNonce(_ string, redirectURI, state, challenge, nonce string) string {
@@ -197,20 +184,27 @@ type userInfoResponse struct {
 
 func (p *Provider) authStyle() string {
 	if p.cfg.TokenEndpointAuth == "client_secret_post" {
-		return "post"
+		return authStylePost
 	}
 	if p.cfg.TokenEndpointAuth == "client_secret_basic" {
-		return "basic"
+		return authStyleBasic
 	}
+	hasBasic, hasPost := false, false
 	for _, method := range p.authMethods {
 		if method == "client_secret_basic" {
-			return "basic"
+			hasBasic = true
 		}
 		if method == "client_secret_post" {
-			return "post"
+			hasPost = true
 		}
 	}
-	return "basic"
+	if hasBasic {
+		return authStyleBasic
+	}
+	if hasPost {
+		return authStylePost
+	}
+	return authStyleBasic
 }
 
 func (p *Provider) exchangeTokens(ctx context.Context, code, verifier, redirectURI string) (*tokenResponse, error) {
@@ -220,7 +214,7 @@ func (p *Provider) exchangeTokens(ctx context.Context, code, verifier, redirectU
 	form.Set("redirect_uri", redirectURI)
 	form.Set("code_verifier", verifier)
 	style := p.authStyle()
-	if style == "post" {
+	if style == authStylePost {
 		form.Set("client_id", p.cfg.ClientID)
 		form.Set("client_secret", p.cfg.ClientSecret)
 	}
@@ -229,7 +223,7 @@ func (p *Provider) exchangeTokens(ctx context.Context, code, verifier, redirectU
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if style == "basic" {
+	if style == authStyleBasic {
 		req.SetBasicAuth(p.cfg.ClientID, p.cfg.ClientSecret)
 	}
 	resp, err := p.client.Do(req)

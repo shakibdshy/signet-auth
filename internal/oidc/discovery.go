@@ -36,8 +36,8 @@ func SafeHTTP(client *http.Client) *http.Client {
 	return &cloned
 }
 
-// requireHTTPS validates a metadata URL.
-func requireHTTPS(raw, field string) error {
+// RequireHTTPS validates a metadata URL.
+func RequireHTTPS(raw, field string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
 		return fmt.Errorf("oidc: %s must be an absolute https URL", field)
@@ -45,13 +45,16 @@ func requireHTTPS(raw, field string) error {
 	return nil
 }
 
-// Discover fetches the well-known document for an issuer.
-func Discover(ctx context.Context, client *http.Client, issuer string) (*Document, error) {
-	if err := requireHTTPS(issuer, "issuer"); err != nil {
-		return nil, err
+// Discover fetches the well-known document for an issuer. An explicit
+// discoveryURL overrides the derived well-known URL.
+func Discover(ctx context.Context, client *http.Client, issuer, discoveryURL string) (*Document, error) {
+	if discoveryURL == "" {
+		if err := RequireHTTPS(issuer, "issuer"); err != nil {
+			return nil, err
+		}
+		discoveryURL = strings.TrimRight(issuer, "/") + "/.well-known/openid-configuration"
 	}
-	discoveryURL := strings.TrimRight(issuer, "/") + "/.well-known/openid-configuration"
-	if err := requireHTTPS(discoveryURL, "discovery URL"); err != nil {
+	if err := RequireHTTPS(discoveryURL, "discovery URL"); err != nil {
 		return nil, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL, nil)
@@ -70,7 +73,7 @@ func Discover(ctx context.Context, client *http.Client, issuer string) (*Documen
 	if err := json.NewDecoder(resp.Body).Decode(&doc); err != nil {
 		return nil, fmt.Errorf("oidc: decode discovery: %w", err)
 	}
-	if err := requireHTTPS(doc.Issuer, "issuer in discovery document"); err != nil {
+	if err := RequireHTTPS(doc.Issuer, "issuer in discovery document"); err != nil {
 		return nil, err
 	}
 	for name, value := range map[string]string{
@@ -80,7 +83,7 @@ func Discover(ctx context.Context, client *http.Client, issuer string) (*Documen
 		"jwks_uri":               doc.JWKSURI,
 	} {
 		if value != "" {
-			if err := requireHTTPS(value, name); err != nil {
+			if err := RequireHTTPS(value, name); err != nil {
 				return nil, err
 			}
 		}

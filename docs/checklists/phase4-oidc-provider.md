@@ -17,9 +17,11 @@ Tests live in `tests/oidc_test.go` and `tests/oidc_identity_test.go`.
 | "ProviderID unique and not reserved" | `TestOIDCProviderIDConflicts`, `TestOIDCReservedProviderNameRejected` |
 | "nonce bound to sealed state" | `TestOAuthStartSendsNonce`, `TestOAuthCallbackPassesNonceToProvider` |
 | "OpenID and PKCE in authorization URL" | `TestOIDCAuthorizationURLHasNonceAndOpenID` |
-| "verified ID token supplies identity" | `TestOIDCIdentityVerifiedIDToken` |
+| "verified ID token supplies identity" | `TestOIDCIdentityVerifiedIDToken`, `TestOIDCIdentityVerifiedTokenAlone` |
 | "bad token claims rejected" | `TestOIDCIdentityRejectsBadTokenClaims` |
-| "UserInfo fallback" | `TestOIDCIdentityUserInfoFallback` |
+| "UserInfo fallback and per-field email mapping" | `TestOIDCIdentityUserInfoFallback`, `TestOIDCPerFieldEmailFallback` |
+| "token endpoint auth preference" | `TestOIDCTokenAuthPrefersBasic` |
+| "DiscoveryURL keeps tenant path" | `TestOIDCDiscoveryURLKeepsTenantPath` |
 | "JWKS failure is hard error" | `TestOIDCIdentityJWKSFailureIsHardError` |
 
 ## Security requirements → tests
@@ -29,8 +31,9 @@ Tests live in `tests/oidc_test.go` and `tests/oidc_identity_test.go`.
 | No new core config field or schema | verified by design; the adapter is registered through the existing `OAuthConfig.Providers` |
 | Discovery cannot be downgraded to HTTP or redirected | `TestOIDCDiscoveryRejectsHTTPAndRedirect` |
 | Issuer and algorithm conflicts fail at startup | `TestOIDCIssuerMismatchRejected`, `TestOIDCAlgorithmRejection` |
-| PKCE and nonce are single-use and bound to state | `TestOAuthStartSendsNonce`, `TestOAuthCallbackPassesNonceToProvider`, existing OAuth state tests |
+| PKCE and nonce are single-use and bound to state | `TestOAuthStartSendsNonce`, `TestOAuthCallbackPassesNonceToProvider`, existing OAuth state and expiry tests |
 | ID-token verification is fail-closed | `TestOIDCIdentityRejectsBadTokenClaims`, `TestOIDCIdentityJWKSFailureIsHardError` |
+| Discovery and token auth honor explicit config | `TestOIDCDiscoveryURLKeepsTenantPath`, `TestOIDCTokenAuthPrefersBasic` |
 | Provider IDs cannot shadow built-ins | `TestOIDCReservedProviderNameRejected`, `TestOIDCProviderIDConflicts` |
 | Existing adapters are unchanged | full existing OAuth suite remains green |
 
