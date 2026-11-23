@@ -138,3 +138,18 @@ optional application-supplied adapters described in [Authorization](/docs/author
 `SetActiveOrganizationInput`, `AdminUserStore`, `UserInfo`, `AdminListUsersInput`,
 `AdminListUsersResult`, `AdminSetUserRoleInput`, `BanUserInput`, `UnbanUserInput`,
 `ImpersonateUserInput`, `ImpersonationResult` and `StopImpersonatingInput`.
+
+## Passkey methods
+
+| Method | Purpose |
+| --- | --- |
+| `BeginPasskeyRegistration(ctx, PasskeyRegistrationInput) (*PasskeyCeremonyResult, error)` | Start enrollment for a signed-in User. |
+| `FinishPasskeyRegistration(ctx, PasskeyFinishInput) error` | Verify attestation and store the credential. |
+| `BeginPasskeySignIn(ctx) (*PasskeyCeremonyResult, error)` | Start a discoverable sign-in ceremony. |
+| `FinishPasskeySignIn(ctx, PasskeyFinishSignInInput) (*SignInResult, error)` | Verify assertion and create a Session. |
+| `ListPasskeys(ctx, PasskeyListInput) (*PasskeyListResult, error)` | List safe credential fields. |
+| `DeletePasskey(ctx, PasskeyDeleteInput) error` | Revoke one credential. |
+
+## Passkey types
+
+`PasskeysConfig`, `PasskeyStore`, `PasskeyProtocol`, `WebAuthnCredential`, `PasskeyInfo`, `PasskeyRegistrationInput`, `PasskeyCeremonyResult`, `PasskeyFinishInput`, `PasskeySignInInput`, `PasskeyFinishSignInInput`, `PasskeyListInput`, `PasskeyListResult`, `PasskeyDeleteInput`, `TokenPasskeyRegistration` and `TokenPasskeyAuthentication`.

@@ -63,6 +63,12 @@ type API interface {
 	ImpersonationFromRequest(*http.Request) (string, string)
 	IsImpersonating(*http.Request) bool
 	AdminActor(*http.Request, string) string
+	BeginPasskeyRegistration(context.Context, core.PasskeyRegistrationInput) (*core.PasskeyCeremonyResult, error)
+	FinishPasskeyRegistration(context.Context, core.PasskeyFinishInput) error
+	BeginPasskeySignIn(context.Context) (*core.PasskeyCeremonyResult, error)
+	FinishPasskeySignIn(context.Context, core.PasskeyFinishSignInInput) (*core.SignInResult, error)
+	ListPasskeys(context.Context, core.PasskeyListInput) (*core.PasskeyListResult, error)
+	DeletePasskey(context.Context, core.PasskeyDeleteInput) error
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -133,6 +139,12 @@ var Endpoints = []Endpoint{
 	{Name: "admin-user-sessions/revoke"},
 	{Name: "impersonate"},
 	{Name: "stop-impersonating"},
+	{Name: "passkeys/register-begin"},
+	{Name: "passkeys/register-finish"},
+	{Name: "passkeys/signin-begin", Anonymous: true},
+	{Name: "passkeys/signin-finish", Anonymous: true},
+	{Name: "passkeys"},
+	{Name: "passkeys/delete"},
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -222,6 +234,18 @@ func (h *Handler) Handler() http.Handler {
 			h.handleImpersonate(w, r)
 		case "stop-impersonating":
 			h.handleStopImpersonating(w, r)
+		case "passkeys/register-begin":
+			h.handlePasskeyRegisterBegin(w, r)
+		case "passkeys/register-finish":
+			h.handlePasskeyRegisterFinish(w, r)
+		case "passkeys/signin-begin":
+			h.handlePasskeySignInBegin(w, r)
+		case "passkeys/signin-finish":
+			h.handlePasskeySignInFinish(w, r)
+		case "passkeys":
+			h.handlePasskeys(w, r)
+		case "passkeys/delete":
+			h.handlePasskeyDelete(w, r)
 		case "set-active-organization":
 			h.handleSetActiveOrganization(w, r)
 		case "active-organization":
@@ -922,6 +946,125 @@ func (h *Handler) handleStopImpersonating(w http.ResponseWriter, r *http.Request
 			writeAuthError(w, err)
 			return
 		}
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handlePasskeyRegisterBegin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	result, err := h.api.BeginPasskeyRegistration(r.Context(), core.PasskeyRegistrationInput{
+		UserID: user.ID, SessionToken: h.api.SessionTokenFromRequest(r),
+	})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.PasskeyFinishInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	if err := h.api.FinishPasskeyRegistration(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	_ = user
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handlePasskeySignInBegin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	result, err := h.api.BeginPasskeySignIn(r.Context())
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handlePasskeySignInFinish(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.PasskeyFinishSignInInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	result, err := h.api.FinishPasskeySignIn(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handlePasskeys(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	result, err := h.api.ListPasskeys(r.Context(), core.PasskeyListInput{
+		UserID: user.ID, SessionToken: h.api.SessionTokenFromRequest(r),
+	})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handlePasskeyDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.PasskeyDeleteInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	if err := h.api.DeletePasskey(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 }

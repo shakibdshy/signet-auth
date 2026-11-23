@@ -42,6 +42,8 @@ type VerificationDependencies struct {
 	CaptchaVerifier  core.CaptchaVerifier
 	CaptchaEndpoints []string
 	AuditSink        core.AuditSink
+	FreshSession     func(context.Context, string) bool
+	DeletePasskeys   func(context.Context, string) error
 }
 
 // VerificationService implements email verification, password reset and
@@ -247,6 +249,11 @@ func (s *VerificationService) DeleteUser(ctx context.Context, in core.ConfirmDel
 			return err
 		}
 	}
+	if s.deps.DeletePasskeys != nil {
+		if err := s.deps.DeletePasskeys(ctx, proof.UserID); err != nil {
+			return err
+		}
+	}
 	if err := s.deps.Store.DeleteUser(ctx, proof.UserID); err != nil {
 		return err
 	}
@@ -269,7 +276,7 @@ func (s *VerificationService) deleteUserMessage(data core.TemplateData) core.Mes
 // RequestEmailChange issues a single-use proof to the new address. The old
 // address remains active until VerifyEmailChange succeeds.
 func (s *VerificationService) RequestEmailChange(ctx context.Context, in core.ChangeEmailInput) error {
-	if in.UserID == "" || in.CurrentPassword == "" {
+	if in.UserID == "" || (in.CurrentPassword == "" && !s.freshProof(in.SessionToken)) {
 		return core.ErrInvalidCredentials
 	}
 	email := normalizeEmail(in.NewEmail)
@@ -283,16 +290,19 @@ func (s *VerificationService) RequestEmailChange(ctx context.Context, in core.Ch
 	if err != nil {
 		return err
 	}
-	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
-	if err != nil {
-		return err
-	}
-	ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.CurrentPassword)
-	if err != nil || !ok {
+	if in.CurrentPassword != "" {
+		// A fresh passkey Session substitutes for this proof when no password is supplied.
+		account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
 		if err != nil {
 			return err
 		}
-		return core.ErrInvalidCredentials
+		ok, err := s.deps.Hasher.Verify(ctx, account.PasswordHash, in.CurrentPassword)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return core.ErrInvalidCredentials
+		}
 	}
 	if existing, err := s.deps.Store.UserByEmail(ctx, email); err == nil {
 		if existing.ID != user.ID {
@@ -466,7 +476,13 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 		return err
 	}
 	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, user.ID)
-	if err != nil {
+	newAccount := false
+	if errors.Is(err, core.ErrNotFound) {
+		// A passkey-only User has no credential Account; the emailed proof
+		// creates the first one so recovery works after losing every passkey.
+		account = &core.Account{ID: proof.ID, UserID: user.ID, Provider: credentialProvider, ProviderUserID: user.ID}
+		newAccount = true
+	} else if err != nil {
 		return err
 	}
 	// OWASP Forgot Password Cheat Sheet: a successful reset must invalidate
@@ -487,7 +503,11 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 	}
 	updated := *account
 	updated.PasswordHash = encoded
-	if err := s.deps.Store.UpdateAccount(ctx, &updated); err != nil {
+	if newAccount {
+		if err := s.deps.Store.CreateAccount(ctx, &updated); err != nil {
+			return err
+		}
+	} else if err := s.deps.Store.UpdateAccount(ctx, &updated); err != nil {
 		return err
 	}
 	s.logInfo("reset-password", "user_id", user.ID)
@@ -498,4 +518,8 @@ func (s *VerificationService) ResetPassword(ctx context.Context, in core.ResetPa
 		s.logWarn("password_changed_notification_failed", "user_id", user.ID, "error", err)
 	}
 	return nil
+}
+
+func (s *VerificationService) freshProof(raw string) bool {
+	return s.deps.FreshSession != nil && raw != "" && s.deps.FreshSession(context.Background(), raw)
 }

@@ -104,3 +104,16 @@ noted; a call from an active impersonation uses the administrator ID from the si
 
 See [API keys](/docs/api-keys), [Organizations](/docs/organizations) and
 [Admin management](/docs/admin-management) for complete flows.
+
+## Passkey endpoints
+
+| Method + path | Auth | CSRF | Success | Key errors | Use it when |
+| --- | --- | --- | --- | --- | --- |
+| POST `/passkeys/register-begin` | yes | required | 200 `PasskeyCeremonyResult` | `forbidden` 403 | Start enrollment. |
+| POST `/passkeys/register-finish` | yes | required | 200 | `invalid_token` 401 | Store the credential. |
+| POST `/passkeys/signin-begin` | no | exempt | 200 `PasskeyCeremonyResult` | `forbidden` 403 | Start discoverable sign-in. |
+| POST `/passkeys/signin-finish` | no | exempt | 200 `SignInResult` | `invalid_token` 401 | Verify and create a Session. |
+| GET `/passkeys` | yes | n/a | 200 `PasskeyListResult` | `forbidden` 403 | List safe passkey fields. |
+| POST `/passkeys/delete` | yes | required | 200 | `forbidden` 403 | Revoke a passkey. |
+
+See [Passkeys](/docs/passkeys) for the complete flow.

@@ -100,6 +100,12 @@ const (
 	PermissionOrgsMemberRole   = core.PermissionOrgsMemberRole
 )
 
+// TokenPasskeyRegistration proves a WebAuthn registration ceremony.
+const TokenPasskeyRegistration = core.TokenPasskeyRegistration
+
+// TokenPasskeyAuthentication proves a WebAuthn authentication ceremony.
+const TokenPasskeyAuthentication = core.TokenPasskeyAuthentication
+
 // TokenKind identifies the sensitive flow a Token proves.
 type TokenKind = core.TokenKind
 
@@ -260,6 +266,45 @@ type ImpersonationResult = core.ImpersonationResult
 
 // StopImpersonatingInput identifies an impersonation to stop.
 type StopImpersonatingInput = core.StopImpersonatingInput
+
+// PasskeysConfig configures passkeys as a first factor.
+type PasskeysConfig = core.PasskeysConfig
+
+// PasskeyStore persists WebAuthn credentials.
+type PasskeyStore = core.PasskeyStore
+
+// PasskeyProtocol verifies WebAuthn ceremonies.
+type PasskeyProtocol = core.PasskeyProtocol
+
+// WebAuthnCredential is the stored public-key record backing a Passkey.
+type WebAuthnCredential = core.WebAuthnCredential
+
+// PasskeyInfo is the safe public view of a WebAuthn credential.
+type PasskeyInfo = core.PasskeyInfo
+
+// PasskeyRegistrationInput starts an enrollment ceremony.
+type PasskeyRegistrationInput = core.PasskeyRegistrationInput
+
+// PasskeyCeremonyResult carries browser options and a ceremony token.
+type PasskeyCeremonyResult = core.PasskeyCeremonyResult
+
+// PasskeyFinishInput completes a registration ceremony.
+type PasskeyFinishInput = core.PasskeyFinishInput
+
+// PasskeySignInInput starts a discoverable sign-in ceremony.
+type PasskeySignInInput = core.PasskeySignInInput
+
+// PasskeyFinishSignInInput completes a sign-in ceremony.
+type PasskeyFinishSignInInput = core.PasskeyFinishSignInInput
+
+// PasskeyListInput selects a User's Passkeys.
+type PasskeyListInput = core.PasskeyListInput
+
+// PasskeyListResult contains safe Passkey fields.
+type PasskeyListResult = core.PasskeyListResult
+
+// PasskeyDeleteInput identifies a Passkey to revoke.
+type PasskeyDeleteInput = core.PasskeyDeleteInput
 
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo

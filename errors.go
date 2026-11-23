@@ -110,3 +110,8 @@ var (
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = core.ErrForbidden
 )
+
+var (
+	// ErrInvalidPasskeysConfig reports an invalid passkeys configuration.
+	ErrInvalidPasskeysConfig = core.ErrInvalidPasskeysConfig
+)

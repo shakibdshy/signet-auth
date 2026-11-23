@@ -290,7 +290,7 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | Global and database hooks/middleware | [Hooks](https://better-auth.com/docs/concepts/hooks) | partial | Redacted `OnSignUp`/`OnSignIn` hooks + `RequireAuth`/`OptionalAuth`; no before/after pipeline. |
 | Type inference from auth config | [TypeScript](https://better-auth.com/docs/concepts/typescript) | partial | Typed Go API and OpenAPI-generated TS client; no `$Infer` equivalent. |
 | CLI schema generation/check | [CLI](https://better-auth.com/docs/concepts/cli) | partial | Explicit embedded migrations and `generate-check` for spec drift; no CLI. |
-| Two-factor / passkey / magic link / email OTP / phone | [2FA](https://better-auth.com/docs/plugins/2fa) · [Passkey](https://better-auth.com/docs/plugins/passkey) · [Magic link](https://better-auth.com/docs/plugins/magic-link) · [Email OTP](https://better-auth.com/docs/plugins/email-otp) · [Phone](https://better-auth.com/docs/plugins/phone-number) | partial | TOTP Second factor with Backup codes, magic link and email OTP are shipped; passkeys and phone OTP are not. |
+| Two-factor / passkey / magic link / email OTP / phone | [2FA](https://better-auth.com/docs/plugins/2fa) · [Passkey](https://better-auth.com/docs/plugins/passkey) · [Magic link](https://better-auth.com/docs/plugins/magic-link) · [Email OTP](https://better-auth.com/docs/plugins/email-otp) · [Phone](https://better-auth.com/docs/plugins/phone-number) | partial | TOTP Second factor with Backup codes, magic link, email OTP and passkeys are shipped; phone OTP is not. |
 | Username / anonymous / one tap / SIWE / one-time token | [Username](https://better-auth.com/docs/plugins/username) · [Anonymous](https://better-auth.com/docs/plugins/anonymous) · [One Tap](https://better-auth.com/docs/plugins/one-tap) · [SIWE](https://better-auth.com/docs/plugins/siwe) · [OTT](https://better-auth.com/docs/plugins/one-time-token) | partial | Username sign-in is shipped as a `username` Account (ADR-0010); anonymous, One Tap, SIWE and one-time tokens are not. |
 | Generic OAuth provider | [Generic OAuth](https://better-auth.com/docs/plugins/generic-oauth) | already | An `oauth/oidc` adapter implements discovery, PKCE and verified ID tokens on the existing `OAuthProvider` seam. |
 | Admin / organization / API keys | [Admin](https://better-auth.com/docs/plugins/admin) · [Organization](https://better-auth.com/docs/plugins/organization) · [API Key](https://better-auth.com/docs/plugins/api-key) | already | Application-managed roles, digest-only API keys, organizations and guarded admin management are shipped. |
@@ -305,8 +305,8 @@ Feature order follows dependencies: session primitives and user lifecycle first,
 first factors, then provider/enterprise surfaces, then defensive and operational extras. Effort is
 relative for a small Go library that already has the Store and token primitives.
 
-As of 2026-11-23, all six phases below are **shipped** (PRs #53, #58, #65, #70, #76, #81, #87 and
-#88). All roadmap phases are complete. i18n and anomaly detection remain explicitly out of scope.
+As of 2026-11-23, all six original phases below are **shipped** (PRs #53, #58, #65, #70, #76, #81,
+#87 and #88), and passkeys shipped as Phase 7. i18n and anomaly detection remain explicitly out of scope.
 
 1. **Foundation — user lifecycle and session controls (shipped).**
    `ChangePassword`/`SetPassword`, `ChangeEmail`, `DeleteUser` with re-verification, and
@@ -318,8 +318,8 @@ As of 2026-11-23, all six phases below are **shipped** (PRs #53, #58, #65, #70, 
    handling. Cookie-cache revocation lag and secondary-storage failure modes need explicit tests.
 3. **Passwordless first factors (shipped).** Magic link and email OTP
    first (they reuse the existing mailer and hashed single-use tokens), then username and TOTP
-   2FA. Passkey is **large** and security-sensitive: WebAuthn attestation/assertion verification
-   is a new protocol surface. Account-listing/unlinking belongs with these.
+   2FA. Passkey is **shipped** as Phase 7: WebAuthn attestation/assertion verification is delegated
+   to a pinned protocol library behind an internal package. Account-listing/unlinking belongs here.
 4. **Broader federation (large, security-sensitive).** Generic OAuth/OIDC discovery on top of
    the existing `OAuthProvider` interface, then SSO (OIDC + SAML), OAuth provider/device flow and
    SCIM. Each has protocol-specific CSRF/replay rules that must be designed in, not bolted on.

@@ -27,6 +27,9 @@ var namedTypes = map[string]reflect.Type{
 	"AdminListUsersResult":          reflect.TypeOf(core.AdminListUsersResult{}),
 	"ListSessionsResult":            reflect.TypeOf(core.ListSessionsResult{}),
 	"ImpersonationResult":           reflect.TypeOf(core.ImpersonationResult{}),
+	"PasskeyCeremonyResult":         reflect.TypeOf(core.PasskeyCeremonyResult{}),
+	"PasskeyListResult":             reflect.TypeOf(core.PasskeyListResult{}),
+	"SignInResult":                  reflect.TypeOf(core.SignInResult{}),
 }
 
 type oasDocument struct {

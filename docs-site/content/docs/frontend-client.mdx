@@ -331,3 +331,36 @@ While impersonating, admin checks use the administrator ID from the cookie, not 
 The self-service account-deletion flow is disabled during impersonation. Treat a `forbidden`
 response from any guarded call as a reason to exit the impersonated view. See
 [Admin management](/docs/admin-management).
+
+## Passkeys
+
+Passkeys are a phishing-resistant first factor. The backend configures the Relying party and stores credentials; the browser only handles the WebAuthn ceremony and the opaque ceremony token returned by Signet.
+
+```ts
+// Enroll — the caller must already have a Session.
+const begin = await auth.beginPasskeyRegistration({ user_id: userId });
+const credential = await navigator.credentials.create({
+  publicKey: begin.options.publicKey,
+});
+await auth.finishPasskeyRegistration({
+  token: begin.token,
+  response: credential,
+});
+
+// Sign in — discoverable, so no username is needed.
+const challenge = await auth.beginPasskeySignIn();
+const assertion = await navigator.credentials.get({
+  publicKey: challenge.options.publicKey,
+});
+const result = await auth.finishPasskeySignIn({
+  token: challenge.token,
+  response: assertion,
+});
+// result.session_token is set as a cookie by the backend.
+
+// Manage passkeys.
+const { passkeys } = await auth.listPasskeys();
+await auth.deletePasskey({ credential_id: passkeys[0].id });
+```
+
+Do not persist the ceremony token or the raw credential response in local storage — they are single-use. If a ceremony fails, call `beginPasskeyRegistration` or `beginPasskeySignIn` again to get a fresh challenge. The typed client clears its cached CSRF token after a passkey sign-in because the Session changes. See [Passkeys](/docs/passkeys) for the backend setup.

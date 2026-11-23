@@ -23,6 +23,7 @@
     "api-keys",
     "organizations",
     "admin-management",
+    "passkeys",
     "verification-and-reset",
     "passwordless-verification",
     "---Database---",
