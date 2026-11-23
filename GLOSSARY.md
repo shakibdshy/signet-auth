@@ -231,3 +231,11 @@ _Avoid_: ACS callback, SAML callback
 **NameID**:
 The subject identifier an Identity provider places in a SAML assertion.
 _Avoid_: SAML subject, name identifier
+
+**SCIM**:
+A protocol for provisioning Users and Groups between a directory and an application. It does not authenticate Users.
+_Avoid_: directory sync, identity provisioning
+
+**Directory group**:
+A Group in an external directory whose members are projected to application roles or Organization memberships.
+_Avoid_: SCIM group, external group

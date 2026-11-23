@@ -139,3 +139,10 @@ var (
 	// ErrSAMLReplay reports a replayed SAML assertion.
 	ErrSAMLReplay = core.ErrSAMLReplay
 )
+
+var (
+	// ErrInvalidSCIMConfig reports a misconfigured SCIM server.
+	ErrInvalidSCIMConfig = core.ErrInvalidSCIMConfig
+	// ErrSCIMUnauthorized reports a rejected SCIM bearer token.
+	ErrSCIMUnauthorized = core.ErrSCIMUnauthorized
+)

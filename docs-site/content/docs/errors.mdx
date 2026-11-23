@@ -33,6 +33,8 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrSAMLInvalidAssertion | 401 saml_invalid_assertion | The SAML assertion failed signature, issuer, audience, time or binding validation. |
 | ErrSAMLConnectionNotFound | 404 saml_connection_not_found | No SAML connection matches the request. |
 | ErrSAMLReplay | 401 saml_replay | The assertion ID was already used. |
+| ErrInvalidSCIMConfig | 500 internal_error | `SCIM` is configured without a store or bearer token. |
+| ErrSCIMUnauthorized | 401 unauthorized | The SCIM bearer token was missing or invalid. |
 | `forbidden` from automatic sign-in | 403 forbidden | Sign-up did not issue a Session because the email is unverified and verification is required. |
 | ErrInvalidOAuthConfig | 500 internal_error | OAuth providers, redirects or `StateKey` are invalid. |
 | ErrInvalidPasswordlessConfig | 500 internal_error | `Passwordless.MagicLinkTTL` or `Passwordless.OTPTTL` is negative. |

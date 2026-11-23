@@ -148,3 +148,7 @@ All five accept form-encoded or JSON bodies and return OAuth-standard errors. Se
 | POST `/saml/acs` | none | Validate a signed assertion and create a Session. |
 
 See [SAML SSO](/docs/saml).
+
+## SCIM provisioning
+
+The SCIM 2.0 server is mounted under `PathPrefix` at `/scim/Users` and `/scim/Groups` and uses a bearer token, not a Signet Session. See [SCIM provisioning](/docs/scim).

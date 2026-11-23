@@ -25,6 +25,7 @@
     "organizations",
     "organization-sso",
     "saml",
+    "scim",
     "admin-management",
     "passkeys",
     "verification-and-reset",

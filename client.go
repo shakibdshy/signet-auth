@@ -18,6 +18,7 @@ import (
 	"github.com/shakibdshy/signet/internal/passkey"
 	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/samlsp"
+	"github.com/shakibdshy/signet/internal/scim"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
 	"github.com/shakibdshy/signet/internal/sso"
@@ -48,6 +49,7 @@ type Client struct {
 	passkeys              *passkey.Service
 	oauthserver           *oauthserver.Service
 	sso                   *sso.Service
+	scim                  *scim.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
@@ -131,6 +133,11 @@ func New(cfg Config) (*Client, error) {
 	if cfg.AuthorizationServer != nil {
 		if cfg.JWT == nil || cfg.AuthorizationServer.Devices == nil {
 			return nil, ErrInvalidAuthorizationServerConfig
+		}
+	}
+	if cfg.SCIM != nil {
+		if cfg.SCIM.Store == nil || cfg.SCIM.Token == "" {
+			return nil, ErrInvalidSCIMConfig
 		}
 	}
 	if cfg.SSO != nil {
@@ -251,6 +258,9 @@ func New(cfg Config) (*Client, error) {
 	var samlService *samlsp.Service
 	if cfg.SSO != nil {
 		samlService, _ = samlsp.New()
+	}
+	if cfg.SCIM != nil {
+		c.scim, _ = scim.New(&cfg, cfg.Logger)
 	}
 	c.sso = sso.New(sso.Deps{
 		Config: &cfg, Store: cfg.Store, Tokens: c.tokens, Sessions: sessions, Logger: cfg.Logger,
@@ -830,6 +840,17 @@ func (c *Client) CompleteSAMLSignIn(ctx context.Context, state string, r *http.R
 	return c.sso.CompleteSAML(ctx, state, r)
 }
 
+// SCIMHandler returns the SCIM 2.0 provisioning HTTP handler.
+func (c *Client) SCIMHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if c.scim == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		c.scim.Handler().ServeHTTP(w, r)
+	})
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -1058,7 +1079,8 @@ func (a httpAdapter) StartSSOSignIn(ctx context.Context, in SSOStartInput) (*SSO
 func (a httpAdapter) CompleteSSOSignIn(ctx context.Context, in SSOCallbackInput) (*SSOCallbackResult, error) {
 	return a.Client.CompleteSSOSignIn(ctx, in)
 }
-func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+func (a httpAdapter) SCIMHandler() http.Handler { return a.Client.SCIMHandler() }
+func (a httpAdapter) CookieName() string        { return a.cookies.Name() }
 
 // Organization and admin adapter methods.
 func (a httpAdapter) ClearActiveOrganizationCookie(w http.ResponseWriter) {
