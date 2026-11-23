@@ -31,6 +31,14 @@ func (s *fakeSCIMStore) SetUserExternalID(_ context.Context, userID, externalID 
 	s.external[externalID] = userID
 	return nil
 }
+func (s *fakeSCIMStore) ExternalIDByUser(_ context.Context, userID string) (string, error) {
+	for external, id := range s.external {
+		if id == userID {
+			return external, nil
+		}
+	}
+	return "", signet.ErrNotFound
+}
 func (s *fakeSCIMStore) ListUsers(context.Context) ([]*signet.User, error) {
 	out := make([]*signet.User, 0, len(s.store.Users))
 	for _, user := range s.store.Users {
@@ -162,7 +170,7 @@ func TestSCIMUserLifecycle(t *testing.T) {
 		t.Fatalf("list status = %d body = %s", list.Code, list.Body.String())
 	}
 	patch := scimRequest(client, http.MethodPatch, "/scim/Users/"+created.ID, "scim-secret",
-		`{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"replace","value":{"active":false}}]}`)
+		`{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"replace","path":"active","value":false}]}`)
 	if patch.Code != http.StatusOK && patch.Code != http.StatusNoContent {
 		t.Fatalf("patch status = %d body = %s", patch.Code, patch.Body.String())
 	}
@@ -210,4 +218,88 @@ func TestSCIMGroupProjection(t *testing.T) {
 		}
 	}
 	_ = found
+}
+
+func TestSCIMStandardPatchDeactivation(t *testing.T) {
+	client, store, _ := scimClient(t)
+	create := scimRequest(client, http.MethodPost, "/scim/Users", "scim-secret",
+		`{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User"],"userName":"bob@acme.com"}`)
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(create.Body.Bytes(), &created); err != nil || created.ID == "" {
+		t.Fatalf("create: %s", create.Body.String())
+	}
+	patch := scimRequest(client, http.MethodPatch, "/scim/Users/"+created.ID, "scim-secret",
+		`{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"replace","path":"active","value":false}]}`)
+	if patch.Code != http.StatusOK && patch.Code != http.StatusNoContent {
+		t.Fatalf("patch status = %d body = %s", patch.Code, patch.Body.String())
+	}
+	user, err := store.store.UserByID(context.Background(), created.ID)
+	if err != nil || !user.Disabled {
+		t.Fatalf("user disabled = %+v err = %v", user, err)
+	}
+}
+
+func TestSCIMSchemaDiscoveryDisabled(t *testing.T) {
+	client, _, _ := scimClient(t)
+	for _, path := range []string{"/scim/Schemas", "/scim/ResourceTypes", "/scim/ServiceProviderConfig"} {
+		if rr := scimRequest(client, http.MethodGet, path, "scim-secret", ""); rr.Code != http.StatusNotFound {
+			t.Fatalf("%s status = %d", path, rr.Code)
+		}
+	}
+}
+
+func TestSCIMGroupPatchProjectsAndAudits(t *testing.T) {
+	_, store, sink := scimClient(t)
+	projected := false
+	client2, err := signet.New(func() signet.Config {
+		cfg := testutil.NewConfig()
+		cfg.Store = store.store
+		cfg.Mailer = testutil.NewMailer()
+		cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+		cfg.AuditSink = sink
+		cfg.SCIM = &signet.SCIMConfig{
+			Store: store, Token: "scim-secret",
+			Projector: func(_ context.Context, group *signet.SCIMGroup) error {
+				projected = len(group.Members) > 0
+				return nil
+			},
+		}
+		return cfg
+	}())
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	create := scimRequest(client2, http.MethodPost, "/scim/Groups", "scim-secret",
+		`{"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"displayName":"team"}`)
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(create.Body.Bytes(), &created); err != nil || created.ID == "" {
+		t.Fatalf("create: %s", create.Body.String())
+	}
+	patch := scimRequest(client2, http.MethodPatch, "/scim/Groups/"+created.ID, "scim-secret",
+		`{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"replace","path":"members","value":[{"value":"user-9"}]}]}`)
+	if patch.Code != http.StatusOK && patch.Code != http.StatusNoContent {
+		t.Fatalf("patch status = %d body = %s", patch.Code, patch.Body.String())
+	}
+	if !projected {
+		t.Fatal("group PATCH did not project members")
+	}
+	found := false
+	for _, event := range sink.events {
+		if event.Name == "scim_group_updated" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("no group update audit: %+v", sink.events)
+	}
+}
+
+func TestSCIMUnauthorizedSentinel(t *testing.T) {
+	if signet.ErrSCIMUnauthorized.Error() != "signet: scim unauthorized" {
+		t.Fatalf("sentinel = %v", signet.ErrSCIMUnauthorized)
+	}
 }

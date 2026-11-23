@@ -10,7 +10,10 @@ Source: accepted design decisions from the enterprise identity plan. Tests live 
 | "bearer token compared in constant time" | `TestSCIMDisabledAndUnauthorized` |
 | "config validated at startup" | `TestSCIMConfigValidation` |
 | "Users create/list/patch" | `TestSCIMUserLifecycle` |
-| "Group projection callback" | `TestSCIMGroupProjection` |
+| "Group projection callback" | `TestSCIMGroupProjection`, `TestSCIMGroupPatchProjectsAndAudits` |
+| "standard PATCH deactivation" | `TestSCIMStandardPatchDeactivation` |
+| "schema discovery out of scope" | `TestSCIMSchemaDiscoveryDisabled` |
+| "sentinel published" | `TestSCIMUnauthorizedSentinel` |
 
 ## Security mechanisms → effect tests
 

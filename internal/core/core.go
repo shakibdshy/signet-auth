@@ -550,6 +550,7 @@ type SCIMGroup struct {
 type SCIMStore interface {
 	UserByExternalID(context.Context, string) (*User, error)
 	SetUserExternalID(context.Context, string, string) error
+	ExternalIDByUser(context.Context, string) (string, error)
 	ListUsers(context.Context) ([]*User, error)
 	GroupByExternalID(context.Context, string) (*SCIMGroup, error)
 	GroupByID(context.Context, string) (*SCIMGroup, error)

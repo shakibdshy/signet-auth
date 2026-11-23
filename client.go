@@ -260,7 +260,7 @@ func New(cfg Config) (*Client, error) {
 		samlService, _ = samlsp.New()
 	}
 	if cfg.SCIM != nil {
-		c.scim, _ = scim.New(&cfg, cfg.Logger)
+		c.scim, _ = scim.New(&cfg, cfg.Logger, c.deleteUserAndChildren)
 	}
 	c.sso = sso.New(sso.Deps{
 		Config: &cfg, Store: cfg.Store, Tokens: c.tokens, Sessions: sessions, Logger: cfg.Logger,
@@ -849,6 +849,28 @@ func (c *Client) SCIMHandler() http.Handler {
 		}
 		c.scim.Handler().ServeHTTP(w, r)
 	})
+}
+
+// deleteUserAndChildren removes a User's Sessions, Tokens, Accounts and row.
+func (c *Client) deleteUserAndChildren(ctx context.Context, userID string) error {
+	if err := c.sessions.RevokeAll(ctx, userID); err != nil {
+		return err
+	}
+	for _, kind := range core.AllTokenKinds {
+		if err := c.cfg.Store.DeleteTokensForUser(ctx, userID, kind); err != nil {
+			return err
+		}
+	}
+	accounts, err := c.cfg.Store.AccountsForUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	for _, account := range accounts {
+		if err := c.cfg.Store.DeleteAccount(ctx, account.ID); err != nil {
+			return err
+		}
+	}
+	return c.cfg.Store.DeleteUser(ctx, userID)
 }
 
 // Authorize reports whether a User holds a permission.

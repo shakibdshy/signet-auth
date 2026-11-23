@@ -4,6 +4,7 @@ package scim
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -18,14 +19,15 @@ import (
 
 // Service implements SCIM resource handlers and the mounted HTTP server.
 type Service struct {
-	cfg    *core.Config
-	server scim.Server
-	logger *slog.Logger
+	cfg        *core.Config
+	server     scim.Server
+	logger     *slog.Logger
+	deleteUser func(context.Context, string) error
 }
 
 // New returns a Service; the SCIM server is mounted by the root Handler.
-func New(cfg *core.Config, logger *slog.Logger) (*Service, error) {
-	service := &Service{cfg: cfg, logger: logger}
+func New(cfg *core.Config, logger *slog.Logger, deleteUser func(context.Context, string) error) (*Service, error) {
+	service := &Service{cfg: cfg, logger: logger, deleteUser: deleteUser}
 	server, err := scim.NewServer(&scim.ServerArgs{
 		ServiceProviderConfig: &scim.ServiceProviderConfig{
 			SupportFiltering: false, SupportPatch: true, MaxResults: 100,
@@ -58,6 +60,12 @@ func (s *Service) Handler() http.Handler {
 			s.emitDenied(r.Context())
 			w.WriteHeader(http.StatusUnauthorized)
 			return
+		}
+		for _, disabled := range []string{"/Schemas", "/ResourceTypes", "/ServiceProviderConfig"} {
+			if strings.HasPrefix(r.URL.Path, disabled) {
+				http.NotFound(w, r)
+				return
+			}
 		}
 		s.server.ServeHTTP(w, r)
 	})
@@ -143,9 +151,13 @@ func emailAddress(attributes scim.ResourceAttributes) string {
 	return value
 }
 
-func resource(user *core.User) scim.Resource {
+func (s *Service) resource(ctx context.Context, user *core.User) scim.Resource {
+	externalID := ""
+	if value, err := s.cfg.SCIM.Store.ExternalIDByUser(ctx, user.ID); err == nil {
+		externalID = value
+	}
 	return scim.Resource{
-		ID: user.ID,
+		ID: user.ID, ExternalID: optional.NewString(externalID),
 		Attributes: scim.ResourceAttributes{
 			"userName": user.Email,
 			"active":   !user.Disabled,
@@ -180,7 +192,7 @@ func (h *userHandler) Create(r *http.Request, attributes scim.ResourceAttributes
 		}
 	}
 	h.service.emit(ctx, audit.SCIMUserCreated, user.ID)
-	return resource(user), nil
+	return h.service.resource(r.Context(), user), nil
 }
 
 func (h *userHandler) Get(r *http.Request, id string) (scim.Resource, error) {
@@ -188,7 +200,7 @@ func (h *userHandler) Get(r *http.Request, id string) (scim.Resource, error) {
 	if err != nil {
 		return scim.Resource{}, err
 	}
-	return resource(user), nil
+	return h.service.resource(r.Context(), user), nil
 }
 
 func (h *userHandler) GetAll(r *http.Request, _ scim.ListRequestParams) (scim.Page, error) {
@@ -198,7 +210,7 @@ func (h *userHandler) GetAll(r *http.Request, _ scim.ListRequestParams) (scim.Pa
 	}
 	resources := make([]scim.Resource, 0, len(users))
 	for _, user := range users {
-		resources = append(resources, resource(user))
+		resources = append(resources, h.service.resource(r.Context(), user))
 	}
 	return scim.Page{Resources: resources}, nil
 }
@@ -211,17 +223,23 @@ func (h *userHandler) Replace(r *http.Request, id string, attributes scim.Resour
 	if email := emailAddress(attributes); email != "" {
 		user.Email = email
 	}
-	user.Disabled = !attributeBool(attributes, "active") && !user.Disabled
+	if _, present := attributes["active"]; present {
+		user.Disabled = !attributeBool(attributes, "active")
+	}
 	user.UpdatedAt = h.service.cfg.Clock.Now()
 	if err := h.service.cfg.Store.UpdateUser(r.Context(), user); err != nil {
 		return scim.Resource{}, err
 	}
 	h.service.emit(r.Context(), audit.SCIMUserUpdated, user.ID)
-	return resource(user), nil
+	return h.service.resource(r.Context(), user), nil
 }
 
 func (h *userHandler) Delete(r *http.Request, id string) error {
-	if err := h.service.cfg.Store.DeleteUser(r.Context(), id); err != nil {
+	if h.service.deleteUser != nil {
+		if err := h.service.deleteUser(r.Context(), id); err != nil {
+			return err
+		}
+	} else if err := h.service.cfg.Store.DeleteUser(r.Context(), id); err != nil {
 		return err
 	}
 	h.service.emit(r.Context(), audit.SCIMUserDeleted, id)
@@ -236,6 +254,10 @@ func (h *userHandler) Patch(r *http.Request, id string, operations []scim.PatchO
 	for _, operation := range operations {
 		if !strings.EqualFold(operation.Op, "replace") {
 			continue
+		}
+		if operation.Path != nil && strings.EqualFold(operation.Path.String(), "active") {
+			flag, _ := operation.Value.(bool)
+			user.Disabled = !flag
 		}
 		values, ok := operation.Value.(map[string]interface{})
 		if !ok {
@@ -253,7 +275,7 @@ func (h *userHandler) Patch(r *http.Request, id string, operations []scim.PatchO
 		return scim.Resource{}, err
 	}
 	h.service.emit(r.Context(), audit.SCIMUserUpdated, user.ID)
-	return resource(user), nil
+	return h.service.resource(r.Context(), user), nil
 }
 
 type groupHandler struct{ service *Service }
@@ -263,13 +285,13 @@ func (h *groupHandler) Create(r *http.Request, attributes scim.ResourceAttribute
 		ID: secret.NewID(), ExternalID: attributeString(attributes, "externalId"),
 		DisplayName: attributeString(attributes, "displayName"), Members: attributeMembers(attributes),
 	}
-	if err := h.service.cfg.SCIM.Store.CreateGroup(r.Context(), group); err != nil {
-		return scim.Resource{}, err
-	}
 	if projector := h.service.cfg.SCIM.Projector; projector != nil {
 		if err := projector(r.Context(), group); err != nil {
 			return scim.Resource{}, err
 		}
+	}
+	if err := h.service.cfg.SCIM.Store.CreateGroup(r.Context(), group); err != nil {
+		return scim.Resource{}, err
 	}
 	h.service.emit(r.Context(), audit.SCIMGroupCreated, group.ID)
 	return groupResource(group), nil
@@ -302,13 +324,13 @@ func (h *groupHandler) Replace(r *http.Request, id string, attributes scim.Resou
 	}
 	group.DisplayName = attributeString(attributes, "displayName")
 	group.Members = attributeMembers(attributes)
-	if err := h.service.cfg.SCIM.Store.UpdateGroup(r.Context(), group); err != nil {
-		return scim.Resource{}, err
-	}
 	if projector := h.service.cfg.SCIM.Projector; projector != nil {
 		if err := projector(r.Context(), group); err != nil {
 			return scim.Resource{}, err
 		}
+	}
+	if err := h.service.cfg.SCIM.Store.UpdateGroup(r.Context(), group); err != nil {
+		return scim.Resource{}, err
 	}
 	h.service.emit(r.Context(), audit.SCIMGroupUpdated, group.ID)
 	return groupResource(group), nil
@@ -328,17 +350,30 @@ func (h *groupHandler) Patch(r *http.Request, id string, operations []scim.Patch
 		return scim.Resource{}, err
 	}
 	for _, operation := range operations {
-		if strings.EqualFold(operation.Op, "replace") {
-			if values, ok := operation.Value.(map[string]interface{}); ok {
-				if raw, ok := values["members"]; ok {
-					group.Members = attributeMembers(scim.ResourceAttributes{"members": raw})
-				}
+		if !strings.EqualFold(operation.Op, "replace") {
+			continue
+		}
+		if operation.Path != nil && strings.EqualFold(operation.Path.String(), "members") {
+			group.Members = decodeMembers(operation.Value)
+		}
+		if values, ok := operation.Value.(map[string]interface{}); ok {
+			if raw, ok := values["members"]; ok {
+				group.Members = decodeMembers(raw)
 			}
+		}
+		if len(group.Members) == 0 {
+			group.Members = decodeMembers(operation.Value)
+		}
+	}
+	if projector := h.service.cfg.SCIM.Projector; projector != nil {
+		if err := projector(r.Context(), group); err != nil {
+			return scim.Resource{}, err
 		}
 	}
 	if err := h.service.cfg.SCIM.Store.UpdateGroup(r.Context(), group); err != nil {
 		return scim.Resource{}, err
 	}
+	h.service.emit(r.Context(), audit.SCIMGroupUpdated, group.ID)
 	return groupResource(group), nil
 }
 
@@ -354,4 +389,24 @@ func groupResource(group *core.SCIMGroup) scim.Resource {
 		},
 		Meta: scim.Meta{},
 	}
+}
+
+func decodeMembers(value interface{}) []string {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return nil
+	}
+	var entries []struct {
+		Value string `json:"value"`
+	}
+	if json.Unmarshal(raw, &entries) != nil {
+		return nil
+	}
+	members := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Value != "" {
+			members = append(members, entry.Value)
+		}
+	}
+	return members
 }
