@@ -64,24 +64,25 @@ func (s *Service) guard(ctx context.Context, actorID, sessionToken string, permi
 }
 
 // orgGuard checks membership, then the organization-aware permission seam.
-func (s *Service) orgGuard(ctx context.Context, actorID, orgID, sessionToken, action string) bool {
+func (s *Service) orgGuard(ctx context.Context, actorID, orgID, sessionToken string, permission core.Permission) bool {
 	if _, err := s.deps.Config.OrganizationStore.MemberRole(ctx, orgID, actorID); err != nil {
 		audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
 			Name: audit.AuthorizationDenied, UserID: actorID, Outcome: "denied",
-			Metadata: map[string]string{"permission": "organizations:" + action, "organization_id": orgID},
+			Metadata: map[string]string{"permission": string(permission), "organization_id": orgID},
 		})
 		return false
 	}
+	resource, action, _ := strings.Cut(string(permission), ":")
 	var granted bool
 	if s.deps.Config.AuthorizeIn != nil {
-		granted = s.deps.Config.AuthorizeIn.AuthorizeIn(ctx, actorID, orgID, "organizations", action)
+		granted = s.deps.Config.AuthorizeIn.AuthorizeIn(ctx, actorID, orgID, resource, action)
 	} else {
-		granted = s.deps.Authz.Authorize(ctx, actorID, "organizations", action)
+		granted = s.deps.Authz.Authorize(ctx, actorID, resource, action)
 	}
 	if !granted || !s.fresh(ctx, sessionToken) {
 		audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
 			Name: audit.AuthorizationDenied, UserID: actorID, Outcome: "denied",
-			Metadata: map[string]string{"permission": "organizations:" + action, "organization_id": orgID},
+			Metadata: map[string]string{"permission": string(permission), "organization_id": orgID},
 		})
 		return false
 	}
@@ -113,7 +114,7 @@ func (s *Service) CreateOrganization(ctx context.Context, in core.CreateOrganiza
 // ListOrganizations returns a User's Organizations after checking the Session and grant.
 func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizationsInput, sessionToken string) (*core.ListOrganizationsResult, error) {
 	if s.deps.Config.OrganizationStore == nil || !s.fresh(ctx, sessionToken) ||
-		!s.deps.Authz.Authorize(ctx, in.UserID, "organizations", "create") {
+		!s.deps.Authz.AuthorizePermission(ctx, in.UserID, core.PermissionOrgsCreate) {
 		return nil, core.ErrForbidden
 	}
 	orgs, err := s.deps.Config.OrganizationStore.List(ctx, in.UserID)
@@ -126,7 +127,7 @@ func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizatio
 // AddOrganizationMember adds a Member after an org-scoped check.
 func (s *Service) AddOrganizationMember(ctx context.Context, in core.AddOrganizationMemberInput, sessionToken string) error {
 	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, in.ActorID, in.OrgID, sessionToken, "member-add") {
+		!s.orgGuard(ctx, in.ActorID, in.OrgID, sessionToken, core.PermissionOrgsMemberAdd) {
 		return core.ErrForbidden
 	}
 	if err := s.deps.Config.OrganizationStore.AddMember(ctx, in.OrgID, in.UserID, in.Role); err != nil {
@@ -139,7 +140,7 @@ func (s *Service) AddOrganizationMember(ctx context.Context, in core.AddOrganiza
 // RemoveOrganizationMember removes a Member after an org-scoped check.
 func (s *Service) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID, sessionToken string) error {
 	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, actorID, orgID, sessionToken, "member-remove") {
+		!s.orgGuard(ctx, actorID, orgID, sessionToken, core.PermissionOrgsMemberRemove) {
 		return core.ErrForbidden
 	}
 	if err := s.deps.Config.OrganizationStore.RemoveMember(ctx, orgID, userID); err != nil {
@@ -152,7 +153,7 @@ func (s *Service) RemoveOrganizationMember(ctx context.Context, orgID, userID, a
 // SetOrganizationMemberRole changes a Member's role after an org-scoped check.
 func (s *Service) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID, sessionToken string) error {
 	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, actorID, orgID, sessionToken, "member-role") {
+		!s.orgGuard(ctx, actorID, orgID, sessionToken, core.PermissionOrgsMemberRole) {
 		return core.ErrForbidden
 	}
 	if err := s.deps.Config.OrganizationStore.SetMemberRole(ctx, orgID, userID, role); err != nil {
@@ -165,7 +166,7 @@ func (s *Service) SetOrganizationMemberRole(ctx context.Context, orgID, userID, 
 // ListOrganizationMembers returns an Organization's Members after an org-scoped check.
 func (s *Service) ListOrganizationMembers(ctx context.Context, orgID, userID, sessionToken string) (*core.ListOrganizationMembersResult, error) {
 	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, userID, orgID, sessionToken, "member-add") {
+		!s.orgGuard(ctx, userID, orgID, sessionToken, core.PermissionOrgsMemberAdd) {
 		return nil, core.ErrForbidden
 	}
 	members, err := s.deps.Config.OrganizationStore.Members(ctx, orgID)
@@ -191,7 +192,7 @@ func (s *Service) SetActiveOrganization(ctx context.Context, orgID, userID, sess
 // ListUsers returns safe User fields after a Session and grant check.
 func (s *Service) ListUsers(ctx context.Context, actorID, sessionToken string) (*core.AdminListUsersResult, error) {
 	if s.deps.Config.AdminUserStore == nil || !s.fresh(ctx, sessionToken) ||
-		!s.deps.Authz.Authorize(ctx, actorID, "users", "ban") {
+		!s.deps.Authz.AuthorizePermission(ctx, actorID, core.PermissionUsersBan) {
 		return nil, core.ErrForbidden
 	}
 	all, err := s.deps.Config.AdminUserStore.ListUsersForAdmin(ctx)
@@ -253,7 +254,7 @@ func (s *Service) SetUserRole(ctx context.Context, in core.AdminSetUserRoleInput
 
 // ListUserSessions returns a User's Sessions after a Session and grant check.
 func (s *Service) ListUserSessions(ctx context.Context, actorID, userID, sessionToken string) (*core.ListSessionsResult, error) {
-	if !s.fresh(ctx, sessionToken) || !s.deps.Authz.Authorize(ctx, actorID, "sessions", "revoke") {
+	if !s.fresh(ctx, sessionToken) || !s.deps.Authz.AuthorizePermission(ctx, actorID, core.PermissionSessionsRevoke) {
 		return nil, core.ErrForbidden
 	}
 	sessions, err := s.deps.Sessions.List(ctx, userID)
@@ -357,10 +358,4 @@ func (s *Service) AdminActor(r *http.Request, fallback string) string {
 		return adminID
 	}
 	return fallback
-}
-
-// ResourceAction splits a published permission into its resource and action.
-func ResourceAction(permission core.Permission) (resource, action string) {
-	resource, action, _ = strings.Cut(string(permission), ":")
-	return resource, action
 }

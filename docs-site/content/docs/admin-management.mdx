@@ -37,8 +37,8 @@ err = auth.UnbanUser(ctx, signet.UnbanUserInput{
 })
 ```
 
-Banning sets `User.Disabled`. Listing requires `users:list` and a valid Session; ban/unban require
-`users:ban` and a fresh Session.
+Banning sets `User.Disabled`. Listing requires a valid Session and the published `users:ban`
+grant; ban/unban require `users:ban` and a fresh Session.
 
 ## Set roles
 
@@ -57,8 +57,8 @@ sessions, err := auth.AdminListUserSessions(ctx, adminID, userID, sessionToken)
 err = auth.AdminRevokeUserSession(ctx, adminID, sessionID, sessionToken)
 ```
 
-Listing requires `sessions:list`; revocation requires `PermissionSessionsRevoke`. Both require a
-valid or fresh Session respectively.
+Listing requires a valid Session and the published `sessions:revoke` grant; revocation requires
+`PermissionSessionsRevoke`. Both require a valid or fresh Session respectively.
 
 ## Impersonation
 
