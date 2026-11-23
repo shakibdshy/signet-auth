@@ -151,3 +151,23 @@ _Avoid_: recent session, active session
 **Trusted proxy**:
 A proxy whose address is explicitly allowlisted for interpreting `X-Forwarded-For` when deriving rate-limit keys.
 _Avoid_: forwarding proxy, reverse proxy
+
+**Passkey**:
+A discoverable public-key credential a User signs in with instead of a password. It is not an Account and requires no username.
+_Avoid_: WebAuthn login, passwordless credential
+
+**WebAuthn credential**:
+The stored public-key record backing a Passkey, scoped to one Relying party and one User.
+_Avoid_: passkey row, authenticator record
+
+**Relying party**:
+The site or application whose identity a Passkey is bound to; WebAuthn checks the Relying party ID on every ceremony.
+_Avoid_: RP, relying party ID
+
+**Attestation**:
+The authenticator's statement about itself at Passkey registration. Signet does not request attestation by default, protecting User privacy.
+_Avoid_: registration proof, device proof
+
+**Assertion**:
+The authenticator's signed proof of possession at Passkey sign-in.
+_Avoid_: login signature, authentication proof
