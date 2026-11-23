@@ -215,3 +215,19 @@ _Avoid_: external ID, provider user ID
 **Just-in-time provisioning**:
 Creating a User on the first successful sign-in through an SSO connection, using the verified claims from that assertion.
 _Avoid_: auto-create, lazy registration
+
+**Service provider**:
+The role Signet takes in SAML when it consumes an Identity provider's assertion to sign in a User.
+_Avoid_: SP, relying party
+
+**SAML assertion**:
+A signed statement from an Identity provider that authenticates a User and carries attributes about them.
+_Avoid_: SAML response, login token
+
+**Assertion consumer service**:
+The endpoint that receives a SAML assertion from an Identity provider and completes the sign-in ceremony.
+_Avoid_: ACS callback, SAML callback
+
+**NameID**:
+The subject identifier an Identity provider places in a SAML assertion.
+_Avoid_: SAML subject, name identifier
