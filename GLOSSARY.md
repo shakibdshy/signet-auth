@@ -175,3 +175,31 @@ _Avoid_: login signature, authentication proof
 **Automatic sign-in**:
 Issuing a Session as part of a successful Sign-up or email-verification flow, without a separate Sign-in call. It is not a new first factor.
 _Avoid_: auto-login, implicit sign-in
+
+**Authorization server**:
+The role a Relying party takes when it issues Access tokens and Refresh tokens to OAuth clients. Signet is a relying party by default and becomes an Authorization server only when this capability is enabled.
+_Avoid_: OAuth provider, identity provider
+
+**OAuth client**:
+A registered application that requests an Authorization grant and receives tokens from the Authorization server.
+_Avoid_: client app, consumer
+
+**Authorization grant**:
+The proof an OAuth client exchanges for tokens: an authorization code with PKCE, a Refresh token, or a device authorization.
+_Avoid_: login code, grant token
+
+**Scope**:
+A named permission requested by an OAuth client and carried in an issued token. Scopes are exact strings and are never wildcard-expanded.
+_Avoid_: permission scope, role
+
+**Consent**:
+The User's approval of an OAuth client's requested Scopes before an Authorization grant is issued.
+_Avoid_: permission screen, approval token
+
+**Device authorization**:
+A flow in which a device with no browser asks for a User code, the User approves it in a browser, and the device polls for tokens.
+_Avoid_: device login, TV flow
+
+**User code**:
+The short, human-readable code a User enters during Device authorization.
+_Avoid_: device code, pairing code
