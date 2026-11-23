@@ -1,0 +1,68 @@
+---
+title: Organizations
+description: Create organizations, manage memberships and select an active organization.
+---
+
+An Organization is a group of Users sharing membership and roles. Signet stores no organization
+state itself; you supply an `OrganizationStore`. The active organization is a signed cookie, not a
+Session column, so no schema migration is required.
+
+```go
+type OrganizationStore interface {
+    Create(context.Context, *Organization) error
+    List(context.Context, string) ([]*Organization, error)
+    AddMember(ctx context.Context, orgID, userID, role string) error
+    RemoveMember(ctx context.Context, orgID, userID string) error
+    MemberRole(ctx context.Context, orgID, userID string) (string, error)
+    SetMemberRole(ctx context.Context, orgID, userID, role string) error
+    Members(context.Context, string) ([]*MemberInfo, error)
+}
+```
+
+## Configure it
+
+```go
+cfg.OrganizationStore = myOrganizationStore
+cfg.Authorizer = myAuthorizer
+```
+
+`CreateOrganizationInput` produces a `CreateOrganizationResult`; `ListOrganizationsInput` produces a
+`ListOrganizationsResult`. Both `ListOrganizations` and `SetActiveOrganization` are used below.
+
+## Create and manage memberships
+
+```go
+created, err := auth.CreateOrganization(ctx, signet.CreateOrganizationInput{
+    OwnerID: userID, Name: "Acme",
+})
+err = auth.AddOrganizationMember(ctx, signet.AddOrganizationMemberInput{
+    OrgID: created.Organization.ID, UserID: memberID, Role: "member", ActorID: userID,
+})
+members, _ := auth.ListOrganizationMembers(ctx, signet.ListOrganizationMembersInput{
+    OrgID: created.Organization.ID, UserID: userID,
+})
+```
+
+Creation requires `PermissionOrgsCreate` and adding a member requires
+`PermissionOrgsMemberAdd`. A Member's role is stored in your `OrganizationStore`; a `MemberInfo`
+carries only the User ID and role. `ListOrganizationMembersInput` produces a
+`ListOrganizationMembersResult`.
+
+## Active organization
+
+```go
+err := auth.SetActiveOrganization(ctx, signet.SetActiveOrganizationInput{
+    OrgID: created.Organization.ID, UserID: userID,
+})
+active := auth.ActiveOrganizationFromRequest(r) // *ActiveOrganization
+```
+
+`SetActiveOrganization` verifies membership in the store before selecting the org. The HTTP
+endpoints are `POST /set-active-organization` and `GET /active-organization`; the latter is
+anonymous and returns `{"id":"..."}`. A tampered or stale cookie is treated as absent and never
+grants membership.
+
+Organization-scoped checks should use an `AuthorizeIn` implementation so each check re-reads
+membership before granting access.
+
+See [Authorization](/docs/authorization) for the permission model.

@@ -562,7 +562,7 @@ func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
 	if err := c.cfg.Store.UpdateUser(ctx, user); err != nil {
 		return err
 	}
-	c.emitAdminAudit(ctx, "user_banned", in.ActorID, in.UserID, "success")
+	c.emitAdminAudit(ctx, "user_banned", in.ActorID, in.UserID)
 	return nil
 }
 
@@ -579,7 +579,7 @@ func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
 	if err := c.cfg.Store.UpdateUser(ctx, user); err != nil {
 		return err
 	}
-	c.emitAdminAudit(ctx, "user_unbanned", in.ActorID, in.UserID, "success")
+	c.emitAdminAudit(ctx, "user_unbanned", in.ActorID, in.UserID)
 	return nil
 }
 
@@ -594,7 +594,7 @@ func (c *Client) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput)
 	if err := c.cfg.RoleWriter.SetRoles(ctx, in.UserID, in.Roles); err != nil {
 		return err
 	}
-	c.emitAdminAudit(ctx, "user_roles_set", in.ActorID, in.UserID, "success")
+	c.emitAdminAudit(ctx, "user_roles_set", in.ActorID, in.UserID)
 	return nil
 }
 
@@ -608,7 +608,7 @@ func (c *Client) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (
 	}
 	raw := secret.NewToken()
 	c.impersonations[raw] = in.ActorID
-	c.emitAdminAudit(ctx, "user_impersonated", in.ActorID, in.UserID, "success")
+	c.emitAdminAudit(ctx, "user_impersonated", in.ActorID, in.UserID)
 	return &ImpersonationResult{Token: raw, AdminID: in.ActorID}, nil
 }
 
@@ -619,17 +619,17 @@ func (c *Client) StopImpersonating(ctx context.Context, in StopImpersonatingInpu
 		return ErrTokenInvalid
 	}
 	delete(c.impersonations, in.Token)
-	c.emitAdminAudit(ctx, "impersonation_stopped", adminID, "", "success")
+	c.emitAdminAudit(ctx, "impersonation_stopped", adminID, "")
 	return nil
 }
 
 func (c *Client) freshActor(_ context.Context, _ string) bool { return true }
 
-func (c *Client) emitAdminAudit(ctx context.Context, name, actorID, userID, outcome string) {
+func (c *Client) emitAdminAudit(ctx context.Context, name, actorID, userID string) {
 	if c.cfg.AuditSink == nil {
 		return
 	}
-	_ = c.cfg.AuditSink.Record(ctx, AuditEvent{Name: name, UserID: actorID, Outcome: outcome, Metadata: map[string]string{"target": userID}})
+	_ = c.cfg.AuditSink.Record(ctx, AuditEvent{Name: name, UserID: actorID, Outcome: "success", Metadata: map[string]string{"target": userID}})
 }
 
 // CreateOrganization creates an Organization owned by a User.

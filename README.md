@@ -19,6 +19,7 @@ any router, and it never owns your database schema.
 - Opt-in session caching, key rotation rings, JWKS publication and redirect patterns
 - Username sign-in, guarded account unlinking and optional TOTP Second factor with Backup codes
 - Opt-in breach checks, captcha checks, audit events and Last sign-in method
+- Application-managed authorization with API keys, organizations and guarded admin management
 - Same-origin checks and signed double-submit CSRF protection
 - PostgreSQL and SQLite adapters with explicit, embedded migrations
 - Pluggable storage, mail, password hashing, rate limiting and logging
@@ -162,8 +163,13 @@ no schema ownership.
 
 Sign-up writes the User and its credential Account in two store calls; if the
 second fails, Signet deletes the new User on a best-effort basis. There is no
+<<<<<<< HEAD
 transaction across Store calls. Passkeys, phone OTP and SSO/SCIM
 are planned for later versions.
+=======
+transaction across Store calls. Passkeys, phone OTP and organizations
+Passkeys, phone OTP and SSO/SCIM are planned for later versions.
+>>>>>>> ac15e54 (docs: add Phase 5 guides and coverage)
 
 ## Project layout
 
