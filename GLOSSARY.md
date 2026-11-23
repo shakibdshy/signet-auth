@@ -171,3 +171,7 @@ _Avoid_: registration proof, device proof
 **Assertion**:
 The authenticator's signed proof of possession at Passkey sign-in.
 _Avoid_: login signature, authentication proof
+
+**Automatic sign-in**:
+Issuing a Session as part of a successful Sign-up or email-verification flow, without a separate Sign-in call. It is not a new first factor.
+_Avoid_: auto-login, implicit sign-in
