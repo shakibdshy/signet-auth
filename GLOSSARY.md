@@ -203,3 +203,15 @@ _Avoid_: device login, TV flow
 **User code**:
 The short, human-readable code a User enters during Device authorization.
 _Avoid_: device code, pairing code
+
+**SSO connection**:
+An Organization's configuration for an external identity provider used to sign in its Users.
+_Avoid_: IdP config, provider connection
+
+**Subject**:
+The stable identifier an external identity provider assigns to a User.
+_Avoid_: external ID, provider user ID
+
+**Just-in-time provisioning**:
+Creating a User on the first successful sign-in through an SSO connection, using the verified claims from that assertion.
+_Avoid_: auto-create, lazy registration
