@@ -1,0 +1,99 @@
+---
+title: Admin management
+description: Guarded user management, role assignment and impersonation.
+---
+
+Admin actions are deliberately guarded: every state-changing operation checks a published
+permission, requires a Session within `Accounts.FreshWindow`, and emits an `AuditEvent` for both
+success and denial. Self-ban, self-delete and self-impersonation are blocked.
+
+## Configure it
+
+```go
+cfg.Authorizer = myAuthorizer       // grants the users:* and sessions:* permissions
+cfg.RoleWriter = myRoleWriter       // required for AdminSetUserRole
+cfg.AdminUserStore = myAdminStore   // implements ListUsersForAdmin
+cfg.AuditSink = myAuditSink
+cfg.Accounts = &signet.AccountConfig{FreshWindow: time.Hour}
+```
+
+`AdminUserStore` has one method, `ListUsersForAdmin(context.Context) ([]*User, error)`. It is the
+only optional adapter needed because the required `Store` contract deliberately has no "list all
+Users" method. Without it, user listing is unavailable.
+
+## List users and ban/unban
+
+```go
+users, err := auth.AdminListUsers(ctx, signet.AdminListUsersInput{
+    ActorID: adminID, SessionToken: sessionToken,
+})
+// AdminListUsersResult carries safe UserInfo values — no verifiers or secrets.
+
+err = auth.BanUser(ctx, signet.BanUserInput{
+    ActorID: adminID, SessionToken: sessionToken, UserID: userID, Reason: "abuse",
+})
+err = auth.UnbanUser(ctx, signet.UnbanUserInput{
+    ActorID: adminID, SessionToken: sessionToken, UserID: userID,
+})
+```
+
+Banning sets `User.Disabled`. Listing requires a valid Session and the published `users:ban`
+grant; ban/unban require `users:ban` and a fresh Session.
+
+## Set roles
+
+```go
+err := auth.AdminSetUserRole(ctx, signet.AdminSetUserRoleInput{
+    ActorID: adminID, SessionToken: sessionToken, UserID: userID, Roles: []string{"admin"},
+})
+```
+
+Requires `PermissionUsersSetRole` and a `RoleWriter`.
+
+## List and revoke Sessions
+
+```go
+sessions, err := auth.AdminListUserSessions(ctx, adminID, userID, sessionToken)
+err = auth.AdminRevokeUserSession(ctx, adminID, sessionID, sessionToken)
+```
+
+Listing requires a valid Session and the published `sessions:revoke` grant; revocation requires
+`PermissionSessionsRevoke`. Both require a valid or fresh Session respectively.
+
+## Impersonation
+
+```go
+started, err := auth.ImpersonateUser(ctx, signet.ImpersonateUserInput{
+    ActorID: adminID, SessionToken: sessionToken, UserID: targetID,
+})
+// ImpersonationResult: Token is the temporary Session token; AdminID records the administrator.
+adminID, originalToken := auth.ImpersonationFromRequest(r) // signed one-hour cookie
+err = auth.SetImpersonationCookie(w, adminID, originalToken)
+original, err := auth.StopImpersonating(ctx, signet.StopImpersonatingInput{Token: started.Token})
+auth.ClearImpersonationCookie(w)
+auth.SetSessionCookies(w, original) // restore the administrator's Session
+```
+
+Impersonation requires `PermissionUsersImpersonate` and a fresh Session. It creates a fresh
+Store-backed Session for the target, stores the administrator ID and the original raw session token
+in a signed one-hour cookie, revokes the temporary Session on stop and restores the original cookie.
+While impersonating, admin checks use the administrator ID from the cookie, not the impersonated
+User — `AdminActorFromRequest` and `IsImpersonating` expose that state. The existing self-service
+deletion flow is blocked while impersonating.
+
+Every impersonation start and stop emits an Audit event naming the administrator.
+
+## HTTP endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/admin-users` | List Users |
+| `POST` | `/admin-users/role` | Set a User's global roles |
+| `POST` | `/admin-users/ban` | Ban a User |
+| `POST` | `/admin-users/unban` | Unban a User |
+| `GET` | `/admin-user-sessions?user_id=…` | List a User's Sessions |
+| `POST` | `/admin-user-sessions/revoke` | Revoke one Session |
+| `POST` | `/impersonate` | Start impersonation |
+| `POST` | `/stop-impersonating` | Stop and restore the original Session |
+
+See [Authorization](/docs/authorization) and [Sessions](/docs/sessions).

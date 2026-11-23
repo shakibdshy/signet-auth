@@ -293,7 +293,7 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | Two-factor / passkey / magic link / email OTP / phone | [2FA](https://better-auth.com/docs/plugins/2fa) · [Passkey](https://better-auth.com/docs/plugins/passkey) · [Magic link](https://better-auth.com/docs/plugins/magic-link) · [Email OTP](https://better-auth.com/docs/plugins/email-otp) · [Phone](https://better-auth.com/docs/plugins/phone-number) | partial | TOTP Second factor with Backup codes, magic link and email OTP are shipped; passkeys and phone OTP are not. |
 | Username / anonymous / one tap / SIWE / one-time token | [Username](https://better-auth.com/docs/plugins/username) · [Anonymous](https://better-auth.com/docs/plugins/anonymous) · [One Tap](https://better-auth.com/docs/plugins/one-tap) · [SIWE](https://better-auth.com/docs/plugins/siwe) · [OTT](https://better-auth.com/docs/plugins/one-time-token) | partial | Username sign-in is shipped as a `username` Account (ADR-0010); anonymous, One Tap, SIWE and one-time tokens are not. |
 | Generic OAuth provider | [Generic OAuth](https://better-auth.com/docs/plugins/generic-oauth) | already | An `oauth/oidc` adapter implements discovery, PKCE and verified ID tokens on the existing `OAuthProvider` seam. |
-| Admin / organization / API keys | [Admin](https://better-auth.com/docs/plugins/admin) · [Organization](https://better-auth.com/docs/plugins/organization) · [API Key](https://better-auth.com/docs/plugins/api-key) | missing | Organizations are planned in Signet's README; no roles, bans, impersonation or API keys. |
+| Admin / organization / API keys | [Admin](https://better-auth.com/docs/plugins/admin) · [Organization](https://better-auth.com/docs/plugins/organization) · [API Key](https://better-auth.com/docs/plugins/api-key) | already | Application-managed roles, digest-only API keys, organizations and guarded admin management are shipped. |
 | OAuth/OIDC provider, device flow, MCP, CIMD | [OAuth Provider](https://better-auth.com/docs/plugins/oauth-provider) · [Device](https://better-auth.com/docs/plugins/device-authorization) · [MCP](https://better-auth.com/docs/plugins/mcp) · [CIMD](https://better-auth.com/docs/plugins/cimd) | missing | Signet is a relying party only. |
 | SAML/OIDC SSO and SCIM | [SSO](https://better-auth.com/docs/plugins/sso) · [SCIM](https://better-auth.com/docs/plugins/scim) | missing | No enterprise federation or directory provisioning. |
 | Captcha / Have I Been Pwned / Sentinel | [Captcha](https://better-auth.com/docs/plugins/captcha) · [HIBP](https://better-auth.com/docs/plugins/have-i-been-pwned) · [Sentinel](https://better-auth.com/docs/infrastructure/plugins/sentinel) | partial | Opt-in Breach and Captcha checks are shipped; Sentinel-style anomaly detection is out of scope. |
@@ -305,8 +305,8 @@ Feature order follows dependencies: session primitives and user lifecycle first,
 first factors, then provider/enterprise surfaces, then defensive and operational extras. Effort is
 relative for a small Go library that already has the Store and token primitives.
 
-As of 2026-11-23, phases 1, 2, 3, 4 and 6 below are **shipped** (PRs #53, #58 and #65 merged; PR #70 covers
-Phase 3). The remaining roadmap item is phase 5 (authorization and management).
+As of 2026-11-23, all six phases below are **shipped** (PRs #53, #58, #65, #70, #76, #81, #87 and
+#88). All roadmap phases are complete. i18n and anomaly detection remain explicitly out of scope.
 
 1. **Foundation — user lifecycle and session controls (shipped).**
    `ChangePassword`/`SetPassword`, `ChangeEmail`, `DeleteUser` with re-verification, and
@@ -323,9 +323,9 @@ Phase 3). The remaining roadmap item is phase 5 (authorization and management).
 4. **Broader federation (large, security-sensitive).** Generic OAuth/OIDC discovery on top of
    the existing `OAuthProvider` interface, then SSO (OIDC + SAML), OAuth provider/device flow and
    SCIM. Each has protocol-specific CSRF/replay rules that must be designed in, not bolted on.
-5. **Authorization and management (large).** Admin roles/bans/impersonation, organizations and API
-   keys. Impersonation is **security-sensitive**; organizations and API keys are mostly additive
-   schema work but expand the public API substantially.
+5. **Authorization and management (shipped).** Admin roles/bans/impersonation, organizations and
+   API keys. All state stays behind optional application-supplied interfaces; impersonation uses a
+   signed cookie and a Store-backed Session.
 6. **Defensive and operational extras (shipped except anomaly detection).** Breach checks, captcha checks, an Audit sink and Last sign-in method are opt-in interfaces. i18n is fully out of scope. Sentinel's
    device fingerprinting and impossible-travel detection are **large** and depend on external
    services, so they should be last and optional.

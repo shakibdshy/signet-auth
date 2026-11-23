@@ -1,6 +1,6 @@
 ---
 title: HTTP API
-description: All 13 endpoints, their authentication and CSRF requirements, and when to use each.
+description: Every endpoint, its authentication and CSRF requirements, and when to use each.
 ---
 
 `Client.Handler()` returns a standard `http.Handler`. Mount it under `Config.PathPrefix`
@@ -72,3 +72,35 @@ so a client cannot override its rate-limit key. `TokenInput` accepts either
 Each operation has a generated page with schemas, response samples and example code under
 `/docs/openapi/...`. Those pages are produced from `api/signet.openapi.json`; never edit
 them by hand. See [Tooling](/docs/tooling) for regeneration.
+
+## Phase 5 endpoints
+
+The authorization features add these endpoints. All require a session cookie and CSRF unless
+noted; a call from an active impersonation uses the administrator ID from the signed cookie.
+
+| Method + path | Auth | CSRF | Success | Key errors | Use it when |
+| --- | --- | --- | --- | --- | --- |
+| POST `/api-keys` | yes | required | 201 `CreateAPIKeyResult` | `forbidden` 403 | Issue a digest-only API key. |
+| GET `/api-keys` | yes | n/a | 200 `ListAPIKeysResult` | `forbidden` 403 | List the caller's keys. |
+| POST `/verify-api-key` | `X-API-Key` | exempt | 200 `Principal` | `invalid_token` 401 | Verify a key. |
+| POST `/revoke-api-key` | yes | required | 200 | `forbidden` 403 | Revoke a key. |
+| POST `/organizations` | yes | required | 201 `CreateOrganizationResult` | `forbidden` 403 | Create an Organization. |
+| GET `/organizations` | yes | n/a | 200 `ListOrganizationsResult` | `forbidden` 403 | List Organizations. |
+| GET `/organization-members?organization_id=…` | yes | n/a | 200 `ListOrganizationMembersResult` | `forbidden` 403 | List Members. |
+| POST `/organization-members/add` | yes | required | 200 | `forbidden` 403 | Add a Member. |
+| POST `/organization-members/remove` | yes | required | 200 | `forbidden` 403 | Remove a Member. |
+| POST `/organization-members/role` | yes | required | 200 | `forbidden` 403 | Change a Member's role. |
+| POST `/set-active-organization` | yes | required | 200 | `forbidden` 403 | Select an Active organization. |
+| GET `/active-organization` | no | exempt | 200 `{"id":"..."}` | none | Read the Active organization. |
+| POST `/clear-active-organization` | yes | required | 200 | `unauthorized` 401 | Clear the Active organization. |
+| GET `/admin-users` | yes | n/a | 200 `AdminListUsersResult` | `forbidden` 403 | List Users. |
+| POST `/admin-users/role` | yes | required | 200 | `forbidden` 403 | Set global roles. |
+| POST `/admin-users/ban` | yes | required | 200 | `forbidden` 403 | Ban a User. |
+| POST `/admin-users/unban` | yes | required | 200 | `forbidden` 403 | Unban a User. |
+| GET `/admin-user-sessions?user_id=…` | yes | n/a | 200 `ListSessionsResult` | `forbidden` 403 | List a User's Sessions. |
+| POST `/admin-user-sessions/revoke` | yes | required | 200 | `forbidden` 403 | Revoke one Session. |
+| POST `/impersonate` | yes | required | 200 `ImpersonationResult` | `forbidden` 403 | Start impersonation. |
+| POST `/stop-impersonating` | no | exempt | 200 | `invalid_token` 401 | Stop and restore the original Session. |
+
+See [API keys](/docs/api-keys), [Organizations](/docs/organizations) and
+[Admin management](/docs/admin-management) for complete flows.

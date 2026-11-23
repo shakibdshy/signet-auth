@@ -22,6 +22,7 @@ version. Missing documentation is never the reason — every shipped feature has
 - **Mailers and templates** — console and SMTP adapters, overridable templates. See [Mail](/docs/mail).
 - **Developer surface** — typed Go API, HTTP endpoints, generated OpenAPI contract, typed TypeScript client, docs handler and Fumadocs site. Per-endpoint rate-limit rules and trusted-proxy keys are configurable. See [Go API](/docs/go-api), [HTTP API](/docs/http-api), [Configuration](/docs/configuration), [Tooling](/docs/tooling).
 - **Security controls** — Argon2id with bounded parsing, rate-limiting interface, redacted hooks, structured events, and opt-in [defensive controls](/docs/defensive-controls). See [Security](/docs/security).
+- **Authorization and management** — application-managed [roles and permissions](/docs/authorization), [API keys](/docs/api-keys), [organizations](/docs/organizations) and guarded [admin management](/docs/admin-management).
 
 ## Not implemented yet
 
@@ -40,7 +41,7 @@ The foundation, passwordless, hardening and Phase 3 sign-in features are shipped
 
 A capability survey of Better Auth lives in `docs/research/better-auth-authentication-features.md`.
 i18n and anomaly detection are explicitly out of scope. It also records features Signet does not have: passkeys, phone OTP,
-anonymous sessions, organizations, roles/API keys, OAuth/OIDC provider,
+anonymous sessions, OAuth/OIDC provider,
 SSO/SCIM, device flow and anomaly detection. Captcha and compromised-password checks are shipped
 as opt-in defensive controls. It is a
 reference for future decisions, not a promise of delivery.

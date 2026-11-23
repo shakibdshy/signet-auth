@@ -21,6 +21,8 @@
     "---Verification and recovery---",
     "authorization",
     "api-keys",
+    "organizations",
+    "admin-management",
     "verification-and-reset",
     "passwordless-verification",
     "---Database---",

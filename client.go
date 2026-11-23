@@ -13,6 +13,7 @@ import (
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/lastmethod"
 	"github.com/shakibdshy/signet/internal/oauth"
+	"github.com/shakibdshy/signet/internal/orgadmin"
 	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
@@ -39,10 +40,12 @@ func DocsHandler() http.Handler {
 type Client struct {
 	cfg                   Config
 	authorization         *authorization.Service
+	orgadmin              *orgadmin.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
 	lastMethod            *lastmethod.Manager
+	activeOrg             *lastmethod.Manager
 	lastMethodBeforeStore func(context.Context, string) bool
 	csrf                  *csrf.Guard
 	cookies               *httpapi.Cookies
@@ -178,6 +181,21 @@ func New(cfg Config) (*Client, error) {
 				return err == nil && fresh
 			}),
 		lastMethod: lastMethodManager,
+		orgadmin: orgadmin.New(orgadmin.Deps{
+			Config: &cfg, Store: cfg.Store, Clock: cfg.Clock, Sessions: sessions,
+			Authz: authorization.NewService(&cfg, cfg.Clock, cfg.Logger,
+				func(ctx context.Context, raw string) bool {
+					fresh, err := sessions.IsFreshWithin(ctx, raw, cfg.Accounts.FreshWindow)
+					return err == nil && fresh
+				}),
+			Logger: cfg.Logger,
+		}, firstCSRFKey(cfg)),
+		activeOrg: func() *lastmethod.Manager {
+			if cfg.OrganizationStore == nil || len(csrfKeys) == 0 {
+				return nil
+			}
+			return lastmethod.New(csrfKeys[0], "signet_active_org", 30*24*time.Hour)
+		}(),
 		lastMethodBeforeStore: func() func(context.Context, string) bool {
 			if cfg.LastSignInMethod == nil {
 				return nil
@@ -520,6 +538,121 @@ func (c *Client) JWKSHandler() http.Handler {
 	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
+// AdminListUsers returns safe User fields for an administrator.
+func (c *Client) AdminListUsers(ctx context.Context, in AdminListUsersInput) (*AdminListUsersResult, error) {
+	return c.orgadmin.ListUsers(ctx, in.ActorID, in.SessionToken)
+}
+
+// BanUser disables a User account.
+func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
+	return c.orgadmin.BanUser(ctx, in)
+}
+
+// UnbanUser re-enables a User account.
+func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
+	return c.orgadmin.UnbanUser(ctx, in)
+}
+
+// AdminSetUserRole writes global roles for a User.
+func (c *Client) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
+	return c.orgadmin.SetUserRole(ctx, in)
+}
+
+// AdminListUserSessions returns a User's Sessions for an administrator.
+func (c *Client) AdminListUserSessions(ctx context.Context, actorID, userID, sessionToken string) (*ListSessionsResult, error) {
+	return c.orgadmin.ListUserSessions(ctx, actorID, userID, sessionToken)
+}
+
+// AdminRevokeUserSession revokes one of a User's Sessions.
+func (c *Client) AdminRevokeUserSession(ctx context.Context, actorID, sessionID, sessionToken string) error {
+	return c.orgadmin.RevokeUserSession(ctx, actorID, sessionID, sessionToken)
+}
+
+// ImpersonateUser creates a short-lived Session for an administrator acting as a User.
+func (c *Client) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (*ImpersonationResult, error) {
+	return c.orgadmin.ImpersonateUser(ctx, in)
+}
+
+// StopImpersonating ends an impersonation and returns the original Session token.
+func (c *Client) StopImpersonating(ctx context.Context, in StopImpersonatingInput) (string, error) {
+	return c.orgadmin.StopImpersonating(ctx, in)
+}
+
+// ImpersonationFromRequest returns the admin ID and original token of an impersonation.
+func (c *Client) ImpersonationFromRequest(r *http.Request) (string, string) {
+	return c.orgadmin.ImpersonationFromRequest(r)
+}
+
+// SetImpersonationCookie writes the signed impersonation cookie.
+func (c *Client) SetImpersonationCookie(w http.ResponseWriter, adminID, originalToken string) {
+	c.orgadmin.SetImpersonationCookie(w, adminID, originalToken)
+}
+
+// ClearImpersonationCookie expires the impersonation cookie.
+func (c *Client) ClearImpersonationCookie(w http.ResponseWriter) {
+	c.orgadmin.ClearImpersonationCookie(w)
+}
+
+// IsImpersonating reports whether a request carries an impersonation cookie.
+func (c *Client) IsImpersonating(r *http.Request) bool {
+	return c.orgadmin.IsImpersonating(r)
+}
+
+// AdminActorFromRequest returns the administrator ID, using the impersonation cookie when present.
+func (c *Client) AdminActorFromRequest(r *http.Request, fallback string) string {
+	return c.orgadmin.AdminActor(r, fallback)
+}
+
+// CreateOrganization creates an Organization owned by a User.
+func (c *Client) CreateOrganization(ctx context.Context, in CreateOrganizationInput) (*CreateOrganizationResult, error) {
+	return c.orgadmin.CreateOrganization(ctx, in, in.SessionToken)
+}
+
+// ListOrganizations returns a User's Organizations.
+func (c *Client) ListOrganizations(ctx context.Context, in ListOrganizationsInput) (*ListOrganizationsResult, error) {
+	return c.orgadmin.ListOrganizations(ctx, in, in.SessionToken)
+}
+
+// AddOrganizationMember adds a Member with a role to an Organization.
+func (c *Client) AddOrganizationMember(ctx context.Context, in AddOrganizationMemberInput) error {
+	return c.orgadmin.AddOrganizationMember(ctx, in, in.SessionToken)
+}
+
+// ListOrganizationMembers returns an Organization's Members.
+func (c *Client) ListOrganizationMembers(ctx context.Context, orgID, userID, sessionToken string) (*ListOrganizationMembersResult, error) {
+	return c.orgadmin.ListOrganizationMembers(ctx, orgID, userID, sessionToken)
+}
+
+// RemoveOrganizationMember removes a Member from an Organization.
+func (c *Client) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID, sessionToken string) error {
+	return c.orgadmin.RemoveOrganizationMember(ctx, orgID, userID, actorID, sessionToken)
+}
+
+// SetOrganizationMemberRole changes a Member's role in an Organization.
+func (c *Client) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID, sessionToken string) error {
+	return c.orgadmin.SetOrganizationMemberRole(ctx, orgID, userID, role, actorID, sessionToken)
+}
+
+// SetActiveOrganization verifies membership before the caller writes the cookie.
+func (c *Client) SetActiveOrganization(ctx context.Context, in SetActiveOrganizationInput) error {
+	return c.orgadmin.SetActiveOrganization(ctx, in.OrgID, in.UserID, in.SessionToken)
+}
+
+// ActiveOrganizationFromRequest reads the signed Active organization cookie.
+func (c *Client) ActiveOrganizationFromRequest(r *http.Request) *ActiveOrganization {
+	if c.activeOrg == nil {
+		return &ActiveOrganization{}
+	}
+	return &ActiveOrganization{ID: c.activeOrg.Method(r)}
+}
+
+// ClearActiveOrganization clears the Active organization cookie.
+func (c *Client) ClearActiveOrganization(w http.ResponseWriter) {
+	if c.activeOrg != nil {
+		c.activeOrg.Clear(w)
+	}
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -692,6 +825,71 @@ func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (str
 	return a.cookies.SetSessionAndCSRF(w, token)
 }
 func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+
+// Organization and admin adapter methods.
+func (a httpAdapter) ClearActiveOrganizationCookie(w http.ResponseWriter) {
+	a.ClearActiveOrganization(w)
+}
+func (a httpAdapter) CreateOrganization(ctx context.Context, in CreateOrganizationInput) (*CreateOrganizationResult, error) {
+	return a.Client.CreateOrganization(ctx, in)
+}
+func (a httpAdapter) ListOrganizations(ctx context.Context, in ListOrganizationsInput) (*ListOrganizationsResult, error) {
+	return a.Client.ListOrganizations(ctx, in)
+}
+func (a httpAdapter) AddOrganizationMember(ctx context.Context, in AddOrganizationMemberInput) error {
+	return a.Client.AddOrganizationMember(ctx, in)
+}
+func (a httpAdapter) ListOrganizationMembers(ctx context.Context, orgID, userID, token string) (*ListOrganizationMembersResult, error) {
+	return a.Client.ListOrganizationMembers(ctx, orgID, userID, token)
+}
+func (a httpAdapter) RemoveOrganizationMember(ctx context.Context, orgID, userID, actor, token string) error {
+	return a.Client.RemoveOrganizationMember(ctx, orgID, userID, actor, token)
+}
+func (a httpAdapter) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actor, token string) error {
+	return a.Client.SetOrganizationMemberRole(ctx, orgID, userID, role, actor, token)
+}
+func (a httpAdapter) AdminListUsers(ctx context.Context, in AdminListUsersInput) (*AdminListUsersResult, error) {
+	return a.Client.AdminListUsers(ctx, in)
+}
+func (a httpAdapter) AdminListUserSessions(ctx context.Context, actor, userID, token string) (*ListSessionsResult, error) {
+	return a.Client.AdminListUserSessions(ctx, actor, userID, token)
+}
+func (a httpAdapter) AdminRevokeUserSession(ctx context.Context, actor, sessionID, token string) error {
+	return a.Client.AdminRevokeUserSession(ctx, actor, sessionID, token)
+}
+func (a httpAdapter) BanUser(ctx context.Context, in BanUserInput) error {
+	return a.Client.BanUser(ctx, in)
+}
+func (a httpAdapter) UnbanUser(ctx context.Context, in UnbanUserInput) error {
+	return a.Client.UnbanUser(ctx, in)
+}
+func (a httpAdapter) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
+	return a.Client.AdminSetUserRole(ctx, in)
+}
+func (a httpAdapter) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (*ImpersonationResult, error) {
+	return a.Client.ImpersonateUser(ctx, in)
+}
+func (a httpAdapter) StopImpersonating(ctx context.Context, in StopImpersonatingInput) (string, error) {
+	return a.Client.StopImpersonating(ctx, in)
+}
+func (a httpAdapter) SetImpersonationCookie(w http.ResponseWriter, adminID, token string) {
+	a.Client.SetImpersonationCookie(w, adminID, token)
+}
+func (a httpAdapter) ClearImpersonationCookie(w http.ResponseWriter) {
+	a.Client.ClearImpersonationCookie(w)
+}
+func (a httpAdapter) ImpersonationFromRequest(r *http.Request) (string, string) {
+	return a.Client.ImpersonationFromRequest(r)
+}
+func (a httpAdapter) IsImpersonating(r *http.Request) bool { return a.Client.IsImpersonating(r) }
+func (a httpAdapter) AdminActor(r *http.Request, fallback string) string {
+	return a.AdminActorFromRequest(r, fallback)
+}
+func (a httpAdapter) SetActiveOrganizationCookie(w http.ResponseWriter, orgID string) {
+	if a.activeOrg != nil && orgID != "" {
+		a.activeOrg.SetCookie(w, orgID)
+	}
+}
 func (a httpAdapter) LastSignInMethod(r *http.Request) string {
 	return a.Client.LastSignInMethod(r.Context(), r)
 }
@@ -738,4 +936,11 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": code, "message": message})
+}
+
+func firstCSRFKey(cfg Config) []byte {
+	if len(cfg.CSRFKeys) > 0 {
+		return cfg.CSRFKeys[0]
+	}
+	return cfg.CSRFKey
 }

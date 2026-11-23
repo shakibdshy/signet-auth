@@ -1,0 +1,95 @@
+---
+title: Organizations
+description: Create organizations, manage memberships and select an active organization.
+---
+
+An Organization is a group of Users sharing membership and roles. Signet stores no organization
+state itself; you supply an `OrganizationStore`. The active organization is a signed cookie, not a
+Session column, so no schema migration is required.
+
+```go
+type OrganizationStore interface {
+    Create(context.Context, *Organization) error
+    List(context.Context, string) ([]*Organization, error)
+    AddMember(ctx context.Context, orgID, userID, role string) error
+    RemoveMember(ctx context.Context, orgID, userID string) error
+    MemberRole(ctx context.Context, orgID, userID string) (string, error)
+    SetMemberRole(ctx context.Context, orgID, userID, role string) error
+    Members(context.Context, string) ([]*MemberInfo, error)
+}
+```
+
+## Configure it
+
+```go
+cfg.OrganizationStore = myOrganizationStore
+cfg.Authorizer = myAuthorizer
+cfg.AuthorizeIn = myOrgAwareAuthorizer // optional; re-reads membership per check
+```
+
+With no `OrganizationStore` the feature is disabled and every operation denies. All mutations
+require a Session within `Accounts.FreshWindow` (passed as `SessionToken`) plus the published
+permission; each emits an Audit event on success and on denial.
+
+## Create and manage memberships
+
+```go
+created, err := auth.CreateOrganization(ctx, signet.CreateOrganizationInput{
+    OwnerID: userID, SessionToken: sessionToken, Name: "Acme",
+})
+// CreateOrganizationResult carries the Organization.
+
+listed, _ := auth.ListOrganizations(ctx, signet.ListOrganizationsInput{
+    UserID: userID, SessionToken: sessionToken,
+})
+// ListOrganizationsResult carries []*Organization.
+
+err = auth.AddOrganizationMember(ctx, signet.AddOrganizationMemberInput{
+    OrgID: created.Organization.ID, UserID: memberID, Role: "member",
+    ActorID: userID, SessionToken: sessionToken,
+})
+members, _ := auth.ListOrganizationMembers(ctx, created.Organization.ID, userID, sessionToken)
+// ListOrganizationMembersResult carries []*MemberInfo (User ID + role).
+
+err = auth.SetOrganizationMemberRole(ctx, created.Organization.ID, memberID, "admin", userID, sessionToken)
+err = auth.RemoveOrganizationMember(ctx, created.Organization.ID, memberID, userID, sessionToken)
+```
+
+Creation requires `PermissionOrgsCreate`; member changes require `PermissionOrgsMemberAdd`,
+`PermissionOrgsMemberRole` and `PermissionOrgsMemberRemove`. Organization-scoped checks re-read
+membership from `OrganizationStore` and, when configured, call `AuthorizeIn.AuthorizeIn` with the
+organization ID. Plain `Authorize` is used only when `AuthorizeIn` is not configured.
+
+## Active organization
+
+```go
+err := auth.SetActiveOrganization(ctx, signet.SetActiveOrganizationInput{
+    OrgID: created.Organization.ID, UserID: userID, SessionToken: sessionToken,
+})
+active := auth.ActiveOrganizationFromRequest(r) // *ActiveOrganization
+auth.ClearActiveOrganization(w)                  // expires the cookie
+```
+
+`SetActiveOrganization` verifies membership in the store before the cookie is written. The HTTP
+endpoints are `POST /set-active-organization`, `GET /active-organization` (anonymous, returns
+`{"id":"..."}`) and `POST /clear-active-organization`. A tampered or stale cookie is treated as
+absent and never grants membership.
+
+## HTTP endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/organizations` | List the caller's Organizations |
+| `POST` | `/organizations` | Create an Organization |
+| `GET` | `/organization-members?organization_id=…` | List Members |
+| `POST` | `/organization-members/add` | Add a Member |
+| `POST` | `/organization-members/remove` | Remove a Member |
+| `POST` | `/organization-members/role` | Change a Member's role |
+| `POST` | `/set-active-organization` | Select an Active organization |
+| `GET` | `/active-organization` | Read the Active organization |
+| `POST` | `/clear-active-organization` | Clear the Active organization |
+
+All endpoints derive the actor from the session cookie; an impersonation cookie, when present,
+supplies the administrator ID. See [Authorization](/docs/authorization) for the permission model.
+
+ListOrganizationMembersInput selects an Organization and the requesting User.

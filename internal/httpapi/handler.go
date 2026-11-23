@@ -40,6 +40,29 @@ type API interface {
 	RevokeAPIKey(context.Context, core.RevokeAPIKeyInput) error
 	APIKeyProtectedEndpoints() []string
 	SetPrincipal(*http.Request, *core.Principal) *http.Request
+	SetActiveOrganization(context.Context, core.SetActiveOrganizationInput) error
+	SetActiveOrganizationCookie(http.ResponseWriter, string)
+	ActiveOrganizationFromRequest(*http.Request) *core.ActiveOrganization
+	ClearActiveOrganizationCookie(http.ResponseWriter)
+	CreateOrganization(context.Context, core.CreateOrganizationInput) (*core.CreateOrganizationResult, error)
+	ListOrganizations(context.Context, core.ListOrganizationsInput) (*core.ListOrganizationsResult, error)
+	AddOrganizationMember(context.Context, core.AddOrganizationMemberInput) error
+	ListOrganizationMembers(context.Context, string, string, string) (*core.ListOrganizationMembersResult, error)
+	RemoveOrganizationMember(context.Context, string, string, string, string) error
+	SetOrganizationMemberRole(context.Context, string, string, string, string, string) error
+	AdminListUsers(context.Context, core.AdminListUsersInput) (*core.AdminListUsersResult, error)
+	AdminListUserSessions(context.Context, string, string, string) (*core.ListSessionsResult, error)
+	AdminRevokeUserSession(context.Context, string, string, string) error
+	BanUser(context.Context, core.BanUserInput) error
+	UnbanUser(context.Context, core.UnbanUserInput) error
+	AdminSetUserRole(context.Context, core.AdminSetUserRoleInput) error
+	ImpersonateUser(context.Context, core.ImpersonateUserInput) (*core.ImpersonationResult, error)
+	StopImpersonating(context.Context, core.StopImpersonatingInput) (string, error)
+	SetImpersonationCookie(http.ResponseWriter, string, string)
+	ClearImpersonationCookie(http.ResponseWriter)
+	ImpersonationFromRequest(*http.Request) (string, string)
+	IsImpersonating(*http.Request) bool
+	AdminActor(*http.Request, string) string
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -94,6 +117,22 @@ var Endpoints = []Endpoint{
 	{Name: "disable-two-factor"},
 	{Name: "regenerate-backup-codes"},
 	{Name: "last-sign-in-method", Anonymous: true},
+	{Name: "set-active-organization"},
+	{Name: "active-organization", Anonymous: true},
+	{Name: "organizations"},
+	{Name: "organization-members"},
+	{Name: "organization-members/add"},
+	{Name: "organization-members/remove"},
+	{Name: "organization-members/role"},
+	{Name: "clear-active-organization"},
+	{Name: "admin-users"},
+	{Name: "admin-users/role"},
+	{Name: "admin-users/ban"},
+	{Name: "admin-users/unban"},
+	{Name: "admin-user-sessions"},
+	{Name: "admin-user-sessions/revoke"},
+	{Name: "impersonate"},
+	{Name: "stop-impersonating"},
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -155,6 +194,38 @@ func (h *Handler) Handler() http.Handler {
 			h.handleRegenerateBackupCodes(w, r)
 		case "last-sign-in-method":
 			h.handleLastSignInMethod(w, r)
+		case "organizations":
+			h.handleOrganizations(w, r)
+		case "organization-members":
+			h.handleOrganizationMembers(w, r)
+		case "organization-members/add":
+			h.handleOrganizationMemberMutation(w, r, "add")
+		case "organization-members/remove":
+			h.handleOrganizationMemberMutation(w, r, "remove")
+		case "organization-members/role":
+			h.handleOrganizationMemberMutation(w, r, "role")
+		case "clear-active-organization":
+			h.handleClearActiveOrganization(w, r)
+		case "admin-users":
+			h.handleAdminUsers(w, r)
+		case "admin-users/role":
+			h.handleAdminUserRole(w, r)
+		case "admin-users/ban":
+			h.handleAdminUserBan(w, r, true)
+		case "admin-users/unban":
+			h.handleAdminUserBan(w, r, false)
+		case "admin-user-sessions":
+			h.handleAdminUserSessions(w, r)
+		case "admin-user-sessions/revoke":
+			h.handleAdminUserSessionRevoke(w, r)
+		case "impersonate":
+			h.handleImpersonate(w, r)
+		case "stop-impersonating":
+			h.handleStopImpersonating(w, r)
+		case "set-active-organization":
+			h.handleSetActiveOrganization(w, r)
+		case "active-organization":
+			h.handleActiveOrganization(w, r)
 		case "accounts":
 			h.handleAccounts(w, r)
 		case "unlink-account":
@@ -565,6 +636,328 @@ func (h *Handler) handleLastSignInMethod(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, map[string]any{"method": h.api.LastSignInMethod(r)})
 }
 
+func (h *Handler) adminIdentity(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return "", "", false
+	}
+	return h.api.AdminActor(r, user.ID), h.api.SessionTokenFromRequest(r), true
+}
+
+func (h *Handler) handleOrganizations(w http.ResponseWriter, r *http.Request) {
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		result, err := h.api.ListOrganizations(r.Context(), core.ListOrganizationsInput{UserID: actor, SessionToken: sessionToken})
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	case http.MethodPost:
+		var in core.CreateOrganizationInput
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+			return
+		}
+		in.OwnerID, in.SessionToken = actor, sessionToken
+		result, err := h.api.CreateOrganization(r.Context(), in)
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, result)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Handler) handleOrganizationMembers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	orgID := r.URL.Query().Get("organization_id")
+	result, err := h.api.ListOrganizationMembers(r.Context(), orgID, actor, sessionToken)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+type organizationMemberInput struct {
+	OrgID  string `json:"organization_id"`
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+}
+
+func (h *Handler) handleOrganizationMemberMutation(w http.ResponseWriter, r *http.Request, action string) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	var in organizationMemberInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	var err error
+	switch action {
+	case "add":
+		err = h.api.AddOrganizationMember(r.Context(), core.AddOrganizationMemberInput{
+			OrgID: in.OrgID, UserID: in.UserID, Role: in.Role, ActorID: actor, SessionToken: sessionToken,
+		})
+	case "remove":
+		err = h.api.RemoveOrganizationMember(r.Context(), in.OrgID, in.UserID, actor, sessionToken)
+	case "role":
+		err = h.api.SetOrganizationMemberRole(r.Context(), in.OrgID, in.UserID, in.Role, actor, sessionToken)
+	}
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleClearActiveOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if _, ok := h.api.Authenticate(w, r, true); !ok {
+		return
+	}
+	h.api.ClearActiveOrganizationCookie(w)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	result, err := h.api.AdminListUsers(r.Context(), core.AdminListUsersInput{ActorID: actor, SessionToken: sessionToken})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+type adminRoleInput struct {
+	UserID string   `json:"user_id"`
+	Roles  []string `json:"roles"`
+}
+
+func (h *Handler) handleAdminUserRole(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	var in adminRoleInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	if err := h.api.AdminSetUserRole(r.Context(), core.AdminSetUserRoleInput{
+		ActorID: actor, SessionToken: sessionToken, UserID: in.UserID, Roles: in.Roles,
+	}); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+type adminUserInput struct {
+	UserID string `json:"user_id"`
+	Reason string `json:"reason"`
+}
+
+func (h *Handler) handleAdminUserBan(w http.ResponseWriter, r *http.Request, ban bool) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	var in adminUserInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	if ban {
+		err := h.api.BanUser(r.Context(), core.BanUserInput{
+			ActorID: actor, SessionToken: sessionToken, UserID: in.UserID, Reason: in.Reason,
+		})
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+	} else {
+		err := h.api.UnbanUser(r.Context(), core.UnbanUserInput{
+			ActorID: actor, SessionToken: sessionToken, UserID: in.UserID,
+		})
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleAdminUserSessions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	result, err := h.api.AdminListUserSessions(r.Context(), actor, r.URL.Query().Get("user_id"), sessionToken)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleAdminUserSessionRevoke(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		SessionID string `json:"session_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	if err := h.api.AdminRevokeUserSession(r.Context(), actor, in.SessionID, sessionToken); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+type impersonateInput struct {
+	UserID string `json:"user_id"`
+}
+
+func (h *Handler) handleImpersonate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, sessionToken, ok := h.adminIdentity(w, r)
+	if !ok {
+		return
+	}
+	var in impersonateInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	result, err := h.api.ImpersonateUser(r.Context(), core.ImpersonateUserInput{
+		ActorID: actor, SessionToken: sessionToken, UserID: in.UserID,
+	})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	h.api.SetImpersonationCookie(w, actor, sessionToken)
+	if _, err := h.api.SetSessionCookies(w, result.Token); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleStopImpersonating(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var in core.StopImpersonatingInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.AdminID, in.OriginalToken = h.api.ImpersonationFromRequest(r)
+	original, err := h.api.StopImpersonating(r.Context(), in)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	h.api.ClearImpersonationCookie(w)
+	if original != "" {
+		if _, err := h.api.SetSessionCookies(w, original); err != nil {
+			writeAuthError(w, err)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleSetActiveOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.SetActiveOrganizationInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	if err := h.api.SetActiveOrganization(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	h.api.SetActiveOrganizationCookie(w, in.OrgID)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleActiveOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, http.StatusOK, h.api.ActiveOrganizationFromRequest(r))
+}
+
 func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -805,6 +1198,10 @@ func (h *Handler) handleRequestAccountDeletion(w http.ResponseWriter, r *http.Re
 }
 
 func (h *Handler) handleConfirmAccountDeletion(w http.ResponseWriter, r *http.Request) {
+	if h.api.IsImpersonating(r) {
+		writeError(w, http.StatusForbidden, "forbidden", "account deletion is disabled while impersonating")
+		return
+	}
 	var in core.ConfirmDeleteUserInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")

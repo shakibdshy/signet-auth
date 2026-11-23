@@ -104,6 +104,58 @@ func ContractFor() Contract {
 			{Name: "last-sign-in-method", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("method")}}, Status: http.StatusOK,
 			}}},
+			{Name: "organizations", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "ListOrganizationsResult"}, Status: http.StatusOK,
+			}, {
+				Verb: "POST", Request: reflect.TypeOf(core.CreateOrganizationInput{}),
+				Response: ResponseSpec{Ref: "CreateOrganizationResult"}, Status: http.StatusCreated,
+			}}},
+			{Name: "organization-members", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "ListOrganizationMembersResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "organization-members/add", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.AddOrganizationMemberInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "organization-members/remove", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.AddOrganizationMemberInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "organization-members/role", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.AddOrganizationMemberInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "clear-active-organization", Methods: []Method{{
+				Verb: "POST", Status: http.StatusOK,
+			}}},
+			{Name: "admin-users", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "AdminListUsersResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "admin-users/role", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.AdminSetUserRoleInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "admin-users/ban", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.BanUserInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "admin-users/unban", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.UnbanUserInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "admin-user-sessions", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "ListSessionsResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "admin-user-sessions/revoke", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.RevokeSessionInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "impersonate", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.ImpersonateUserInput{}),
+				Response: ResponseSpec{Ref: "ImpersonationResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "stop-impersonating", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.StopImpersonatingInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "set-active-organization", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SetActiveOrganizationInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "active-organization", Anonymous: true, Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("id")}}, Status: http.StatusOK,
+			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
 					typeField("accounts", []core.AccountInfo{}),

@@ -198,6 +198,69 @@ type ListAPIKeysResult = core.ListAPIKeysResult
 // RevokeAPIKeyInput identifies a key to revoke.
 type RevokeAPIKeyInput = core.RevokeAPIKeyInput
 
+// Organization is a group of Users sharing membership and roles.
+type Organization = core.Organization
+
+// OrganizationStore persists Organizations and Memberships.
+type OrganizationStore = core.OrganizationStore
+
+// CreateOrganizationInput describes a new Organization.
+type CreateOrganizationInput = core.CreateOrganizationInput
+
+// CreateOrganizationResult carries the created Organization.
+type CreateOrganizationResult = core.CreateOrganizationResult
+
+// ListOrganizationsInput selects a User's Organizations.
+type ListOrganizationsInput = core.ListOrganizationsInput
+
+// ListOrganizationsResult contains a User's Organizations.
+type ListOrganizationsResult = core.ListOrganizationsResult
+
+// AddOrganizationMemberInput adds a Member to an Organization.
+type AddOrganizationMemberInput = core.AddOrganizationMemberInput
+
+// ListOrganizationMembersInput selects an Organization's Members.
+type ListOrganizationMembersInput = core.ListOrganizationMembersInput
+
+// MemberInfo is a safe representation of a Membership.
+type MemberInfo = core.MemberInfo
+
+// ListOrganizationMembersResult contains an Organization's Members.
+type ListOrganizationMembersResult = core.ListOrganizationMembersResult
+
+// SetActiveOrganizationInput selects an Active organization.
+type SetActiveOrganizationInput = core.SetActiveOrganizationInput
+
+// ActiveOrganization is the currently selected Organization.
+type ActiveOrganization = core.ActiveOrganization
+
+// UserInfo is a safe representation of a User.
+type UserInfo = core.UserInfo
+
+// AdminListUsersInput selects the User list for an administrator.
+type AdminListUsersInput = core.AdminListUsersInput
+
+// AdminListUsersResult contains safe User fields.
+type AdminListUsersResult = core.AdminListUsersResult
+
+// BanUserInput describes an administrative ban.
+type BanUserInput = core.BanUserInput
+
+// UnbanUserInput identifies a User to unban.
+type UnbanUserInput = core.UnbanUserInput
+
+// AdminSetUserRoleInput assigns global roles to a User.
+type AdminSetUserRoleInput = core.AdminSetUserRoleInput
+
+// ImpersonateUserInput starts an impersonation Session.
+type ImpersonateUserInput = core.ImpersonateUserInput
+
+// ImpersonationResult carries the temporary credentials.
+type ImpersonationResult = core.ImpersonationResult
+
+// StopImpersonatingInput identifies an impersonation to stop.
+type StopImpersonatingInput = core.StopImpersonatingInput
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

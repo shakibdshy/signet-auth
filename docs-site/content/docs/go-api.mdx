@@ -87,3 +87,54 @@ directly with the `context.Context` you supply. The HTTP endpoints are a separat
 over those services. Use whichever fits your application; both enforce the same security
 rules and produce the same effects. See [HTTP API](/docs/http-api) and the
 [frontend client](/docs/frontend-client) for the other surfaces.
+
+## Phase 5 methods
+
+Authorization, API keys, organizations and admin management are opt-in. All state lives behind
+optional application-supplied adapters described in [Authorization](/docs/authorization).
+
+| Method | Purpose |
+| --- | --- |
+| `Authorize(ctx, userID, resource, action) bool` | Read-only permission check through the `Authorizer`. |
+| `AuthorizeIn(ctx, userID, orgID, resource, action) bool` | Organization-scoped check through `AuthorizeIn`. |
+| `SetRoles(ctx, userID, roles) error` | Write global roles through the `RoleWriter`. |
+| `NewMemoryAuthorizer(statements, roles) Authorizer` | Build an in-memory `Authorizer` from role statements and a callback. |
+| `CreateAPIKey(ctx, CreateAPIKeyInput) (*CreateAPIKeyResult, error)` | Issue a digest-only key; the raw value is returned once. |
+| `VerifyAPIKey(ctx, raw) (*Principal, error)` | Atomically consume one use and return the key's owner and roles. |
+| `ListAPIKeys(ctx, ListAPIKeysInput) (*ListAPIKeysResult, error)` | List a User's keys. |
+| `RevokeAPIKey(ctx, RevokeAPIKeyInput) error` | Revoke a User's key. |
+| `PrincipalFromContext(ctx) (*Principal, bool)` | Read the `Principal` attached by key middleware. |
+| `CreateOrganization(ctx, CreateOrganizationInput) (*CreateOrganizationResult, error)` | Create an Organization. |
+| `ListOrganizations(ctx, ListOrganizationsInput) (*ListOrganizationsResult, error)` | List a User's Organizations. |
+| `AddOrganizationMember(ctx, AddOrganizationMemberInput) error` | Add a Member with a role. |
+| `ListOrganizationMembers(ctx, orgID, userID, sessionToken) (*ListOrganizationMembersResult, error)` | List Members. |
+| `RemoveOrganizationMember(ctx, orgID, userID, actorID, sessionToken) error` | Remove a Member. |
+| `SetOrganizationMemberRole(ctx, orgID, userID, role, actorID, sessionToken) error` | Change a Member's role. |
+| `SetActiveOrganization(ctx, SetActiveOrganizationInput) error` | Verify membership before selecting an Active organization. |
+| `ActiveOrganizationFromRequest(r) *ActiveOrganization` | Read the signed Active organization cookie. |
+| `ClearActiveOrganization(w)` | Expire the Active organization cookie. |
+| `AdminListUsers(ctx, AdminListUsersInput) (*AdminListUsersResult, error)` | List Users for an administrator. |
+| `AdminSetUserRole(ctx, AdminSetUserRoleInput) error` | Write global roles for a User. |
+| `BanUser(ctx, BanUserInput) error` | Disable a User. |
+| `UnbanUser(ctx, UnbanUserInput) error` | Re-enable a User. |
+| `AdminListUserSessions(ctx, actorID, userID, sessionToken) (*ListSessionsResult, error)` | List a User's Sessions. |
+| `AdminRevokeUserSession(ctx, actorID, sessionID, sessionToken) error` | Revoke one of a User's Sessions. |
+| `ImpersonateUser(ctx, ImpersonateUserInput) (*ImpersonationResult, error)` | Start a Store-backed impersonation Session. |
+| `StopImpersonating(ctx, StopImpersonatingInput) (string, error)` | Revoke the temp Session and return the original token. |
+| `ImpersonationFromRequest(r) (string, string)` | Read the admin ID and original token from the signed cookie. |
+| `SetImpersonationCookie(w, adminID, originalToken)` | Write the signed impersonation cookie. |
+| `ClearImpersonationCookie(w)` | Expire the impersonation cookie. |
+| `IsImpersonating(r) bool` | Report whether a request carries an impersonation cookie. |
+| `AdminActorFromRequest(r, fallback) string` | Resolve the administrator ID from the cookie. |
+
+## Phase 5 types
+
+`Permission`, `RoleStatements`, `Authorizer`, `AuthorizeIn`, `RoleWriter`, `APIKey`,
+`APIKeyStore`, `Principal`, `CreateAPIKeyInput`, `CreateAPIKeyResult`, `ListAPIKeysInput`,
+`ListAPIKeysResult`, `RevokeAPIKeyInput`, `Organization`, `OrganizationStore`,
+`CreateOrganizationInput`, `CreateOrganizationResult`, `ListOrganizationsInput`,
+`ListOrganizationsResult`, `AddOrganizationMemberInput`, `ListOrganizationMembersInput`,
+`ListOrganizationMembersResult`, `MemberInfo`, `ActiveOrganization`,
+`SetActiveOrganizationInput`, `AdminUserStore`, `UserInfo`, `AdminListUsersInput`,
+`AdminListUsersResult`, `AdminSetUserRoleInput`, `BanUserInput`, `UnbanUserInput`,
+`ImpersonateUserInput`, `ImpersonationResult` and `StopImpersonatingInput`.

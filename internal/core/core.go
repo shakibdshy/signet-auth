@@ -307,6 +307,143 @@ type RevokeAPIKeyInput struct {
 	ID           string `json:"id"`
 }
 
+// Organization is a group of Users sharing membership and roles.
+type Organization struct {
+	ID        string
+	OwnerID   string
+	Name      string
+	CreatedAt time.Time
+}
+
+// OrganizationStore persists Organizations and Memberships. It is optional.
+type OrganizationStore interface {
+	Create(context.Context, *Organization) error
+	List(context.Context, string) ([]*Organization, error)
+	AddMember(ctx context.Context, orgID, userID, role string) error
+	RemoveMember(ctx context.Context, orgID, userID string) error
+	MemberRole(ctx context.Context, orgID, userID string) (string, error)
+	SetMemberRole(ctx context.Context, orgID, userID, role string) error
+	Members(context.Context, string) ([]*MemberInfo, error)
+}
+
+// AdminUserStore lists Users for administrative management. It is optional.
+type AdminUserStore interface {
+	ListUsersForAdmin(context.Context) ([]*User, error)
+}
+
+// CreateOrganizationInput describes a new Organization.
+type CreateOrganizationInput struct {
+	OwnerID      string `json:"owner_id"`
+	SessionToken string `json:"-"`
+	Name         string `json:"name"`
+}
+
+// CreateOrganizationResult carries the created Organization.
+type CreateOrganizationResult struct{ Organization *Organization }
+
+// ListOrganizationsInput selects a User's Organizations.
+type ListOrganizationsInput struct {
+	UserID       string `json:"user_id"`
+	SessionToken string `json:"-"`
+}
+
+// ListOrganizationsResult contains a User's Organizations.
+type ListOrganizationsResult struct{ Organizations []*Organization }
+
+// AddOrganizationMemberInput adds a Member to an Organization.
+type AddOrganizationMemberInput struct {
+	OrgID        string `json:"org_id"`
+	UserID       string `json:"user_id"`
+	Role         string `json:"role"`
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
+}
+
+// ListOrganizationMembersInput selects an Organization's Members.
+type ListOrganizationMembersInput struct {
+	OrgID  string
+	UserID string
+}
+
+// MemberInfo is a safe representation of a Membership.
+type MemberInfo struct {
+	UserID string
+	Role   string
+}
+
+// ListOrganizationMembersResult contains an Organization's Members.
+type ListOrganizationMembersResult struct{ Members []*MemberInfo }
+
+// SetActiveOrganizationInput selects an Active organization.
+type SetActiveOrganizationInput struct {
+	OrgID        string `json:"org_id"`
+	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
+}
+
+// ActiveOrganization is the currently selected Organization.
+type ActiveOrganization struct{ ID string }
+
+// AdminListUsersInput selects the User list for an administrator.
+type AdminListUsersInput struct {
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
+}
+
+// AdminListUsersResult contains safe User fields.
+type AdminListUsersResult struct{ Users []*UserInfo }
+
+// UserInfo is a safe representation of a User.
+type UserInfo struct {
+	ID       string
+	Email    string
+	Name     string
+	Disabled bool
+}
+
+// BanUserInput describes an administrative ban.
+type BanUserInput struct {
+	ActorID      string
+	SessionToken string
+	UserID       string
+	Reason       string
+}
+
+// UnbanUserInput identifies a User to unban.
+type UnbanUserInput struct {
+	ActorID      string
+	SessionToken string
+	UserID       string
+}
+
+// AdminSetUserRoleInput assigns global roles to a User.
+type AdminSetUserRoleInput struct {
+	ActorID      string
+	SessionToken string
+	UserID       string
+	Roles        []string
+}
+
+// ImpersonateUserInput starts an impersonation Session.
+type ImpersonateUserInput struct {
+	ActorID      string
+	SessionToken string
+	UserID       string
+}
+
+// ImpersonationResult carries the temporary credentials.
+type ImpersonationResult struct {
+	Token   string
+	AdminID string
+}
+
+// StopImpersonatingInput identifies an impersonation to stop.
+type StopImpersonatingInput struct {
+	Token         string `json:"token"`
+	AdminID       string `json:"-"`
+	OriginalToken string `json:"-"`
+}
+
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {
 	TTL         time.Duration
@@ -520,6 +657,8 @@ type Config struct {
 	RoleWriter               RoleWriter
 	APIKeyStore              APIKeyStore
 	APIKeyProtectedEndpoints []string
+	OrganizationStore        OrganizationStore
+	AdminUserStore           AdminUserStore
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
