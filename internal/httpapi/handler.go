@@ -1350,7 +1350,7 @@ func (h *Handler) handleSSOConnections(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleSSODelete(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}

@@ -292,3 +292,27 @@ func TestSSOStartHidesUnverifiedDomain(t *testing.T) {
 		t.Fatalf("unverified start error = %v, want generic not-found", err)
 	}
 }
+
+func TestSSOHTTPDeleteConnection(t *testing.T) {
+	provider := &fakeSSOProvider{}
+	client, token, orgID := ssoClient(t, provider, verifyTrue)
+	ctx := context.Background()
+	created, err := client.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
+		OrganizationID: orgID, Issuer: "https://idp.example.com",
+		Domains: []string{"acme.com"}, SessionToken: token,
+	})
+	if err != nil {
+		t.Fatalf("create connection: %v", err)
+	}
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
+	req := httptest.NewRequest(http.MethodDelete, "/sso/connections",
+		strings.NewReader(`{"id":"`+created.ID+`"}`))
+	req.AddCookie(&http.Cookie{Name: "__Host-signet_session", Value: token, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	rr := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("delete status = %d body = %s", rr.Code, rr.Body.String())
+	}
+}
