@@ -416,3 +416,20 @@ const deviceTokens = await auth.oauthToken({
   code: device.device_code,
 });
 ```
+
+
+## Organization SSO
+
+```ts
+const start = await auth.startSSOSignIn({ email: 'member@acme.com' });
+window.location.assign(start.url);
+// On your callback page, read state and code from the URL:
+const result = await auth.completeSSOSignIn(state, code);
+// result.session_token and result.organization_id are set.
+
+const connections = await auth.listSSOConnections();
+await auth.createSSOConnection({
+  organization_id: orgId, issuer, client_id, client_secret, domains: ['acme.com'],
+});
+await auth.deleteSSOConnection(connections[0].id);
+```

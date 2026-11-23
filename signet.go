@@ -359,6 +359,36 @@ type DeviceAuthorizeResult = core.DeviceAuthorizeResult
 // DeviceApproveInput approves a User code.
 type DeviceApproveInput = core.DeviceApproveInput
 
+// SSOConfig enables per-organization OIDC SSO.
+type SSOConfig = core.SSOConfig
+
+// SSOConnection is an Organization's OIDC provider configuration.
+type SSOConnection = core.SSOConnection
+
+// SSOConnectionStore persists SSO connections.
+type SSOConnectionStore = core.SSOConnectionStore
+
+// SSOConnectionInfo is the safe public view of an SSO connection.
+type SSOConnectionInfo = core.SSOConnectionInfo
+
+// SSOStartInput starts an SSO sign-in.
+type SSOStartInput = core.SSOStartInput
+
+// SSOStartResult carries the provider URL and state Token.
+type SSOStartResult = core.SSOStartResult
+
+// SSOCallbackInput completes an SSO sign-in.
+type SSOCallbackInput = core.SSOCallbackInput
+
+// SSOCallbackResult carries the Session and Organization.
+type SSOCallbackResult = core.SSOCallbackResult
+
+// CreateSSOConnectionInput describes a new SSO connection.
+type CreateSSOConnectionInput = core.CreateSSOConnectionInput
+
+// DeleteSSOConnectionInput identifies a connection to delete.
+type DeleteSSOConnectionInput = core.DeleteSSOConnectionInput
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

@@ -23,6 +23,7 @@
     "authorization",
     "api-keys",
     "organizations",
+    "organization-sso",
     "admin-management",
     "passkeys",
     "verification-and-reset",

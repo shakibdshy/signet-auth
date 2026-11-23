@@ -122,3 +122,14 @@ var (
 	// ErrOAuthSlowDown reports that a device is polling too quickly.
 	ErrOAuthSlowDown = core.ErrOAuthSlowDown
 )
+
+var (
+	// ErrSSOConnectionNotFound reports an unknown SSO connection.
+	ErrSSOConnectionNotFound = core.ErrSSOConnectionNotFound
+	// ErrSSODomainNotVerified reports an unverified SSO domain.
+	ErrSSODomainNotVerified = core.ErrSSODomainNotVerified
+	// ErrSSOInvalidAssertion reports a rejected SSO assertion.
+	ErrSSOInvalidAssertion = core.ErrSSOInvalidAssertion
+	// ErrInvalidSSOConfig reports a misconfigured SSO feature.
+	ErrInvalidSSOConfig = core.ErrInvalidSSOConfig
+)

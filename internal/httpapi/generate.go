@@ -35,6 +35,9 @@ var namedTypes = map[string]reflect.Type{
 	"OAuthAuthorizeResult":          reflect.TypeOf(core.OAuthAuthorizeResult{}),
 	"OAuthTokenResult":              reflect.TypeOf(core.OAuthTokenResult{}),
 	"DeviceAuthorizeResult":         reflect.TypeOf(core.DeviceAuthorizeResult{}),
+	"SSOStartResult":                reflect.TypeOf(core.SSOStartResult{}),
+	"SSOCallbackResult":             reflect.TypeOf(core.SSOCallbackResult{}),
+	"SSOConnectionInfo":             reflect.TypeOf(core.SSOConnectionInfo{}),
 }
 
 type oasDocument struct {
