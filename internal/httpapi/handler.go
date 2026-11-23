@@ -1333,7 +1333,11 @@ func (h *Handler) handleRequestAccountDeletion(w http.ResponseWriter, r *http.Re
 	if !ok {
 		return
 	}
-	in := core.RequestDeleteUserInput{UserID: user.ID, RateLimitKey: h.clientIP(r)}
+	in := core.RequestDeleteUserInput{
+		UserID:       user.ID,
+		SessionToken: h.api.SessionTokenFromRequest(r),
+		RateLimitKey: h.clientIP(r),
+	}
 	if err := h.api.RequestUserDeletion(r.Context(), in); err != nil {
 		writeAuthError(w, err)
 		return

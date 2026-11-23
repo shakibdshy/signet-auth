@@ -247,13 +247,11 @@ type PasskeyProtocol interface {
 
 // PasskeysConfig configures passkeys as a first factor. A nil config disables them.
 type PasskeysConfig struct {
-	RPID             string
-	RPDisplayName    string
-	RPOrigins        []string
-	Store            PasskeyStore
-	Protocol         PasskeyProtocol
-	Attestation      bool
-	UserVerification bool
+	RPID          string
+	RPDisplayName string
+	RPOrigins     []string
+	Store         PasskeyStore
+	Protocol      PasskeyProtocol
 }
 
 // PasskeyRegistrationInput starts an enrollment ceremony.
