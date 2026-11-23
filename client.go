@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/authorization"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/csrf"
 	"github.com/shakibdshy/signet/internal/httpapi"
@@ -37,6 +38,7 @@ func DocsHandler() http.Handler {
 // is intended to be created once at application startup.
 type Client struct {
 	cfg                   Config
+	authorization         *authorization.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
@@ -167,9 +169,10 @@ func New(cfg Config) (*Client, error) {
 		csrf:          guard,
 		cookies: httpapi.NewCookies(guard, sessionCookieName, cfg.Cookie.Path, cfg.Cookie.Domain,
 			cfg.Cookie.Secure, cfg.Cookie.HttpOnly, cfg.Cookie.SameSite, cfg.JWTOnly),
-		tokens:     token.New(cfg.Store, cfg.Clock),
-		sessions:   session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
-		lastMethod: lastMethodManager,
+		tokens:        token.New(cfg.Store, cfg.Clock),
+		sessions:      session.New(cfg.Store, cfg.Clock, cfg.Session, cfg.SessionCache, cfg.Logger),
+		authorization: authorization.NewService(&cfg, cfg.Clock, cfg.Logger),
+		lastMethod:    lastMethodManager,
 		lastMethodBeforeStore: func() func(context.Context, string) bool {
 			if cfg.LastSignInMethod == nil {
 				return nil
@@ -514,103 +517,40 @@ func (c *Client) JWKSHandler() http.Handler {
 
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
-	if c.cfg.Authorizer == nil {
-		return false
-	}
-	return c.cfg.Authorizer.Authorize(ctx, userID, resource, action)
+	return c.authorization.Authorize(ctx, userID, resource, action)
 }
 
-func (c *Client) authorizePermission(ctx context.Context, userID string, permission Permission) bool {
-	resource, action, ok := strings.Cut(string(permission), ":")
-	if !ok {
+// AuthorizeIn reports whether a User holds a permission within an Organization.
+func (c *Client) AuthorizeIn(ctx context.Context, userID, orgID, resource, action string) bool {
+	if c.cfg.AuthorizeIn == nil {
 		return false
 	}
-	if c.Authorize(ctx, userID, resource, action) {
-		return true
-	}
-	if c.cfg.AuditSink != nil {
-		_ = c.cfg.AuditSink.Record(ctx, AuditEvent{
-			Name: "authorization_denied", UserID: userID, Outcome: "denied",
-			Metadata: map[string]string{"permission": string(permission)},
-		})
-	}
-	return false
+	return c.cfg.AuthorizeIn.AuthorizeIn(ctx, userID, orgID, resource, action)
 }
 
 // CreateAPIKey issues a digest-only API key for a non-human client.
 func (c *Client) CreateAPIKey(ctx context.Context, in CreateAPIKeyInput) (*CreateAPIKeyResult, error) {
-	if c.cfg.APIKeyStore == nil {
-		return nil, ErrForbidden
-	}
-	owner := in.OwnerUserID
-	if owner == "" {
-		owner = SystemOwnerID
-	}
-	if !c.authorizePermission(ctx, owner, PermissionAPIKeysCreate) {
-		return nil, ErrForbidden
-	}
-	raw := secret.NewToken()
-	key := &APIKey{
-		ID: secret.NewID(), OwnerUserID: owner, Name: in.Name,
-		Hash: secret.Digest(raw), Prefix: secret.Digest(raw)[:6], Roles: in.Roles,
-		Remaining: in.Remaining, ExpiresAt: in.ExpiresAt, CreatedAt: c.cfg.Clock.Now(),
-	}
-	if err := c.cfg.APIKeyStore.Create(ctx, key); err != nil {
-		return nil, err
-	}
-	return &CreateAPIKeyResult{Raw: raw, Key: key}, nil
+	return c.authorization.CreateAPIKey(ctx, in)
 }
 
 // VerifyAPIKey atomically consumes one use of an API key and returns its Principal.
 func (c *Client) VerifyAPIKey(ctx context.Context, raw string) (*Principal, error) {
-	if c.cfg.APIKeyStore == nil {
-		return nil, ErrForbidden
-	}
-	key, err := c.cfg.APIKeyStore.Consume(ctx, raw)
-	if err != nil {
-		return nil, ErrTokenInvalid
-	}
-	return &Principal{OwnerUserID: key.OwnerUserID, Roles: key.Roles}, nil
+	return c.authorization.VerifyAPIKey(ctx, raw)
 }
 
 // ListAPIKeys returns the API keys owned by a User.
 func (c *Client) ListAPIKeys(ctx context.Context, in ListAPIKeysInput) (*ListAPIKeysResult, error) {
-	if c.cfg.APIKeyStore == nil {
-		return nil, ErrForbidden
-	}
-	keys, err := c.cfg.APIKeyStore.List(ctx, in.OwnerUserID)
-	if err != nil {
-		return nil, err
-	}
-	return &ListAPIKeysResult{Keys: keys}, nil
+	return c.authorization.ListAPIKeys(ctx, in)
 }
 
 // RevokeAPIKey revokes one of a User's API keys.
 func (c *Client) RevokeAPIKey(ctx context.Context, in RevokeAPIKeyInput) error {
-	if c.cfg.APIKeyStore == nil {
-		return ErrForbidden
-	}
-	if !c.authorizePermission(ctx, in.OwnerUserID, PermissionAPIKeysRevoke) {
-		return ErrForbidden
-	}
-	keys, err := c.cfg.APIKeyStore.List(ctx, in.OwnerUserID)
-	if err != nil {
-		return err
-	}
-	for _, key := range keys {
-		if key.ID == in.ID {
-			return c.cfg.APIKeyStore.Revoke(ctx, in.ID)
-		}
-	}
-	return ErrForbidden
+	return c.authorization.RevokeAPIKey(ctx, in)
 }
 
 // SetRoles writes a User's global roles when a RoleWriter is configured.
 func (c *Client) SetRoles(ctx context.Context, userID string, roles []string) error {
-	if c.cfg.RoleWriter == nil {
-		return ErrForbidden
-	}
-	return c.cfg.RoleWriter.SetRoles(ctx, userID, roles)
+	return c.authorization.SetRoles(ctx, userID, roles)
 }
 
 // ListAccounts returns the safe fields of a User's Accounts.
@@ -763,12 +703,24 @@ func (a httpAdapter) Authenticate(w http.ResponseWriter, r *http.Request, requir
 func (a httpAdapter) CurrentSession(r *http.Request) (*Session, error) {
 	return a.currentSession(r)
 }
+func (a httpAdapter) VerifyAPIKey(ctx context.Context, raw string) (*Principal, error) {
+	return a.Client.VerifyAPIKey(ctx, raw)
+}
+func (a httpAdapter) APIKeyProtectedEndpoints() []string { return a.cfg.APIKeyProtectedEndpoints }
+func (a httpAdapter) SetPrincipal(r *http.Request, principal *Principal) *http.Request {
+	return r.WithContext(httpapi.WithPrincipal(r.Context(), principal))
+}
 func (a httpAdapter) SessionTokenFromRequest(r *http.Request) string {
 	cookie, err := r.Cookie(a.cookies.Name())
 	if err != nil {
 		return ""
 	}
 	return cookie.Value
+}
+
+// PrincipalFromContext returns the API-key Principal carried by a request context.
+func PrincipalFromContext(ctx context.Context) (*Principal, bool) {
+	return httpapi.PrincipalFromContext(ctx)
 }
 
 // UserFromContext returns the authenticated User carried by a request context.

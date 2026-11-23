@@ -23,3 +23,29 @@ err = auth.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{OwnerUserID: "user-1", ID:
 and `RevokeAPIKeyInput` cover management. `VerifyAPIKey` uses one atomic store operation combining
 lookup, expiry, remaining-check and decrement. A missing, expired or exhausted key returns
 `ErrTokenInvalid`. Issuance and revocation require the published permissions and are owner-scoped.
+
+## HTTP endpoints
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api-keys` | Session | Create a key for the signed-in User |
+| `GET` | `/api-keys` | Session | List the signed-in User's keys |
+| `POST` | `/verify-api-key` | `X-API-Key` header | Verify a key and return its `Principal` |
+
+Create and list derive the owner from the session cookie — a caller cannot act on another User's
+keys. Revoke is Go-only for now; use `Client.RevokeAPIKey` from your backend.
+
+## Per-route middleware
+
+`APIKeyProtectedEndpoints` is an opt-in list of endpoint names. On those routes the `X-API-Key`
+header is required and the Session cookie is ignored, so there is never a mixed principal. The
+verified `Principal` is attached to the request context and can be read server-side:
+
+```go
+cfg.APIKeyProtectedEndpoints = []string{"my-protected-endpoint"}
+// Inside your handler:
+principal, ok := signet.PrincipalFromContext(r.Context())
+```
+
+A missing or invalid key returns 401 before the endpoint runs. Endpoints not in the list keep their
+normal Session-based behaviour.

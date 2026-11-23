@@ -3,6 +3,8 @@ package tests
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -124,7 +126,7 @@ func TestAPIKeyOwnerScoping(t *testing.T) {
 	store := newFakeAPIKeyStore()
 	client := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}})
 	ctx := context.Background()
-	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1"})
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", Remaining: 5})
 	if err != nil {
 		t.Fatalf("CreateAPIKey: %v", err)
 	}
@@ -148,5 +150,65 @@ func TestAPIKeyRawNotStored(t *testing.T) {
 		if strings.Contains(record.Hash, created.Raw) {
 			t.Fatal("raw API key stored")
 		}
+	}
+}
+
+func TestAPIKeyHTTPEndpoints(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	authorizer := &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true, "api-keys:revoke": true}}
+	client := apiKeyClient(t, store, authorizer)
+	signUp, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	result, err := client.SignIn(context.Background(), signet.SignInInput{Email: "user@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	_ = signUp
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api-keys", strings.NewReader(`{"name":"ci"}`))
+	req.AddCookie(&http.Cookie{Name: "__Host-signet_session", Value: result.SessionToken, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	csrfToken, csrfCookie := issueCSRFToken(t, client)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated || !strings.Contains(rr.Body.String(), "raw") {
+		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestAPIKeyMiddleware(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	authorizer := &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.APIKeyStore = store
+	cfg.Authorizer = authorizer
+	cfg.APIKeyProtectedEndpoints = []string{"csrf-token"}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{OwnerUserID: "user-1", Remaining: 5})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	// Without a key the protected endpoint rejects.
+	rr := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/csrf-token", nil))
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("no-key status = %d", rr.Code)
+	}
+	// With a key it succeeds.
+	rr = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/csrf-token", nil)
+	req.Header.Set("X-API-Key", created.Raw)
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("with-key status = %d body = %s", rr.Code, rr.Body.String())
 	}
 }

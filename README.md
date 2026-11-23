@@ -162,7 +162,7 @@ no schema ownership.
 
 Sign-up writes the User and its credential Account in two store calls; if the
 second fails, Signet deletes the new User on a best-effort basis. There is no
-transaction across Store calls. Passkeys, phone OTP and organizations
+transaction across Store calls. Passkeys, phone OTP and SSO/SCIM
 are planned for later versions.
 
 ## Project layout

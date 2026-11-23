@@ -32,7 +32,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -42,7 +42,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -52,7 +52,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -62,7 +62,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -72,7 +72,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -82,7 +82,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -92,7 +92,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -102,7 +102,221 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-keys": {
+      "get": {
+        "operationId": "api-keys_get",
+        "summary": "GET /api-keys",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAPIKeysResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "api-keys_post",
+        "summary": "POST /api-keys",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAPIKeyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAPIKeyResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -148,7 +362,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -158,7 +372,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -168,7 +382,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -178,7 +392,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -188,7 +402,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -198,7 +412,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -208,7 +422,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -218,7 +432,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -264,7 +478,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -274,7 +488,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -284,7 +498,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -294,7 +508,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -304,7 +518,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -314,7 +528,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -324,7 +538,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -334,7 +548,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -375,7 +589,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -385,7 +599,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -395,7 +609,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -405,7 +619,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -415,7 +629,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -425,7 +639,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -435,7 +649,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -445,7 +659,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -481,7 +695,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -491,7 +705,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -501,7 +715,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -511,7 +725,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -521,7 +735,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -531,7 +745,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -541,7 +755,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -551,7 +765,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -592,7 +806,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -602,7 +816,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -612,7 +826,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -622,7 +836,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -632,7 +846,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -642,7 +856,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -652,7 +866,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -662,7 +876,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -729,7 +943,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -739,7 +953,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -749,7 +963,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -759,7 +973,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -769,7 +983,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -779,7 +993,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -789,7 +1003,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -799,7 +1013,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -835,7 +1049,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -845,7 +1059,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -855,7 +1069,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -865,7 +1079,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -875,7 +1089,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -885,7 +1099,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -895,7 +1109,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -905,7 +1119,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -944,7 +1158,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -954,7 +1168,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -964,7 +1178,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -974,7 +1188,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -984,7 +1198,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -994,7 +1208,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1004,7 +1218,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1014,7 +1228,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1052,7 +1266,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1062,7 +1276,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1072,7 +1286,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1082,7 +1296,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1092,7 +1306,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1102,7 +1316,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1112,7 +1326,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1122,7 +1336,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1181,7 +1395,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1191,7 +1405,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1201,7 +1415,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1211,7 +1425,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1221,7 +1435,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1231,7 +1445,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1241,7 +1455,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1251,7 +1465,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1287,7 +1501,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1297,7 +1511,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1307,7 +1521,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1317,7 +1531,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1327,7 +1541,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1337,7 +1551,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1347,7 +1561,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1357,7 +1571,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1398,7 +1612,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1408,7 +1622,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1418,7 +1632,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1428,7 +1642,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1438,7 +1652,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1448,7 +1662,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1458,7 +1672,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1468,7 +1682,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1499,7 +1713,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1509,7 +1723,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1519,7 +1733,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1529,7 +1743,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1539,7 +1753,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1549,7 +1763,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1559,7 +1773,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1569,7 +1783,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1600,7 +1814,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1610,7 +1824,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1620,7 +1834,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1630,7 +1844,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1640,7 +1854,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1650,7 +1864,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1660,7 +1874,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1670,7 +1884,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1711,7 +1925,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1721,7 +1935,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1731,7 +1945,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1741,7 +1955,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1751,7 +1965,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1761,7 +1975,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1771,7 +1985,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1781,7 +1995,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1822,7 +2036,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1832,7 +2046,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1842,7 +2056,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1852,7 +2066,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1862,7 +2076,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1872,7 +2086,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1882,7 +2096,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1892,7 +2106,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1928,7 +2142,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -1938,7 +2152,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -1948,7 +2162,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -1958,7 +2172,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1968,7 +2182,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -1978,7 +2192,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -1988,7 +2202,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1998,7 +2212,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2034,7 +2248,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2044,7 +2258,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2054,7 +2268,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2064,7 +2278,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2074,7 +2288,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2084,7 +2298,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2094,7 +2308,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2104,7 +2318,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2146,7 +2360,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2156,7 +2370,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2166,7 +2380,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2176,7 +2390,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2186,7 +2400,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2196,7 +2410,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2206,7 +2420,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2216,7 +2430,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2274,7 +2488,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2284,7 +2498,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2294,7 +2508,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2304,7 +2518,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2314,7 +2528,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2324,7 +2538,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2334,7 +2548,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2344,7 +2558,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2385,7 +2599,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2395,7 +2609,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2405,7 +2619,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2415,7 +2629,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2425,7 +2639,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2435,7 +2649,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2445,7 +2659,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2455,7 +2669,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2501,7 +2715,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2511,7 +2725,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2521,7 +2735,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2531,7 +2745,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2541,7 +2755,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2551,7 +2765,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2561,7 +2775,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2571,7 +2785,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2609,7 +2823,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2619,7 +2833,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2629,7 +2843,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2639,7 +2853,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2649,7 +2863,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2659,7 +2873,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2669,7 +2883,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2679,7 +2893,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2720,7 +2934,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2730,7 +2944,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2740,7 +2954,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2750,7 +2964,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2760,7 +2974,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2770,7 +2984,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2780,7 +2994,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2790,7 +3004,105 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify-api-key": {
+      "post": {
+        "operationId": "verify-api-key_post",
+        "summary": "POST /verify-api-key",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Principal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2831,7 +3143,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2841,7 +3153,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2851,7 +3163,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2861,7 +3173,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2871,7 +3183,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2881,7 +3193,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -2891,7 +3203,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -2901,7 +3213,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -2942,7 +3254,7 @@
             "description": "Success"
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2952,7 +3264,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -2962,7 +3274,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -2972,7 +3284,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2982,7 +3294,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -2992,7 +3304,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -3002,7 +3314,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -3012,7 +3324,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3070,7 +3382,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -3080,7 +3392,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3090,7 +3402,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3100,7 +3412,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3110,7 +3422,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -3120,7 +3432,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -3130,7 +3442,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -3140,7 +3452,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3190,7 +3502,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -3200,7 +3512,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3210,7 +3522,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3220,7 +3532,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3230,7 +3542,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -3240,7 +3552,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -3250,7 +3562,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -3260,7 +3572,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3310,7 +3622,7 @@
             }
           },
           "400": {
-            "description": "password_compromised",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -3320,7 +3632,7 @@
             }
           },
           "401": {
-            "description": "code_already_used",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3330,7 +3642,7 @@
             }
           },
           "403": {
-            "description": "forbidden",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
@@ -3340,7 +3652,7 @@
             }
           },
           "404": {
-            "description": "not_found",
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3350,7 +3662,7 @@
             }
           },
           "409": {
-            "description": "oauth_account_conflict",
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -3360,7 +3672,7 @@
             }
           },
           "429": {
-            "description": "rate_limited",
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
@@ -3370,7 +3682,7 @@
             }
           },
           "500": {
-            "description": "internal_error",
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -3380,7 +3692,7 @@
             }
           },
           "503": {
-            "description": "captcha_unavailable",
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -3395,6 +3707,59 @@
   },
   "components": {
     "schemas": {
+      "APIKey": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_user_id": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "remaining": {
+            "type": "integer"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "owner_user_id",
+          "name",
+          "hash",
+          "prefix",
+          "roles",
+          "remaining",
+          "expires_at",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "AccountInfo": {
         "properties": {
           "created_at": {
@@ -3509,6 +3874,53 @@
         ],
         "type": "object"
       },
+      "CreateAPIKeyInput": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_user_id": {
+            "type": "string"
+          },
+          "remaining": {
+            "type": "integer"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "owner_user_id",
+          "name",
+          "roles",
+          "remaining",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "CreateAPIKeyResult": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/APIKey",
+            "nullable": true
+          },
+          "raw": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "raw",
+          "key"
+        ],
+        "type": "object"
+      },
       "DisableTwoFactorInput": {
         "properties": {
           "password": {
@@ -3528,6 +3940,21 @@
         },
         "required": [
           "password"
+        ],
+        "type": "object"
+      },
+      "ListAPIKeysResult": {
+        "properties": {
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/APIKey",
+              "nullable": true
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "keys"
         ],
         "type": "object"
       },
@@ -3554,6 +3981,24 @@
         },
         "required": [
           "url"
+        ],
+        "type": "object"
+      },
+      "Principal": {
+        "properties": {
+          "owner_user_id": {
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "owner_user_id",
+          "roles"
         ],
         "type": "object"
       },

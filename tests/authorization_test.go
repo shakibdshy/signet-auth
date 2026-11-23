@@ -78,7 +78,7 @@ func TestPermissionConstants(t *testing.T) {
 
 func TestRoleWriterSetsRoles(t *testing.T) {
 	writer := &fakeRoleWriter{}
-	client := authorizationClient(t, &fakeAuthorizer{}, writer, nil)
+	client := authorizationClient(t, &fakeAuthorizer{allowed: map[string]bool{"users:set-role": true}}, writer, nil)
 	if err := client.SetRoles(context.Background(), "user-1", []string{"admin"}); err != nil {
 		t.Fatalf("SetRoles: %v", err)
 	}
@@ -87,15 +87,14 @@ func TestRoleWriterSetsRoles(t *testing.T) {
 	}
 }
 
-func TestAuthorizeCheckDoesNotAudit(t *testing.T) {
+func TestAuthorizeDenialEmitsAudit(t *testing.T) {
 	sink := &recordingAuditSink{}
 	client := authorizationClient(t, &fakeAuthorizer{}, nil, sink)
 	if client.Authorize(context.Background(), "user-1", "users", "ban") {
 		t.Fatal("expected denial")
 	}
-	// The public Authorize check itself does not audit; guarded actions do.
-	if len(sink.events) != 0 {
-		t.Fatalf("unexpected audit events: %+v", sink.events)
+	if len(sink.events) != 1 || sink.events[0].Outcome != "denied" {
+		t.Fatalf("audit events = %+v", sink.events)
 	}
 	if !errors.Is(signet.ErrForbidden, signet.ErrForbidden) {
 		t.Fatal("sentinel mismatch")
@@ -112,11 +111,46 @@ func (s *recordingAuditSink) Record(_ context.Context, event signet.AuditEvent) 
 func TestDeniedGuardedActionEmitsAudit(t *testing.T) {
 	sink := &recordingAuditSink{}
 	client := authorizationClient(t, &fakeAuthorizer{}, nil, sink)
-	if err := client.SetRoles(context.Background(), "user-1", []string{"admin"}); !errors.Is(err, signet.ErrForbidden) {
-		t.Fatalf("SetRoles error = %v", err)
+	_, err := client.CreateAPIKey(context.Background(), signet.CreateAPIKeyInput{OwnerUserID: "user-1"})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("CreateAPIKey error = %v", err)
 	}
-	// SetRoles without a RoleWriter denies without an audit; guarded actions audit denials.
-	if len(sink.events) != 0 {
-		t.Fatalf("unexpected events: %+v", sink.events)
+	if len(sink.events) != 1 || sink.events[0].Outcome != "denied" ||
+		sink.events[0].Metadata["permission"] != "api-keys:create" {
+		t.Fatalf("audit events = %+v", sink.events)
 	}
+}
+
+func TestMemoryAuthorizerFromStatements(t *testing.T) {
+	authorizer := signet.NewMemoryAuthorizer(
+		signet.RoleStatements{"admin": {signet.PermissionUsersBan}},
+		func(_ context.Context, _ string) []string { return []string{"admin"} },
+	)
+	if !authorizer.Authorize(context.Background(), "user-1", "users", "ban") {
+		t.Fatal("statement grant missing")
+	}
+	if authorizer.Authorize(context.Background(), "user-1", "users", "delete") {
+		t.Fatal("unlisted permission granted")
+	}
+}
+
+func TestAuthorizeInWiring(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.AuthorizeIn = &fakeAuthorizeIn{}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !client.AuthorizeIn(context.Background(), "user-1", "org-1", "organizations", "create") {
+		t.Fatal("AuthorizeIn not wired")
+	}
+}
+
+type fakeAuthorizeIn struct{}
+
+func (*fakeAuthorizeIn) AuthorizeIn(context.Context, string, string, string, string) bool {
+	return true
 }

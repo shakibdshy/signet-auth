@@ -224,6 +224,9 @@ const (
 	PermissionOrgsMemberRole   Permission = "organizations:member-role"
 )
 
+// RoleStatements maps role names to their granted permissions.
+type RoleStatements map[string][]Permission
+
 // Authorizer answers read-only authorization questions.
 type Authorizer interface {
 	Roles(context.Context, string) []string
@@ -242,16 +245,16 @@ type AuthorizeIn interface {
 
 // APIKey is a digest-only credential for a non-human client.
 type APIKey struct {
-	ID          string
-	OwnerUserID string
-	Name        string
-	Hash        string
-	Prefix      string
-	Roles       []string
-	Remaining   int
-	ExpiresAt   time.Time
-	CreatedAt   time.Time
-	RevokedAt   *time.Time
+	ID          string     `json:"id"`
+	OwnerUserID string     `json:"owner_user_id"`
+	Name        string     `json:"name"`
+	Hash        string     `json:"hash"`
+	Prefix      string     `json:"prefix"`
+	Roles       []string   `json:"roles"`
+	Remaining   int        `json:"remaining"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
 }
 
 // APIKeyStore persists digest-only API keys. It is optional.
@@ -264,30 +267,32 @@ type APIKeyStore interface {
 
 // Principal is the identity attached to a verified API key.
 type Principal struct {
-	OwnerUserID string
-	Roles       []string
+	OwnerUserID string   `json:"owner_user_id"`
+	Roles       []string `json:"roles"`
 }
 
 // CreateAPIKeyInput describes a new API key.
 type CreateAPIKeyInput struct {
-	OwnerUserID string
-	Name        string
-	Roles       []string
-	Remaining   int
-	ExpiresAt   time.Time
+	OwnerUserID string    `json:"owner_user_id"`
+	Name        string    `json:"name"`
+	Roles       []string  `json:"roles"`
+	Remaining   int       `json:"remaining"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 // CreateAPIKeyResult carries the raw key once and its stored record.
 type CreateAPIKeyResult struct {
-	Raw string
-	Key *APIKey
+	Raw string  `json:"raw"`
+	Key *APIKey `json:"key"`
 }
 
 // ListAPIKeysInput selects the keys owned by a User.
 type ListAPIKeysInput struct{ OwnerUserID string }
 
 // ListAPIKeysResult contains a User's API keys.
-type ListAPIKeysResult struct{ Keys []*APIKey }
+type ListAPIKeysResult struct {
+	Keys []*APIKey `json:"keys"`
+}
 
 // RevokeAPIKeyInput identifies a key to revoke and its owner.
 type RevokeAPIKeyInput struct {
@@ -504,8 +509,10 @@ type Config struct {
 	CaptchaEndpoints         []string
 	AuditSink                AuditSink
 	Authorizer               Authorizer
+	AuthorizeIn              AuthorizeIn
 	RoleWriter               RoleWriter
 	APIKeyStore              APIKeyStore
+	APIKeyProtectedEndpoints []string
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte

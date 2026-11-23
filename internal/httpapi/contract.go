@@ -214,6 +214,15 @@ func ContractFor() Contract {
 			{Name: "csrf-token", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("token")}}, Status: http.StatusOK,
 			}}},
+			{Name: "api-keys", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "ListAPIKeysResult"}, Status: http.StatusOK,
+			}, {
+				Verb: "POST", Request: reflect.TypeOf(core.CreateAPIKeyInput{}),
+				Response: ResponseSpec{Ref: "CreateAPIKeyResult"}, Status: http.StatusCreated,
+			}}},
+			{Name: "verify-api-key", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Response: ResponseSpec{Ref: "Principal"}, Status: http.StatusOK,
+			}}},
 		},
 		OptionalFields: map[string][]string{
 			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
