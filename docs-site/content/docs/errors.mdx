@@ -90,6 +90,7 @@ sign in first and send the session cookie and CSRF token.
 | --- | --- | --- |
 | ErrRateLimited | 429 rate_limited | Too many attempts, including failed OTP guesses; retry later. |
 | ErrInvalidCSRFConfig | 500 internal_error | See configuration errors above. |
+| ErrForbidden | 403 forbidden | The actor lacks the required permission, has a stale Session, is acting on another owner's keys, or attempted a self-action ban/impersonation. Guarded denials emit an Audit event. |
 
 ## CSRF wire errors
 

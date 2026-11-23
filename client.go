@@ -13,6 +13,7 @@ import (
 	"github.com/shakibdshy/signet/internal/httpapi"
 	"github.com/shakibdshy/signet/internal/lastmethod"
 	"github.com/shakibdshy/signet/internal/oauth"
+	"github.com/shakibdshy/signet/internal/orgadmin"
 	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
@@ -39,13 +40,12 @@ func DocsHandler() http.Handler {
 type Client struct {
 	cfg                   Config
 	authorization         *authorization.Service
+	orgadmin              *orgadmin.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
 	lastMethod            *lastmethod.Manager
 	activeOrg             *lastmethod.Manager
-	activeOrgToken        string
-	impersonations        map[string]string
 	lastMethodBeforeStore func(context.Context, string) bool
 	csrf                  *csrf.Guard
 	cookies               *httpapi.Cookies
@@ -180,8 +180,16 @@ func New(cfg Config) (*Client, error) {
 				fresh, err := sessions.IsFreshWithin(ctx, raw, cfg.Accounts.FreshWindow)
 				return err == nil && fresh
 			}),
-		lastMethod:     lastMethodManager,
-		impersonations: make(map[string]string),
+		lastMethod: lastMethodManager,
+		orgadmin: orgadmin.New(orgadmin.Deps{
+			Config: &cfg, Store: cfg.Store, Clock: cfg.Clock, Sessions: sessions,
+			Authz: authorization.NewService(&cfg, cfg.Clock, cfg.Logger,
+				func(ctx context.Context, raw string) bool {
+					fresh, err := sessions.IsFreshWithin(ctx, raw, cfg.Accounts.FreshWindow)
+					return err == nil && fresh
+				}),
+			Logger: cfg.Logger,
+		}, firstCSRFKey(cfg)),
 		activeOrg: func() *lastmethod.Manager {
 			if cfg.OrganizationStore == nil || len(csrfKeys) == 0 {
 				return nil
@@ -532,195 +540,102 @@ func (c *Client) JWKSHandler() http.Handler {
 
 // AdminListUsers returns safe User fields for an administrator.
 func (c *Client) AdminListUsers(ctx context.Context, in AdminListUsersInput) (*AdminListUsersResult, error) {
-	if c.cfg.AdminUserStore == nil || !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersBan) {
-		return nil, ErrForbidden
-	}
-	all, err := c.cfg.AdminUserStore.ListUsersForAdmin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	users := make([]*UserInfo, 0, len(all))
-	for _, user := range all {
-		users = append(users, &UserInfo{ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled})
-	}
-	return &AdminListUsersResult{Users: users}, nil
+	return c.orgadmin.ListUsers(ctx, in.ActorID, in.SessionToken)
 }
 
 // BanUser disables a User account.
 func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
-	if in.ActorID == in.UserID {
-		return ErrForbidden
-	}
-	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
-		return ErrForbidden
-	}
-	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
-	if err != nil {
-		return err
-	}
-	user.Disabled = true
-	if err := c.cfg.Store.UpdateUser(ctx, user); err != nil {
-		return err
-	}
-	c.emitAdminAudit(ctx, "user_banned", in.ActorID, in.UserID)
-	return nil
+	return c.orgadmin.BanUser(ctx, in)
 }
 
 // UnbanUser re-enables a User account.
 func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
-	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
-		return ErrForbidden
-	}
-	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
-	if err != nil {
-		return err
-	}
-	user.Disabled = false
-	if err := c.cfg.Store.UpdateUser(ctx, user); err != nil {
-		return err
-	}
-	c.emitAdminAudit(ctx, "user_unbanned", in.ActorID, in.UserID)
-	return nil
+	return c.orgadmin.UnbanUser(ctx, in)
 }
 
 // AdminSetUserRole writes global roles for a User.
 func (c *Client) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
-	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersSetRole) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
-		return ErrForbidden
-	}
-	if c.cfg.RoleWriter == nil {
-		return ErrForbidden
-	}
-	if err := c.cfg.RoleWriter.SetRoles(ctx, in.UserID, in.Roles); err != nil {
-		return err
-	}
-	c.emitAdminAudit(ctx, "user_roles_set", in.ActorID, in.UserID)
-	return nil
+	return c.orgadmin.SetUserRole(ctx, in)
+}
+
+// AdminListUserSessions returns a User's Sessions for an administrator.
+func (c *Client) AdminListUserSessions(ctx context.Context, actorID, userID, sessionToken string) (*ListSessionsResult, error) {
+	return c.orgadmin.ListUserSessions(ctx, actorID, userID, sessionToken)
+}
+
+// AdminRevokeUserSession revokes one of a User's Sessions.
+func (c *Client) AdminRevokeUserSession(ctx context.Context, actorID, sessionID, sessionToken string) error {
+	return c.orgadmin.RevokeUserSession(ctx, actorID, sessionID, sessionToken)
 }
 
 // ImpersonateUser creates a short-lived Session for an administrator acting as a User.
 func (c *Client) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (*ImpersonationResult, error) {
-	if in.ActorID == in.UserID {
-		return nil, ErrForbidden
-	}
-	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersImpersonate) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
-		return nil, ErrForbidden
-	}
-	raw := secret.NewToken()
-	c.impersonations[raw] = in.ActorID
-	c.emitAdminAudit(ctx, "user_impersonated", in.ActorID, in.UserID)
-	return &ImpersonationResult{Token: raw, AdminID: in.ActorID}, nil
+	return c.orgadmin.ImpersonateUser(ctx, in)
 }
 
-// StopImpersonating ends an impersonation.
-func (c *Client) StopImpersonating(ctx context.Context, in StopImpersonatingInput) error {
-	adminID, ok := c.impersonations[in.Token]
-	if !ok {
-		return ErrTokenInvalid
-	}
-	delete(c.impersonations, in.Token)
-	c.emitAdminAudit(ctx, "impersonation_stopped", adminID, "")
-	return nil
+// StopImpersonating ends an impersonation and returns the original Session token.
+func (c *Client) StopImpersonating(ctx context.Context, in StopImpersonatingInput) (string, error) {
+	return c.orgadmin.StopImpersonating(ctx, in)
 }
 
-func (c *Client) freshActor(ctx context.Context, _ string, sessionToken string) bool {
-	if sessionToken == "" {
-		return false
-	}
-	fresh, err := c.sessions.IsFreshWithin(ctx, sessionToken, c.cfg.Accounts.FreshWindow)
-	return err == nil && fresh
+// ImpersonationFromRequest returns the admin ID and original token of an impersonation.
+func (c *Client) ImpersonationFromRequest(r *http.Request) (string, string) {
+	return c.orgadmin.ImpersonationFromRequest(r)
 }
 
-func (c *Client) emitAdminAudit(ctx context.Context, name, actorID, userID string) {
-	if c.cfg.AuditSink == nil {
-		return
-	}
-	_ = c.cfg.AuditSink.Record(ctx, AuditEvent{Name: name, UserID: actorID, Outcome: "success", Metadata: map[string]string{"target": userID}})
+// SetImpersonationCookie writes the signed impersonation cookie.
+func (c *Client) SetImpersonationCookie(w http.ResponseWriter, adminID, originalToken string) {
+	c.orgadmin.SetImpersonationCookie(w, adminID, originalToken)
 }
 
-// RemoveOrganizationMember removes a Member from an Organization.
-func (c *Client) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID string) error {
-	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, actorID, PermissionOrgsMemberRemove) {
-		return ErrForbidden
-	}
-	return c.cfg.OrganizationStore.RemoveMember(ctx, orgID, userID)
+// ClearImpersonationCookie expires the impersonation cookie.
+func (c *Client) ClearImpersonationCookie(w http.ResponseWriter) {
+	c.orgadmin.ClearImpersonationCookie(w)
 }
 
-// SetOrganizationMemberRole changes a Member's role in an Organization.
-func (c *Client) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID string) error {
-	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, actorID, PermissionOrgsMemberRole) {
-		return ErrForbidden
-	}
-	return c.cfg.OrganizationStore.SetMemberRole(ctx, orgID, userID, role)
+// IsImpersonating reports whether a request carries an impersonation cookie.
+func (c *Client) IsImpersonating(r *http.Request) bool {
+	return c.orgadmin.IsImpersonating(r)
 }
 
-// ClearActiveOrganization clears the Active organization cookie.
-func (c *Client) ClearActiveOrganization(w http.ResponseWriter) {
-	if c.activeOrg != nil {
-		c.activeOrg.Clear(w)
-	}
+// AdminActorFromRequest returns the administrator ID, using the impersonation cookie when present.
+func (c *Client) AdminActorFromRequest(r *http.Request, fallback string) string {
+	return c.orgadmin.AdminActor(r, fallback)
 }
 
 // CreateOrganization creates an Organization owned by a User.
 func (c *Client) CreateOrganization(ctx context.Context, in CreateOrganizationInput) (*CreateOrganizationResult, error) {
-	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, in.OwnerID, PermissionOrgsCreate) {
-		return nil, ErrForbidden
-	}
-	org := &Organization{ID: secret.NewID(), OwnerID: in.OwnerID, Name: in.Name, CreatedAt: c.cfg.Clock.Now()}
-	if err := c.cfg.OrganizationStore.Create(ctx, org); err != nil {
-		return nil, err
-	}
-	return &CreateOrganizationResult{Organization: org}, nil
+	return c.orgadmin.CreateOrganization(ctx, in, in.SessionToken)
 }
 
 // ListOrganizations returns a User's Organizations.
 func (c *Client) ListOrganizations(ctx context.Context, in ListOrganizationsInput) (*ListOrganizationsResult, error) {
-	if c.cfg.OrganizationStore == nil {
-		return nil, ErrForbidden
-	}
-	orgs, err := c.cfg.OrganizationStore.List(ctx, in.UserID)
-	if err != nil {
-		return nil, err
-	}
-	return &ListOrganizationsResult{Organizations: orgs}, nil
+	return c.orgadmin.ListOrganizations(ctx, in, in.SessionToken)
 }
 
 // AddOrganizationMember adds a Member with a role to an Organization.
 func (c *Client) AddOrganizationMember(ctx context.Context, in AddOrganizationMemberInput) error {
-	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionOrgsMemberAdd) {
-		return ErrForbidden
-	}
-	return c.cfg.OrganizationStore.AddMember(ctx, in.OrgID, in.UserID, in.Role)
+	return c.orgadmin.AddOrganizationMember(ctx, in, in.SessionToken)
 }
 
 // ListOrganizationMembers returns an Organization's Members.
-func (c *Client) ListOrganizationMembers(ctx context.Context, in ListOrganizationMembersInput) (*ListOrganizationMembersResult, error) {
-	if c.cfg.OrganizationStore == nil {
-		return nil, ErrForbidden
-	}
-	if _, err := c.cfg.OrganizationStore.MemberRole(ctx, in.OrgID, in.UserID); err != nil {
-		return nil, ErrForbidden
-	}
-	members, err := c.cfg.OrganizationStore.Members(ctx, in.OrgID)
-	if err != nil {
-		return nil, err
-	}
-	return &ListOrganizationMembersResult{Members: members}, nil
+func (c *Client) ListOrganizationMembers(ctx context.Context, orgID, userID, sessionToken string) (*ListOrganizationMembersResult, error) {
+	return c.orgadmin.ListOrganizationMembers(ctx, orgID, userID, sessionToken)
 }
 
-// SetActiveOrganization verifies membership and selects an Active organization.
+// RemoveOrganizationMember removes a Member from an Organization.
+func (c *Client) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID, sessionToken string) error {
+	return c.orgadmin.RemoveOrganizationMember(ctx, orgID, userID, actorID, sessionToken)
+}
+
+// SetOrganizationMemberRole changes a Member's role in an Organization.
+func (c *Client) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID, sessionToken string) error {
+	return c.orgadmin.SetOrganizationMemberRole(ctx, orgID, userID, role, actorID, sessionToken)
+}
+
+// SetActiveOrganization verifies membership before the caller writes the cookie.
 func (c *Client) SetActiveOrganization(ctx context.Context, in SetActiveOrganizationInput) error {
-	if c.cfg.OrganizationStore == nil {
-		return ErrForbidden
-	}
-	if _, err := c.cfg.OrganizationStore.MemberRole(ctx, in.OrgID, in.UserID); err != nil {
-		return ErrForbidden
-	}
-	if c.activeOrg != nil {
-		// Cookie write happens through the adapter; Go callers read it explicitly.
-		c.activeOrgToken = in.OrgID
-	}
-	return nil
+	return c.orgadmin.SetActiveOrganization(ctx, in.OrgID, in.UserID, in.SessionToken)
 }
 
 // ActiveOrganizationFromRequest reads the signed Active organization cookie.
@@ -729,6 +644,13 @@ func (c *Client) ActiveOrganizationFromRequest(r *http.Request) *ActiveOrganizat
 		return &ActiveOrganization{}
 	}
 	return &ActiveOrganization{ID: c.activeOrg.Method(r)}
+}
+
+// ClearActiveOrganization clears the Active organization cookie.
+func (c *Client) ClearActiveOrganization(w http.ResponseWriter) {
+	if c.activeOrg != nil {
+		c.activeOrg.Clear(w)
+	}
 }
 
 // Authorize reports whether a User holds a permission.
@@ -903,6 +825,66 @@ func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (str
 	return a.cookies.SetSessionAndCSRF(w, token)
 }
 func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+
+// Organization and admin adapter methods.
+func (a httpAdapter) ClearActiveOrganizationCookie(w http.ResponseWriter) {
+	a.ClearActiveOrganization(w)
+}
+func (a httpAdapter) CreateOrganization(ctx context.Context, in CreateOrganizationInput) (*CreateOrganizationResult, error) {
+	return a.Client.CreateOrganization(ctx, in)
+}
+func (a httpAdapter) ListOrganizations(ctx context.Context, in ListOrganizationsInput) (*ListOrganizationsResult, error) {
+	return a.Client.ListOrganizations(ctx, in)
+}
+func (a httpAdapter) AddOrganizationMember(ctx context.Context, in AddOrganizationMemberInput) error {
+	return a.Client.AddOrganizationMember(ctx, in)
+}
+func (a httpAdapter) ListOrganizationMembers(ctx context.Context, orgID, userID, token string) (*ListOrganizationMembersResult, error) {
+	return a.Client.ListOrganizationMembers(ctx, orgID, userID, token)
+}
+func (a httpAdapter) RemoveOrganizationMember(ctx context.Context, orgID, userID, actor, token string) error {
+	return a.Client.RemoveOrganizationMember(ctx, orgID, userID, actor, token)
+}
+func (a httpAdapter) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actor, token string) error {
+	return a.Client.SetOrganizationMemberRole(ctx, orgID, userID, role, actor, token)
+}
+func (a httpAdapter) AdminListUsers(ctx context.Context, in AdminListUsersInput) (*AdminListUsersResult, error) {
+	return a.Client.AdminListUsers(ctx, in)
+}
+func (a httpAdapter) AdminListUserSessions(ctx context.Context, actor, userID, token string) (*ListSessionsResult, error) {
+	return a.Client.AdminListUserSessions(ctx, actor, userID, token)
+}
+func (a httpAdapter) AdminRevokeUserSession(ctx context.Context, actor, sessionID, token string) error {
+	return a.Client.AdminRevokeUserSession(ctx, actor, sessionID, token)
+}
+func (a httpAdapter) BanUser(ctx context.Context, in BanUserInput) error {
+	return a.Client.BanUser(ctx, in)
+}
+func (a httpAdapter) UnbanUser(ctx context.Context, in UnbanUserInput) error {
+	return a.Client.UnbanUser(ctx, in)
+}
+func (a httpAdapter) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
+	return a.Client.AdminSetUserRole(ctx, in)
+}
+func (a httpAdapter) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (*ImpersonationResult, error) {
+	return a.Client.ImpersonateUser(ctx, in)
+}
+func (a httpAdapter) StopImpersonating(ctx context.Context, in StopImpersonatingInput) (string, error) {
+	return a.Client.StopImpersonating(ctx, in)
+}
+func (a httpAdapter) SetImpersonationCookie(w http.ResponseWriter, adminID, token string) {
+	a.Client.SetImpersonationCookie(w, adminID, token)
+}
+func (a httpAdapter) ClearImpersonationCookie(w http.ResponseWriter) {
+	a.Client.ClearImpersonationCookie(w)
+}
+func (a httpAdapter) ImpersonationFromRequest(r *http.Request) (string, string) {
+	return a.Client.ImpersonationFromRequest(r)
+}
+func (a httpAdapter) IsImpersonating(r *http.Request) bool { return a.Client.IsImpersonating(r) }
+func (a httpAdapter) AdminActor(r *http.Request, fallback string) string {
+	return a.AdminActorFromRequest(r, fallback)
+}
 func (a httpAdapter) SetActiveOrganizationCookie(w http.ResponseWriter, orgID string) {
 	if a.activeOrg != nil && orgID != "" {
 		a.activeOrg.SetCookie(w, orgID)
@@ -954,4 +936,11 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": code, "message": message})
+}
+
+func firstCSRFKey(cfg Config) []byte {
+	if len(cfg.CSRFKeys) > 0 {
+		return cfg.CSRFKeys[0]
+	}
+	return cfg.CSRFKey
 }

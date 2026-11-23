@@ -16,11 +16,17 @@ import (
 var timeType = reflect.TypeOf(time.Time{})
 
 var namedTypes = map[string]reflect.Type{
-	"TokenPair":          reflect.TypeOf(core.TokenPair{}),
-	"OAuthStartResult":   reflect.TypeOf(core.OAuthStartResult{}),
-	"ListAPIKeysResult":  reflect.TypeOf(core.ListAPIKeysResult{}),
-	"CreateAPIKeyResult": reflect.TypeOf(core.CreateAPIKeyResult{}),
-	"Principal":          reflect.TypeOf(core.Principal{}),
+	"TokenPair":                     reflect.TypeOf(core.TokenPair{}),
+	"OAuthStartResult":              reflect.TypeOf(core.OAuthStartResult{}),
+	"ListAPIKeysResult":             reflect.TypeOf(core.ListAPIKeysResult{}),
+	"CreateAPIKeyResult":            reflect.TypeOf(core.CreateAPIKeyResult{}),
+	"Principal":                     reflect.TypeOf(core.Principal{}),
+	"ListOrganizationsResult":       reflect.TypeOf(core.ListOrganizationsResult{}),
+	"CreateOrganizationResult":      reflect.TypeOf(core.CreateOrganizationResult{}),
+	"ListOrganizationMembersResult": reflect.TypeOf(core.ListOrganizationMembersResult{}),
+	"AdminListUsersResult":          reflect.TypeOf(core.AdminListUsersResult{}),
+	"ListSessionsResult":            reflect.TypeOf(core.ListSessionsResult{}),
+	"ImpersonationResult":           reflect.TypeOf(core.ImpersonationResult{}),
 }
 
 type oasDocument struct {

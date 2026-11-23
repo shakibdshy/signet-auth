@@ -333,25 +333,30 @@ type AdminUserStore interface {
 
 // CreateOrganizationInput describes a new Organization.
 type CreateOrganizationInput struct {
-	OwnerID string
-	Name    string
+	OwnerID      string `json:"owner_id"`
+	SessionToken string `json:"-"`
+	Name         string `json:"name"`
 }
 
 // CreateOrganizationResult carries the created Organization.
 type CreateOrganizationResult struct{ Organization *Organization }
 
 // ListOrganizationsInput selects a User's Organizations.
-type ListOrganizationsInput struct{ UserID string }
+type ListOrganizationsInput struct {
+	UserID       string `json:"user_id"`
+	SessionToken string `json:"-"`
+}
 
 // ListOrganizationsResult contains a User's Organizations.
 type ListOrganizationsResult struct{ Organizations []*Organization }
 
 // AddOrganizationMemberInput adds a Member to an Organization.
 type AddOrganizationMemberInput struct {
-	OrgID   string
-	UserID  string
-	Role    string
-	ActorID string
+	OrgID        string `json:"org_id"`
+	UserID       string `json:"user_id"`
+	Role         string `json:"role"`
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
 }
 
 // ListOrganizationMembersInput selects an Organization's Members.
@@ -371,15 +376,19 @@ type ListOrganizationMembersResult struct{ Members []*MemberInfo }
 
 // SetActiveOrganizationInput selects an Active organization.
 type SetActiveOrganizationInput struct {
-	OrgID  string `json:"org_id"`
-	UserID string `json:"-"`
+	OrgID        string `json:"org_id"`
+	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
 }
 
 // ActiveOrganization is the currently selected Organization.
 type ActiveOrganization struct{ ID string }
 
 // AdminListUsersInput selects the User list for an administrator.
-type AdminListUsersInput struct{ ActorID string }
+type AdminListUsersInput struct {
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
+}
 
 // AdminListUsersResult contains safe User fields.
 type AdminListUsersResult struct{ Users []*UserInfo }
@@ -429,7 +438,11 @@ type ImpersonationResult struct {
 }
 
 // StopImpersonatingInput identifies an impersonation to stop.
-type StopImpersonatingInput struct{ Token string }
+type StopImpersonatingInput struct {
+	Token         string `json:"token"`
+	AdminID       string `json:"-"`
+	OriginalToken string `json:"-"`
+}
 
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {

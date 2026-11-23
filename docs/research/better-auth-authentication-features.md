@@ -305,8 +305,8 @@ Feature order follows dependencies: session primitives and user lifecycle first,
 first factors, then provider/enterprise surfaces, then defensive and operational extras. Effort is
 relative for a small Go library that already has the Store and token primitives.
 
-As of 2026-11-23, all six phases below are **shipped** (PRs #53, #58 and #65 merged; PR #70 covers
-Phase 3). All roadmap phases are complete. i18n and anomaly detection remain explicitly out of scope.
+As of 2026-11-23, all six phases below are **shipped** (PRs #53, #58, #65, #70, #76, #81, #87 and
+#88). All roadmap phases are complete. i18n and anomaly detection remain explicitly out of scope.
 
 1. **Foundation — user lifecycle and session controls (shipped).**
    `ChangePassword`/`SetPassword`, `ChangeEmail`, `DeleteUser` with re-verification, and
@@ -323,9 +323,9 @@ Phase 3). All roadmap phases are complete. i18n and anomaly detection remain exp
 4. **Broader federation (large, security-sensitive).** Generic OAuth/OIDC discovery on top of
    the existing `OAuthProvider` interface, then SSO (OIDC + SAML), OAuth provider/device flow and
    SCIM. Each has protocol-specific CSRF/replay rules that must be designed in, not bolted on.
-5. **Authorization and management (large).** Admin roles/bans/impersonation, organizations and API
-   keys. Impersonation is **security-sensitive**; organizations and API keys are mostly additive
-   schema work but expand the public API substantially.
+5. **Authorization and management (shipped).** Admin roles/bans/impersonation, organizations and
+   API keys. All state stays behind optional application-supplied interfaces; impersonation uses a
+   signed cookie and a Store-backed Session.
 6. **Defensive and operational extras (shipped except anomaly detection).** Breach checks, captcha checks, an Audit sink and Last sign-in method are opt-in interfaces. i18n is fully out of scope. Sentinel's
    device fingerprinting and impossible-travel detection are **large** and depend on external
    services, so they should be last and optional.

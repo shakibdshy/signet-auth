@@ -5,7 +5,7 @@ description: Guarded user management, role assignment and impersonation.
 
 Admin actions are deliberately guarded: every state-changing operation checks a published
 permission, requires a Session within `Accounts.FreshWindow`, and emits an `AuditEvent` for both
-success and denial. Self-ban and self-delete are blocked.
+success and denial. Self-ban, self-delete and self-impersonation are blocked.
 
 ## Configure it
 
@@ -17,55 +17,83 @@ cfg.AuditSink = myAuditSink
 cfg.Accounts = &signet.AccountConfig{FreshWindow: time.Hour}
 ```
 
-The `AdminUserStore` interface has one method, `ListUsersForAdmin(context.Context) ([]*User, error)`.
-Without an `AdminUserStore`, user listing is unavailable.
+`AdminUserStore` has one method, `ListUsersForAdmin(context.Context) ([]*User, error)`. It is the
+only optional adapter needed because the required `Store` contract deliberately has no "list all
+Users" method. Without it, user listing is unavailable.
 
 ## List users and ban/unban
 
 ```go
-users, err := auth.AdminListUsers(ctx, signet.AdminListUsersInput{ActorID: adminID})
-err = auth.BanUser(ctx, signet.BanUserInput{ActorID: adminID, UserID: userID, Reason: "abuse"})
-err = auth.UnbanUser(ctx, signet.UnbanUserInput{ActorID: adminID, UserID: userID})
+users, err := auth.AdminListUsers(ctx, signet.AdminListUsersInput{
+    ActorID: adminID, SessionToken: sessionToken,
+})
+// AdminListUsersResult carries safe UserInfo values — no verifiers or secrets.
+
+err = auth.BanUser(ctx, signet.BanUserInput{
+    ActorID: adminID, SessionToken: sessionToken, UserID: userID, Reason: "abuse",
+})
+err = auth.UnbanUser(ctx, signet.UnbanUserInput{
+    ActorID: adminID, SessionToken: sessionToken, UserID: userID,
+})
 ```
 
-Banning sets `User.Disabled` and revokes that User's Sessions. `AdminListUsers` returns `UserInfo`
-values only — no password verifiers or secrets.
+Banning sets `User.Disabled`. Listing requires `users:list` and a valid Session; ban/unban require
+`users:ban` and a fresh Session.
 
 ## Set roles
 
 ```go
 err := auth.AdminSetUserRole(ctx, signet.AdminSetUserRoleInput{
-    ActorID: adminID, UserID: userID, Roles: []string{"admin"},
+    ActorID: adminID, SessionToken: sessionToken, UserID: userID, Roles: []string{"admin"},
 })
 ```
 
 Requires `PermissionUsersSetRole` and a `RoleWriter`.
 
-## Revoke sessions
+## List and revoke Sessions
 
-Session revocation uses the existing `RevokeSession`/`RevokeAllSessions` methods guarded by
-`PermissionSessionsRevoke`.
+```go
+sessions, err := auth.AdminListUserSessions(ctx, adminID, userID, sessionToken)
+err = auth.AdminRevokeUserSession(ctx, adminID, sessionID, sessionToken)
+```
+
+Listing requires `sessions:list`; revocation requires `PermissionSessionsRevoke`. Both require a
+valid or fresh Session respectively.
 
 ## Impersonation
 
 ```go
 started, err := auth.ImpersonateUser(ctx, signet.ImpersonateUserInput{
-    ActorID: adminID, UserID: targetID,
+    ActorID: adminID, SessionToken: sessionToken, UserID: targetID,
 })
-// started.Token is the temporary credential; started.AdminID records the administrator.
-err = auth.StopImpersonating(ctx, signet.StopImpersonatingInput{Token: started.Token})
+// ImpersonationResult: Token is the temporary Session token; AdminID records the administrator.
+adminID, originalToken := auth.ImpersonationFromRequest(r) // signed one-hour cookie
+err = auth.SetImpersonationCookie(w, adminID, originalToken)
+original, err := auth.StopImpersonating(ctx, signet.StopImpersonatingInput{Token: started.Token})
+auth.ClearImpersonationCookie(w)
+auth.SetSessionCookies(w, original) // restore the administrator's Session
 ```
 
-Impersonation requires `PermissionUsersImpersonate`. It creates a short-lived signed credential
-carrying the admin ID and the original session token; stopping invalidates the temporary credential
-and restores the original Session. The temporary Session is revoked on stop. While impersonating,
-admin checks use the administrator ID from the cookie, not the impersonated User. Self-impersonation
-is blocked and the existing self-service deletion flow is disabled while impersonating.
+Impersonation requires `PermissionUsersImpersonate` and a fresh Session. It creates a fresh
+Store-backed Session for the target, stores the administrator ID and the original raw session token
+in a signed one-hour cookie, revokes the temporary Session on stop and restores the original cookie.
+While impersonating, admin checks use the administrator ID from the cookie, not the impersonated
+User — `AdminActorFromRequest` and `IsImpersonating` expose that state. The existing self-service
+deletion flow is blocked while impersonating.
 
 Every impersonation start and stop emits an Audit event naming the administrator.
 
+## HTTP endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/admin-users` | List Users |
+| `POST` | `/admin-users/role` | Set a User's global roles |
+| `POST` | `/admin-users/ban` | Ban a User |
+| `POST` | `/admin-users/unban` | Unban a User |
+| `GET` | `/admin-user-sessions?user_id=…` | List a User's Sessions |
+| `POST` | `/admin-user-sessions/revoke` | Revoke one Session |
+| `POST` | `/impersonate` | Start impersonation |
+| `POST` | `/stop-impersonating` | Stop and restore the original Session |
+
 See [Authorization](/docs/authorization) and [Sessions](/docs/sessions).
-
-The result type is AdminListUsersResult.
-
-ImpersonationResult carries the temporary Token and AdminID.
