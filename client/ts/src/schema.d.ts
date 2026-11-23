@@ -1269,7 +1269,9 @@ export interface operations {
     };
     "admin-user-sessions_get": {
         parameters: {
-            query?: never;
+            query: {
+                user_id: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3080,7 +3082,9 @@ export interface operations {
     };
     "organization-members_get": {
         parameters: {
-            query?: never;
+            query: {
+                organization_id: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5373,7 +5377,9 @@ export interface operations {
     "verify-api-key_post": {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "X-API-Key": string;
+            };
             path?: never;
             cookie?: never;
         };

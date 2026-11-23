@@ -69,11 +69,13 @@ export function createSignetClient(options: SignetClientOptions) {
 		return { "X-CSRF-Token": csrfToken };
 	}
 
+	function clearCsrfToken(): void {
+		csrfToken = undefined;
+	}
+
 	return {
 		/** Force a fresh CSRF token on the next state-changing request. */
-		clearCsrfToken(): void {
-			csrfToken = undefined;
-		},
+		clearCsrfToken,
 
 		async signUp(body: RequestBody<"/signup", "post">): Promise<SuccessBody<"/signup", "post", 201>> {
 			return unwrap(await api.POST("/signup", { body, headers: await csrfHeaders() }));
@@ -168,6 +170,141 @@ export function createSignetClient(options: SignetClientOptions) {
 
 		async lastSignInMethod(): Promise<SuccessBody<"/last-sign-in-method", "get", 200>> {
 			return unwrap(await api.GET("/last-sign-in-method"));
+		},
+
+		// --- API keys ---
+
+		async createApiKey(
+			body: RequestBody<"/api-keys", "post">,
+		): Promise<SuccessBody<"/api-keys", "post", 201>> {
+			return unwrap(await api.POST("/api-keys", { body, headers: await csrfHeaders() }));
+		},
+
+		async listApiKeys(): Promise<SuccessBody<"/api-keys", "get", 200>> {
+			return unwrap(await api.GET("/api-keys"));
+		},
+
+		async verifyApiKey(
+			key: string,
+		): Promise<SuccessBody<"/verify-api-key", "post", 200>> {
+			return unwrap(await api.POST("/verify-api-key", {
+				params: { header: { "X-API-Key": key } },
+			}));
+		},
+
+		async revokeApiKey(
+			body: RequestBody<"/revoke-api-key", "post">,
+		): Promise<SuccessBody<"/revoke-api-key", "post", 200>> {
+			return unwrap(await api.POST("/revoke-api-key", { body, headers: await csrfHeaders() }));
+		},
+
+		// --- Organizations ---
+
+		async createOrganization(
+			body: RequestBody<"/organizations", "post">,
+		): Promise<SuccessBody<"/organizations", "post", 201>> {
+			return unwrap(await api.POST("/organizations", { body, headers: await csrfHeaders() }));
+		},
+
+		async listOrganizations(): Promise<SuccessBody<"/organizations", "get", 200>> {
+			return unwrap(await api.GET("/organizations"));
+		},
+
+		async listOrganizationMembers(
+			organizationId: string,
+		): Promise<SuccessBody<"/organization-members", "get", 200>> {
+			return unwrap(await api.GET("/organization-members", {
+				params: { query: { organization_id: organizationId } },
+			}));
+		},
+
+		async addOrganizationMember(
+			body: RequestBody<"/organization-members/add", "post">,
+		): Promise<SuccessBody<"/organization-members/add", "post", 200>> {
+			return unwrap(await api.POST("/organization-members/add", { body, headers: await csrfHeaders() }));
+		},
+
+		async removeOrganizationMember(
+			body: RequestBody<"/organization-members/remove", "post">,
+		): Promise<SuccessBody<"/organization-members/remove", "post", 200>> {
+			return unwrap(await api.POST("/organization-members/remove", { body, headers: await csrfHeaders() }));
+		},
+
+		async setOrganizationMemberRole(
+			body: RequestBody<"/organization-members/role", "post">,
+		): Promise<SuccessBody<"/organization-members/role", "post", 200>> {
+			return unwrap(await api.POST("/organization-members/role", { body, headers: await csrfHeaders() }));
+		},
+
+		async setActiveOrganization(
+			body: RequestBody<"/set-active-organization", "post">,
+		): Promise<SuccessBody<"/set-active-organization", "post", 200>> {
+			return unwrap(await api.POST("/set-active-organization", { body, headers: await csrfHeaders() }));
+		},
+
+		async activeOrganization(): Promise<SuccessBody<"/active-organization", "get", 200>> {
+			return unwrap(await api.GET("/active-organization"));
+		},
+
+		async clearActiveOrganization(): Promise<SuccessBody<"/clear-active-organization", "post", 200>> {
+			return unwrap(await api.POST("/clear-active-organization", { headers: await csrfHeaders() }));
+		},
+
+		// --- Admin management ---
+
+		async adminListUsers(): Promise<SuccessBody<"/admin-users", "get", 200>> {
+			return unwrap(await api.GET("/admin-users"));
+		},
+
+		async adminSetUserRole(
+			body: RequestBody<"/admin-users/role", "post">,
+		): Promise<SuccessBody<"/admin-users/role", "post", 200>> {
+			return unwrap(await api.POST("/admin-users/role", { body, headers: await csrfHeaders() }));
+		},
+
+		async adminBanUser(
+			body: RequestBody<"/admin-users/ban", "post">,
+		): Promise<SuccessBody<"/admin-users/ban", "post", 200>> {
+			return unwrap(await api.POST("/admin-users/ban", { body, headers: await csrfHeaders() }));
+		},
+
+		async adminUnbanUser(
+			body: RequestBody<"/admin-users/unban", "post">,
+		): Promise<SuccessBody<"/admin-users/unban", "post", 200>> {
+			return unwrap(await api.POST("/admin-users/unban", { body, headers: await csrfHeaders() }));
+		},
+
+		async adminListUserSessions(
+			userId: string,
+		): Promise<SuccessBody<"/admin-user-sessions", "get", 200>> {
+			return unwrap(await api.GET("/admin-user-sessions", {
+				params: { query: { user_id: userId } },
+			}));
+		},
+
+		async adminRevokeUserSession(
+			body: RequestBody<"/admin-user-sessions/revoke", "post">,
+		): Promise<SuccessBody<"/admin-user-sessions/revoke", "post", 200>> {
+			return unwrap(await api.POST("/admin-user-sessions/revoke", { body, headers: await csrfHeaders() }));
+		},
+
+		async impersonate(
+			body: RequestBody<"/impersonate", "post">,
+		): Promise<SuccessBody<"/impersonate", "post", 200>> {
+			const data = await unwrap(await api.POST("/impersonate", { body, headers: await csrfHeaders() }));
+			clearCsrfToken();
+			return data;
+		},
+
+		async stopImpersonating(
+			token: string,
+		): Promise<SuccessBody<"/stop-impersonating", "post", 200>> {
+			const data = await unwrap(await api.POST("/stop-impersonating", {
+				body: { token },
+				headers: await csrfHeaders(),
+			}));
+			clearCsrfToken();
+			return data;
 		},
 	};
 }

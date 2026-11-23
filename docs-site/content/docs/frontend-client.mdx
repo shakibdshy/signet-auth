@@ -234,3 +234,100 @@ User as signed in.
 The backend team can merge this base spec into its own application spec and publish a versioned
 SDK. The frontend then depends on that SDK; a breaking server shape change becomes a major
 version and fails the build at the affected call sites. See [HTTP API](/docs/http-api).
+
+## API keys
+
+API keys are for non-human clients (CI jobs, scripts, server-to-server calls). The browser never
+creates or holds a raw key in a persisted store — your backend issues it with Go's
+`Client.CreateAPIKey` and shows the raw value to the user **once**. The frontend can still call the
+typed endpoints for management and verification:
+
+```ts
+// Issue a key — the backend's session cookie authenticates the owner.
+const created = await auth.createApiKey({
+  name: 'ci-pipeline',
+  roles: ['ci'],
+  remaining: 100,
+});
+showOnce(created.raw); // display once; never persist it in localStorage
+
+// List and revoke keys owned by the signed-in User.
+const { keys } = await auth.listApiKeys();
+await auth.revokeApiKey({ id: keys[0].id });
+
+// Verify a key from a non-human client (X-API-Key header, no Session).
+const principal = await auth.verifyApiKey(rawKeyFromYourScript);
+// principal.owner_user_id, principal.roles
+```
+
+For a browser app that authenticates **by key** on specific routes, the backend sets
+`Config.APIKeyProtectedEndpoints`; on those routes the `X-API-Key` header is required and the
+session cookie is ignored. There is no mixed principal. See [API keys](/docs/api-keys).
+
+## Organizations
+
+Create an Organization, manage Members and switch the active Organization for the authenticated
+visit. The active organization lives in a signed cookie, so it survives navigation but cannot be
+forged by the client.
+
+```ts
+// Create and list Organizations.
+const created = await auth.createOrganization({ name: 'Acme' });
+const orgId = created.Organization.id;
+const { Organizations: orgs } = await auth.listOrganizations();
+
+// Manage Memberships. Role changes are guarded by the backend Authorizer.
+await auth.addOrganizationMember({ organization_id: orgId, user_id: userId, role: 'member' });
+const { Members: members } = await auth.listOrganizationMembers(orgId);
+await auth.setOrganizationMemberRole({ organization_id: orgId, user_id: userId, role: 'admin' });
+await auth.removeOrganizationMember({ organization_id: orgId, user_id: userId });
+
+// Select, read and clear the active Organization.
+await auth.setActiveOrganization({ organization_id: orgId });
+const active = await auth.activeOrganization(); // { id: '...' }
+await auth.clearActiveOrganization();
+```
+
+Every mutation requires a CSRF token (the client handles it automatically) and a fresh Session on
+the backend. A tampered active-organization cookie is treated as absent — always verify the value
+returned by `activeOrganization()` against your own data before rendering privileged UI. See
+[Organizations](/docs/organizations).
+
+## Admin management
+
+Admin endpoints are guarded by the backend's permission checks, fresh Session and Audit events —
+the frontend only calls them. The permission model is described in [Authorization](/docs/authorization).
+
+```ts
+const { Users: users } = await auth.adminListUsers();
+await auth.adminSetUserRole({ user_id: userId, roles: ['admin'] });
+await auth.adminBanUser({ user_id: userId, reason: 'abuse' });
+await auth.adminUnbanUser({ user_id: userId });
+
+const { Sessions: sessions } = await auth.adminListUserSessions(userId);
+await auth.adminRevokeUserSession({ session_id: sessions[0].id });
+```
+
+A `forbidden` (403) response means a missing grant, a stale Session, or a self-action block — show
+a generic "not allowed" message; do not expose which check failed. See
+[Admin management](/docs/admin-management) and [Errors](/docs/errors).
+
+## Impersonation
+
+Impersonation creates a short-lived Session for the target User and a signed one-hour cookie
+holding the administrator ID and original Session token. The typed client handles both cookies:
+
+```ts
+const result = await auth.impersonate({ user_id: targetId });
+// result.Token is the temporary Session; the browser now acts as the target.
+// The client clears its cached CSRF token because the Session changed.
+
+// Later — revoke the temporary Session and restore the original one.
+await auth.stopImpersonating(result.Token);
+await auth.clearCsrfToken();
+```
+
+While impersonating, admin checks use the administrator ID from the cookie, not the target User.
+The self-service account-deletion flow is disabled during impersonation. Treat a `forbidden`
+response from any guarded call as a reason to exit the impersonated view. See
+[Admin management](/docs/admin-management).
