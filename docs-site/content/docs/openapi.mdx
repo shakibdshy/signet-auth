@@ -8,12 +8,13 @@ For a prose map of all endpoints and their requirements, see the [HTTP API](/doc
 The reference below is generated from `api/signet.openapi.json`, which Signet
 produces from the same declarative contract that drives its HTTP handlers. Each
 page shows the request body, responses, status codes and error codes, with an
-interactive playground.
+interactive playground. Endpoints are grouped into accordions by area (Authentication,
+Sessions, Passkeys, Admin users, and so on) so related operations sit together.
 
 <Cards>
-  <Card title="Sign in" href="/docs/openapi/signin_post" />
-  <Card title="Create a session token" href="/docs/openapi/token_post" />
-  <Card title="List sessions" href="/docs/openapi/sessions_get" />
+  <Card title="Sign in" href="/docs/openapi/authentication/signin_post" />
+  <Card title="Create a session token" href="/docs/openapi/authentication/token_post" />
+  <Card title="List sessions" href="/docs/openapi/sessions/sessions_get" />
 </Cards>
 
 For an interactive reference served from your own backend, mount

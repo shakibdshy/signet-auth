@@ -14,6 +14,7 @@ import (
 	"github.com/shakibdshy/signet/internal/lastmethod"
 	"github.com/shakibdshy/signet/internal/oauth"
 	"github.com/shakibdshy/signet/internal/orgadmin"
+	"github.com/shakibdshy/signet/internal/passkey"
 	"github.com/shakibdshy/signet/internal/ratelimit"
 	"github.com/shakibdshy/signet/internal/secret"
 	"github.com/shakibdshy/signet/internal/session"
@@ -41,6 +42,7 @@ type Client struct {
 	cfg                   Config
 	authorization         *authorization.Service
 	orgadmin              *orgadmin.Service
+	passkeys              *passkey.Service
 	dummyVerifier         string
 	jwtService            *token.JWTService
 	jwtKeys               []any
@@ -83,6 +85,16 @@ func New(cfg Config) (*Client, error) {
 	}
 	if cfg.TOTPStore != nil && len(cfg.TOTPKey) != 32 {
 		return nil, ErrTOTPNotConfigured
+	}
+	if cfg.Passkeys != nil {
+		if cfg.Passkeys.RPID == "" || len(cfg.Passkeys.RPOrigins) == 0 {
+			return nil, ErrInvalidPasskeysConfig
+		}
+		if cfg.Passkeys.Protocol == nil {
+			if err := passkey.Validate(cfg.Passkeys); err != nil {
+				return nil, ErrInvalidPasskeysConfig
+			}
+		}
 	}
 	if cfg.Passwordless.MagicLinkTTL < 0 || cfg.Passwordless.OTPTTL < 0 {
 		return nil, ErrInvalidPasswordlessConfig
@@ -181,6 +193,10 @@ func New(cfg Config) (*Client, error) {
 				return err == nil && fresh
 			}),
 		lastMethod: lastMethodManager,
+		passkeys: passkey.New(passkey.Deps{
+			Config: &cfg, Store: cfg.Store, Tokens: token.New(cfg.Store, cfg.Clock),
+			Session: sessions, Resolve: sessions.Resolve, Logger: cfg.Logger,
+		}),
 		orgadmin: orgadmin.New(orgadmin.Deps{
 			Config: &cfg, Store: cfg.Store, Clock: cfg.Clock, Sessions: sessions,
 			Authz: authorization.NewService(&cfg, cfg.Clock, cfg.Logger,
@@ -227,7 +243,12 @@ func New(cfg Config) (*Client, error) {
 		Passwordless: cfg.Passwordless, OAuthRedirects: oauthRedirects,
 		RedirectPatterns: cfg.AllowedRedirectPatterns,
 		CreateSession:    c.createSession, RevokeSessions: c.sessions.RevokeAll,
-		FlushSessions: c.sessions.Flush, BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier, AuditSink: cfg.AuditSink,
+		FlushSessions:  c.sessions.Flush,
+		DeletePasskeys: c.passkeys.DeleteForUser,
+		FreshSession: func(ctx context.Context, raw string) bool {
+			fresh, err := c.sessions.IsFreshWithin(ctx, raw, cfg.Accounts.FreshWindow)
+			return err == nil && fresh
+		}, BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier, AuditSink: cfg.AuditSink,
 		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	c.auth = auth.New(auth.Dependencies{
@@ -237,8 +258,9 @@ func New(cfg Config) (*Client, error) {
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
 		SendVerification: c.verification.SendVerificationForUser, CreateSession: c.createSession,
 		RevokeSession: c.sessions.Revoke, DummyVerifier: dummy,
-		FlushSessions: c.sessions.Flush, IsSessionFresh: c.sessions.IsFreshWithin,
-		FreshWindow: cfg.Accounts.FreshWindow, Tokens: c.tokens,
+		FlushSessions:  c.sessions.Flush,
+		IsSessionFresh: c.sessions.IsFreshWithin,
+		FreshWindow:    cfg.Accounts.FreshWindow, Tokens: c.tokens,
 		TOTPStore: cfg.TOTPStore, TOTPKey: cfg.TOTPKey, TOTP: cfg.TOTP, AppURL: cfg.AppURL,
 		BreachChecker: cfg.BreachChecker, CaptchaVerifier: cfg.CaptchaVerifier, AuditSink: cfg.AuditSink,
 		CaptchaEndpoints: cfg.CaptchaEndpoints,
@@ -653,6 +675,36 @@ func (c *Client) ClearActiveOrganization(w http.ResponseWriter) {
 	}
 }
 
+// BeginPasskeyRegistration starts enrollment of a Passkey for a signed-in User.
+func (c *Client) BeginPasskeyRegistration(ctx context.Context, in PasskeyRegistrationInput) (*PasskeyCeremonyResult, error) {
+	return c.passkeys.BeginRegistration(ctx, in)
+}
+
+// FinishPasskeyRegistration verifies the ceremony and stores the WebAuthn credential.
+func (c *Client) FinishPasskeyRegistration(ctx context.Context, in PasskeyFinishInput) error {
+	return c.passkeys.FinishRegistration(ctx, in)
+}
+
+// BeginPasskeySignIn starts a discoverable Passkey sign-in ceremony.
+func (c *Client) BeginPasskeySignIn(ctx context.Context) (*PasskeyCeremonyResult, error) {
+	return c.passkeys.BeginLogin(ctx)
+}
+
+// FinishPasskeySignIn verifies an assertion and creates a Session.
+func (c *Client) FinishPasskeySignIn(ctx context.Context, in PasskeyFinishSignInInput) (*SignInResult, error) {
+	return c.passkeys.FinishLogin(ctx, in)
+}
+
+// ListPasskeys returns the safe fields of a User's Passkeys.
+func (c *Client) ListPasskeys(ctx context.Context, in PasskeyListInput) (*PasskeyListResult, error) {
+	return c.passkeys.List(ctx, in)
+}
+
+// DeletePasskey revokes one of a User's Passkeys.
+func (c *Client) DeletePasskey(ctx context.Context, in PasskeyDeleteInput) error {
+	return c.passkeys.Delete(ctx, in)
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -823,6 +875,24 @@ func (a httpAdapter) CSRFGuard(w http.ResponseWriter, r *http.Request) bool {
 func (a httpAdapter) ServeCSRFToken(w http.ResponseWriter, r *http.Request) { a.csrf.ServeToken(w, r) }
 func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (string, error) {
 	return a.cookies.SetSessionAndCSRF(w, token)
+}
+func (a httpAdapter) BeginPasskeyRegistration(ctx context.Context, in PasskeyRegistrationInput) (*PasskeyCeremonyResult, error) {
+	return a.Client.BeginPasskeyRegistration(ctx, in)
+}
+func (a httpAdapter) FinishPasskeyRegistration(ctx context.Context, in PasskeyFinishInput) error {
+	return a.Client.FinishPasskeyRegistration(ctx, in)
+}
+func (a httpAdapter) BeginPasskeySignIn(ctx context.Context) (*PasskeyCeremonyResult, error) {
+	return a.Client.BeginPasskeySignIn(ctx)
+}
+func (a httpAdapter) FinishPasskeySignIn(ctx context.Context, in PasskeyFinishSignInInput) (*SignInResult, error) {
+	return a.Client.FinishPasskeySignIn(ctx, in)
+}
+func (a httpAdapter) ListPasskeys(ctx context.Context, in PasskeyListInput) (*PasskeyListResult, error) {
+	return a.Client.ListPasskeys(ctx, in)
+}
+func (a httpAdapter) DeletePasskey(ctx context.Context, in PasskeyDeleteInput) error {
+	return a.Client.DeletePasskey(ctx, in)
 }
 func (a httpAdapter) CookieName() string { return a.cookies.Name() }
 

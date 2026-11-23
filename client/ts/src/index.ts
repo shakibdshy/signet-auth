@@ -172,6 +172,42 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.GET("/last-sign-in-method"));
 		},
 
+		// --- Passkeys ---
+
+		async beginPasskeyRegistration(
+			body: RequestBody<"/passkeys/register-begin", "post">,
+		): Promise<SuccessBody<"/passkeys/register-begin", "post", 200>> {
+			return unwrap(await api.POST("/passkeys/register-begin", { body, headers: await csrfHeaders() }));
+		},
+
+		async finishPasskeyRegistration(
+			body: RequestBody<"/passkeys/register-finish", "post">,
+		): Promise<SuccessBody<"/passkeys/register-finish", "post", 200>> {
+			return unwrap(await api.POST("/passkeys/register-finish", { body, headers: await csrfHeaders() }));
+		},
+
+		async beginPasskeySignIn(): Promise<SuccessBody<"/passkeys/signin-begin", "post", 200>> {
+			return unwrap(await api.POST("/passkeys/signin-begin"));
+		},
+
+		async finishPasskeySignIn(
+			body: RequestBody<"/passkeys/signin-finish", "post">,
+		): Promise<SuccessBody<"/passkeys/signin-finish", "post", 200>> {
+			const result = await unwrap(await api.POST("/passkeys/signin-finish", { body }));
+			clearCsrfToken();
+			return result;
+		},
+
+		async listPasskeys(): Promise<SuccessBody<"/passkeys", "get", 200>> {
+			return unwrap(await api.GET("/passkeys"));
+		},
+
+		async deletePasskey(
+			body: RequestBody<"/passkeys/delete", "post">,
+		): Promise<SuccessBody<"/passkeys/delete", "post", 200>> {
+			return unwrap(await api.POST("/passkeys/delete", { body, headers: await csrfHeaders() }));
+		},
+
 		// --- API keys ---
 
 		async createApiKey(

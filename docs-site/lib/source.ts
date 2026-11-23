@@ -3,7 +3,7 @@ import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
 import { docsRoute } from './shared';
 import { defineDocs } from 'fumadocs-mdx/macro';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
-import { openapi } from './openapi';
+import { openapi, referenceGroup, referenceName } from './openapi';
 
 const docs = defineDocs({
   dir: 'content/docs',
@@ -23,7 +23,15 @@ const docs = defineDocs({
 export const source = loader(
   {
     docs: docs.toFumadocsSource(),
-    openapi: await openapi.staticSource({ baseDir: 'openapi' }),
+    openapi: await openapi.staticSource({
+      baseDir: 'openapi',
+      meta: { folderStyle: 'folder' },
+      groupBy: (entry: { type: string; item: { path?: string; name?: string } }) => referenceGroup((entry.type === 'operation' ? entry.item.path : entry.item.name) ?? 'index'),
+      name: (entry: { type: string; item: { path?: string; name?: string; method: string } }) => referenceName(
+        (entry.type === 'operation' ? entry.item.path : entry.item.name) ?? 'index',
+        entry.item.method,
+      ),
+    }),
   },
   {
     baseUrl: docsRoute,

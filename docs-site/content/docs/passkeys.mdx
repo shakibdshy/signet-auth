@@ -1,0 +1,97 @@
+---
+title: Passkeys
+description: Phishing-resistant first-factor sign-in with WebAuthn.
+---
+
+A Passkey is a discoverable public-key credential a User signs in with instead of a password. It is not an Account, and it needs no username. Signet verifies WebAuthn ceremonies with `go-webauthn/webauthn` and stores the resulting WebAuthn credential through an application-owned `PasskeyStore`, so no schema migration is required.
+
+Passkeys are disabled until you configure a Relying party and a credential store.
+
+## Configure the backend
+
+```go
+cfg.Passkeys = &signet.PasskeysConfig{
+    RPID:          "example.com",
+    RPDisplayName: "Example",
+    RPOrigins:     []string{"https://example.com"},
+    Store:         myPasskeyStore,
+}
+```
+
+`RPID` and `RPOrigins` are required; `New` returns `ErrInvalidPasskeysConfig` when they are missing or invalid. User verification is always required and attestation is never requested. The Relying party ID must match the domain the browser sees, and origins are checked exactly on every ceremony.
+
+Your `PasskeyStore` implements five methods: `CreateCredential`, `CredentialsByUser`, `CredentialByID`, `UpdateCredential` and `DeleteCredential`. Store the public key as opaque bytes; Signet never asks you to store a private key. Deleting a User removes their credentials explicitly.
+
+## Enroll a passkey
+
+Enrollment requires an authenticated Session within `Accounts.FreshWindow` and a verified email when `RequireVerifiedEmail` is enabled.
+
+```go
+// Begin: hand the browser the WebAuthn creation options and keep the token.
+ceremony, err := auth.BeginPasskeyRegistration(ctx, signet.PasskeyRegistrationInput{
+    UserID: userID, SessionToken: sessionToken,
+})
+// ceremony.Options is the JSON for navigator.credentials.create({ publicKey: ... })
+// ceremony.Token is a five-minute, single-use proof of this ceremony.
+
+// Finish: pass back the authenticator response from the browser.
+err = auth.FinishPasskeyRegistration(ctx, signet.PasskeyFinishInput{
+    Token: ceremony.Token, Response: authenticatorResponse, SessionToken: sessionToken,
+})
+```
+
+The finish call consumes the ceremony token, verifies the attestation and stores the credential. A replayed finish returns `ErrTokenInvalid`. Sign count is written back on every sign-in; a regression emits an Audit event rather than failing the visit.
+
+## Sign in
+
+Sign-in is discoverable: the browser finds the credential for the Relying party, so the User types no username.
+
+```go
+begin, err := auth.BeginPasskeySignIn(ctx)
+// begin.Options is the JSON for navigator.credentials.get({ publicKey: ... })
+
+result, err := auth.FinishPasskeySignIn(ctx, signet.PasskeyFinishSignInInput{
+    Token: begin.Token, Response: authenticatorResponse,
+})
+// result.SessionToken is a normal Session; result.LastSignInMethod == "passkey"
+```
+
+The assertion must include user verification. A successful ceremony creates a Session through the same path as password sign-in, so idle and absolute lifetimes, cookies and revocation are identical.
+
+## List and revoke
+
+```go
+listed, err := auth.ListPasskeys(ctx, signet.PasskeyListInput{
+    UserID: userID, SessionToken: sessionToken,
+})
+// listed.Passkeys contains only PasskeyInfo: ID, AAGUID, sign count, created time.
+
+err = auth.DeletePasskey(ctx, signet.PasskeyDeleteInput{
+    UserID: userID, CredentialID: credentialID, SessionToken: sessionToken,
+})
+```
+
+Both are owner-scoped and require a fresh Session. `PasskeyInfo` never includes the public key.
+
+## HTTP endpoints
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/passkeys/register-begin` | Session | Start enrollment |
+| `POST` | `/passkeys/register-finish` | Session | Store the credential |
+| `POST` | `/passkeys/signin-begin` | none | Start discoverable sign-in |
+| `POST` | `/passkeys/signin-finish` | none | Verify and create a Session |
+| `GET` | `/passkeys` | Session | List safe passkey fields |
+| `POST` | `/passkeys/delete` | Session | Revoke a passkey |
+
+Ceremony tokens use the `TokenPasskeyRegistration` and `TokenPasskeyAuthentication` kinds. They are digest-only, expire after five minutes and are revoked by the existing revoke-all-Tokens flow.
+
+## Recovery
+
+A User may have a passkey and no credential Account. Such a User can set an initial password through the existing emailed password-reset proof, and a fresh passkey Session satisfies the current-password proof for email changes. The browser flow is in [Frontend client](/docs/frontend-client).
+
+See [Authorization](/docs/authorization) for guarded admin actions and [Errors](/docs/errors) for `ErrForbidden` (403).
+
+## Types
+
+`PasskeyCeremonyResult` carries the browser `options` and the single-use `token`. `PasskeyListResult` carries `PasskeyInfo` values. `SignInResult` is returned by `FinishPasskeySignIn`. `WebAuthnCredential` is the stored record your `PasskeyStore` persists; it is never returned by a list operation. `PasskeySignInInput` starts the discoverable ceremony. For advanced deployments, `PasskeyProtocol` can be supplied to replace the default verifier.

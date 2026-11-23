@@ -4,6 +4,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -70,7 +71,7 @@ type Session struct {
 // silently omitted.
 var AllTokenKinds = []TokenKind{
 	TokenVerifyEmail, TokenChangeEmail, TokenDeleteUser, TokenResetPassword, TokenOAuthLink, TokenRefresh, TokenOAuthState,
-	TokenMagicLink, TokenEmailOTP, TokenTwoFactor,
+	TokenMagicLink, TokenEmailOTP, TokenTwoFactor, TokenPasskeyRegistration, TokenPasskeyAuthentication,
 }
 
 // TokenKind identifies the sensitive flow a Token proves.
@@ -103,6 +104,12 @@ const (
 	// TokenTwoFactor proves a first factor awaiting a Second factor.
 	//nolint:gosec // G101: a kind discriminator, not a credential.
 	TokenTwoFactor TokenKind = "two_factor"
+	// TokenPasskeyRegistration proves a WebAuthn registration ceremony.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenPasskeyRegistration TokenKind = "passkey_registration"
+	// TokenPasskeyAuthentication proves a WebAuthn authentication ceremony.
+	//nolint:gosec // G101: a kind discriminator, not a credential.
+	TokenPasskeyAuthentication TokenKind = "passkey_authentication"
 )
 
 // Token is a single-use proof for one sensitive flow.
@@ -197,6 +204,100 @@ type AuditEvent struct {
 	SessionID string
 	Outcome   string
 	Metadata  map[string]string
+}
+
+// WebAuthnCredential is the stored public-key record backing a Passkey.
+type WebAuthnCredential struct {
+	ID             string    `json:"id"`
+	UserID         string    `json:"user_id"`
+	PublicKey      []byte    `json:"-"`
+	AAGUID         string    `json:"aaguid"`
+	SignCount      uint32    `json:"sign_count"`
+	Transports     []string  `json:"transports,omitempty"`
+	BackupEligible bool      `json:"backup_eligible"`
+	BackupState    bool      `json:"backup_state"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// PasskeyInfo is the safe public view of a WebAuthn credential.
+type PasskeyInfo struct {
+	ID        string    `json:"id"`
+	AAGUID    string    `json:"aaguid"`
+	SignCount uint32    `json:"sign_count"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// PasskeyStore persists WebAuthn credentials. It is optional.
+type PasskeyStore interface {
+	CreateCredential(context.Context, *WebAuthnCredential) error
+	CredentialsByUser(context.Context, string) ([]*WebAuthnCredential, error)
+	CredentialByID(context.Context, string) (*WebAuthnCredential, error)
+	UpdateCredential(context.Context, *WebAuthnCredential) error
+	DeleteCredential(context.Context, string) error
+}
+
+// PasskeyProtocol verifies WebAuthn ceremonies. The default implementation uses
+// go-webauthn; applications may supply their own verifier.
+type PasskeyProtocol interface {
+	BeginRegistration(ctx context.Context, userID, name string, credentials []*WebAuthnCredential) (options []byte, data string, err error)
+	FinishRegistration(ctx context.Context, data string, response []byte) (*WebAuthnCredential, error)
+	BeginLogin(ctx context.Context) (options []byte, data string, err error)
+	FinishLogin(ctx context.Context, data string, response []byte) (userID string, credential *WebAuthnCredential, err error)
+}
+
+// PasskeysConfig configures passkeys as a first factor. A nil config disables them.
+type PasskeysConfig struct {
+	RPID          string
+	RPDisplayName string
+	RPOrigins     []string
+	Store         PasskeyStore
+	Protocol      PasskeyProtocol
+}
+
+// PasskeyRegistrationInput starts an enrollment ceremony.
+type PasskeyRegistrationInput struct {
+	UserID       string `json:"user_id"`
+	SessionToken string `json:"-"`
+}
+
+// PasskeyCeremonyResult carries browser options and the single-use ceremony token.
+type PasskeyCeremonyResult struct {
+	Options json.RawMessage `json:"options"`
+	Token   string          `json:"token"`
+}
+
+// PasskeyFinishInput completes a ceremony with the authenticator response.
+type PasskeyFinishInput struct {
+	Token        string          `json:"token"`
+	Response     json.RawMessage `json:"response"`
+	SessionToken string          `json:"-"`
+}
+
+// PasskeySignInInput starts a discoverable authentication ceremony.
+type PasskeySignInInput struct{}
+
+// PasskeyFinishSignInInput completes a discoverable authentication ceremony.
+type PasskeyFinishSignInInput struct {
+	Token    string          `json:"token"`
+	Response json.RawMessage `json:"response"`
+}
+
+// PasskeyListInput selects a User's passkeys.
+type PasskeyListInput struct {
+	UserID       string `json:"user_id"`
+	SessionToken string `json:"-"`
+}
+
+// PasskeyListResult contains the safe fields of a User's passkeys.
+type PasskeyListResult struct {
+	Passkeys []*PasskeyInfo `json:"passkeys"`
+}
+
+// PasskeyDeleteInput identifies a passkey to revoke.
+type PasskeyDeleteInput struct {
+	UserID       string `json:"user_id"`
+	CredentialID string `json:"credential_id"`
+	SessionToken string `json:"-"`
 }
 
 // AuditSink receives Audit events. Implementations own persistence and retention.
@@ -652,6 +753,7 @@ type Config struct {
 	CaptchaVerifier          CaptchaVerifier
 	CaptchaEndpoints         []string
 	AuditSink                AuditSink
+	Passkeys                 *PasskeysConfig
 	Authorizer               Authorizer
 	AuthorizeIn              AuthorizeIn
 	RoleWriter               RoleWriter
@@ -904,6 +1006,7 @@ type ChangePasswordInput struct {
 // RequestDeleteUserInput identifies the User requesting account deletion.
 type RequestDeleteUserInput struct {
 	UserID       string `json:"-"`
+	SessionToken string `json:"-"`
 	RateLimitKey string `json:"-"`
 }
 
@@ -922,6 +1025,7 @@ type DeleteUserTemplates interface {
 // authenticated User.
 type ChangeEmailInput struct {
 	UserID          string `json:"-"`
+	SessionToken    string `json:"-"`
 	NewEmail        string `json:"new_email"`
 	CurrentPassword string `json:"current_password"`
 	RateLimitKey    string `json:"-"`
@@ -1095,6 +1199,8 @@ var (
 	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
 	// ErrInvalidCSRFConfig reports an invalid CSRF key.
 	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
+	// ErrInvalidPasskeysConfig reports an invalid passkeys configuration.
+	ErrInvalidPasskeysConfig = errors.New("signet: invalid passkeys configuration")
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = errors.New("signet: forbidden")
 )

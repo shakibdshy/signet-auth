@@ -18,11 +18,38 @@ const loadSpec = (): Document => {
   };
 };
 
+/** The accordion each API endpoint belongs to in the reference sidebar. */
+export function referenceGroup(route: string): string {
+  const path = route.replace(/^\//, '');
+  if (path.startsWith('passkeys')) return 'Passkeys';
+  if (path.startsWith('admin-user') || path === 'impersonate' || path === 'stop-impersonating') return 'Admin users';
+  if (path.includes('organization')) return 'Organizations';
+  if (path.startsWith('api-keys') || path.startsWith('revoke-api-key') || path === 'verify-api-key') return 'API keys';
+  if (path.startsWith('oauth/')) return 'OAuth and federation';
+  if (path.includes('two-factor') || path === 'regenerate-backup-codes') return 'Second factor';
+  if (path === 'send-magic-link' || path === 'verify-magic-link' || path === 'send-otp' || path === 'verify-otp') return 'Passwordless';
+  if (path === 'signup' || path === 'signin' || path === 'signout' || path === 'token') return 'Authentication';
+  if (path === 'sessions' || path === 'session' || path === 'last-sign-in-method') return 'Sessions';
+  if (path === 'accounts' || path === 'unlink-account') return 'Accounts';
+  if (path === 'csrf-token') return 'Utilities';
+  if (
+    path === 'change-email' || path === 'verify-change-email' ||
+    path === 'send-verification' || path === 'verify-email' ||
+    path === 'change-password' || path === 'send-password-reset' || path === 'reset-password' ||
+    path === 'request-account-deletion' || path === 'confirm-account-deletion'
+  ) return 'Email and verification';
+  return 'Other';
+}
+
+/** Flat file name inside an accordion; operationIds can contain slashes. */
+export function referenceName(route: string, method: string): string {
+  const path = route.replace(/^\//, '').replace(/\//g, '-');
+  return `${path}_${method.toLowerCase()}`;
+}
+
 // Server-side API. The schema is loaded from the generated contract synced by
 // `npm run sync:spec`, so the reference pages stay in step with the handlers.
 export const openapi = createOpenAPI({
   input: { signet: loadSpec },
-  // Keep playground requests same-origin; the proxy is allowlisted to the
-  // configured backend so the browser never talks to an arbitrary host.
   proxyUrl: '/api/proxy',
 });

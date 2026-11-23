@@ -158,6 +158,25 @@ func ContractFor() Contract {
 			{Name: "stop-impersonating", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.StopImpersonatingInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "passkeys/register-begin", Methods: []Method{{
+				Verb: "POST", Response: ResponseSpec{Ref: "PasskeyCeremonyResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "passkeys/register-finish", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.PasskeyFinishInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "passkeys/signin-begin", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Response: ResponseSpec{Ref: "PasskeyCeremonyResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "passkeys/signin-finish", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.PasskeyFinishSignInInput{}),
+				Response: ResponseSpec{Ref: "SignInResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "passkeys", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "PasskeyListResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "passkeys/delete", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.PasskeyDeleteInput{}), Status: http.StatusOK,
+			}}},
 			{Name: "set-active-organization", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SetActiveOrganizationInput{}), Status: http.StatusOK,
 			}}},
