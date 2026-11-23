@@ -104,9 +104,28 @@ interfaces. Google and GitHub do not implement them and keep working unchanged.
 
 ## Token endpoint authentication
 
-Signet honors `token_endpoint_auth_methods_supported`, preferring `client_secret_basic` then
-`client_secret_post`, and defaults to Basic when discovery omits the list. Set
-`TokenEndpointAuth` in `oidc.Config` to override it.
+When `NewProvider` fetches discovery, it keeps the `token_endpoint_auth_methods_supported` list.
+At code redemption time Signet chooses a style: `client_secret_basic` if the list contains it,
+otherwise `client_secret_post`, and Basic if the list is absent.
+
+- **Basic** — credentials go in the `Authorization: Basic …` header; the form body carries only
+  `grant_type`, `code`, `redirect_uri` and `code_verifier`.
+- **Post** — `client_id` and `client_secret` are added to the form body instead, and no Basic
+  header is sent.
+
+Either way, the token request uses the discovered `token_endpoint` over HTTPS with redirects
+refused. Override the choice explicitly when a provider advertises the wrong value:
+
+```go
+provider, err := oidc.NewProvider(ctx, oidc.Config{
+	ProviderID:        "acme",
+	ClientID:          os.Getenv("OIDC_CLIENT_ID"),
+	ClientSecret:      os.Getenv("OIDC_CLIENT_SECRET"),
+	Issuer:            "https://idp.example.com",
+	TokenEndpointAuth: "client_secret_post", // or "client_secret_basic"
+})
+```
+
 
 ## Identity mapping
 
