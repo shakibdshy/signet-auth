@@ -147,10 +147,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** /api-keys */
+        /** /api-keys · list */
         get: operations["api-keys_get"];
         put?: never;
-        /** /api-keys */
+        /** /api-keys · create */
         post: operations["api-keys_post"];
         delete?: never;
         options?: never;
@@ -420,10 +420,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** /organizations */
+        /** /organizations · list */
         get: operations["organizations_get"];
         put?: never;
-        /** /organizations */
+        /** /organizations · create */
         post: operations["organizations_post"];
         delete?: never;
         options?: never;
@@ -693,11 +693,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** /sessions */
+        /** /sessions · list */
         get: operations["sessions_get"];
         put?: never;
         post?: never;
-        /** /sessions */
+        /** /sessions · revoke all */
         delete: operations["sessions_delete"];
         options?: never;
         head?: never;

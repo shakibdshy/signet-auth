@@ -873,7 +873,7 @@
     "/api-keys": {
       "get": {
         "operationId": "api-keys_get",
-        "summary": "/api-keys",
+        "summary": "/api-keys · list",
         "responses": {
           "200": {
             "description": "Success",
@@ -969,7 +969,7 @@
       },
       "post": {
         "operationId": "api-keys_post",
-        "summary": "/api-keys",
+        "summary": "/api-keys · create",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -2767,7 +2767,7 @@
     "/organizations": {
       "get": {
         "operationId": "organizations_get",
-        "summary": "/organizations",
+        "summary": "/organizations · list",
         "responses": {
           "200": {
             "description": "Success",
@@ -2863,7 +2863,7 @@
       },
       "post": {
         "operationId": "organizations_post",
-        "summary": "/organizations",
+        "summary": "/organizations · create",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4602,7 +4602,7 @@
     "/sessions": {
       "delete": {
         "operationId": "sessions_delete",
-        "summary": "/sessions",
+        "summary": "/sessions · revoke all",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4706,7 +4706,7 @@
       },
       "get": {
         "operationId": "sessions_get",
-        "summary": "/sessions",
+        "summary": "/sessions · list",
         "security": [
           {
             "sessionCookie": []

@@ -1,6 +1,6 @@
 # Requirements coverage — Phase 7 passkeys
 
-Source: issue #90; tickets #91–#95. Tests live in `tests/passkey_test.go`.
+Source: issue #90; tickets #91–#95. Tests live in `tests/passkey_test.go` and `internal/passkey/protocol_test.go`.
 
 ## Testing Decisions → tests
 
@@ -42,10 +42,10 @@ Source: issue #90; tickets #91–#95. Tests live in `tests/passkey_test.go`.
 | Single-use ceremony token | second finish returns `ErrTokenInvalid` | `TestPasskeyRegistrationReplayRejected`, `TestPasskeySignInReplayRejected` |
 | Ceremony expiry | expired proof rejected with injected Clock | `TestPasskeyCeremonyExpiry` |
 | Freshness | stale session token denied | `TestPasskeyEnrollmentRequiresFreshSession`, `TestPasskeyDeleteOwnerScoped` |
-| Session binding | fresh session cannot enroll another User | `TestPasskeyRegistrationBindsSessionUser` |
-| Ceremony revocation | kinds joined to `AllTokenKinds` so revoke-all invalidates them | design: kinds added to the canonical list |
+| Session binding | fresh session cannot enroll, list or delete for another User | `TestPasskeyRegistrationBindsSessionUser`, `TestPasskeyListingOwnerScoped`, `TestPasskeyDeleteOwnerScoped` |
+| Ceremony revocation | deleting ceremony Tokens invalidates the proof | `TestPasskeyCeremonyRevokedByTokenDeletion` |
 | Verified email gate | unverified User denied enrollment | `TestPasskeyEnrollmentRequiresVerifiedEmail` |
-| Owner scoping | other User cannot delete credential | `TestPasskeyDeleteOwnerScoped` |
+| Owner scoping | other User cannot list or delete credentials | `TestPasskeyDeleteOwnerScoped`, `TestPasskeyListingOwnerScoped` |
 | Child record deletion | store empty after User deletion | `TestUserDeletionRemovesPasskeys` |
 | Sign count regression | audit event emitted; sign-in still succeeds | `TestPasskeySignCountRegressionAudit` |
 | Disabled feature | `ErrForbidden` rather than panic | `TestPasskeyDisabled` |
@@ -62,3 +62,10 @@ Source: issue #90; tickets #91–#95. Tests live in `tests/passkey_test.go`.
 - [x] typed TypeScript client wrappers compile against the generated schema
 - [x] backend code appears only in backend guides; frontend code only in the frontend guide
 - [x] no internal ADR references on public docs pages
+
+## Protocol policy effect tests
+
+| Mechanism | Observable effect asserted | Test |
+| --- | --- | --- |
+| User verification required | registration options carry `userVerification: "required"` | `TestProtocolOptionsEnforcePolicy` |
+| No attestation requested | registration options carry `attestation: "none"` | `TestProtocolOptionsEnforcePolicy` |

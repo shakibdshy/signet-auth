@@ -59,6 +59,15 @@ func (s *Service) Enabled() bool {
 	return s.deps.Config.Passkeys != nil && s.deps.Config.Passkeys.Store != nil && s.protocol != nil
 }
 
+// sessionMatches reports whether a fresh Session belongs to userID.
+func (s *Service) sessionMatches(ctx context.Context, raw, userID string) bool {
+	if s.deps.Resolve == nil {
+		return false
+	}
+	sessionUser, err := s.deps.Resolve(ctx, raw)
+	return err == nil && sessionUser != nil && sessionUser.ID == userID
+}
+
 func (s *Service) fresh(ctx context.Context, raw string) bool {
 	if raw == "" {
 		return false
@@ -85,11 +94,8 @@ func (s *Service) BeginRegistration(ctx context.Context, in core.PasskeyRegistra
 	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) {
 		return nil, core.ErrForbidden
 	}
-	if s.deps.Resolve != nil {
-		sessionUser, err := s.deps.Resolve(ctx, in.SessionToken)
-		if err != nil || sessionUser == nil || sessionUser.ID != in.UserID {
-			return nil, core.ErrForbidden
-		}
+	if !s.sessionMatches(ctx, in.SessionToken, in.UserID) {
+		return nil, core.ErrForbidden
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
 	if err != nil {
@@ -127,6 +133,9 @@ func (s *Service) FinishRegistration(ctx context.Context, in core.PasskeyFinishI
 	if err != nil {
 		s.deny(ctx, ceremony.UserID, audit.PasskeyRegistrationFailed)
 		return core.ErrTokenInvalid
+	}
+	if !s.sessionMatches(ctx, in.SessionToken, ceremony.UserID) {
+		return core.ErrForbidden
 	}
 	credential.UserID = ceremony.UserID
 	credential.CreatedAt = s.deps.Config.Clock.Now()
@@ -190,7 +199,7 @@ func (s *Service) FinishLogin(ctx context.Context, in core.PasskeyFinishSignInIn
 
 // List returns the safe fields of a User's passkeys.
 func (s *Service) List(ctx context.Context, in core.PasskeyListInput) (*core.PasskeyListResult, error) {
-	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) {
+	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) || !s.sessionMatches(ctx, in.SessionToken, in.UserID) {
 		return nil, core.ErrForbidden
 	}
 	credentials, err := s.deps.Config.Passkeys.Store.CredentialsByUser(ctx, in.UserID)
@@ -208,7 +217,7 @@ func (s *Service) List(ctx context.Context, in core.PasskeyListInput) (*core.Pas
 
 // Delete revokes one of a User's passkeys.
 func (s *Service) Delete(ctx context.Context, in core.PasskeyDeleteInput) error {
-	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) {
+	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) || !s.sessionMatches(ctx, in.SessionToken, in.UserID) {
 		return core.ErrForbidden
 	}
 	credential, err := s.deps.Config.Passkeys.Store.CredentialByID(ctx, in.CredentialID)

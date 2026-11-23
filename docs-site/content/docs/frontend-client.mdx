@@ -351,6 +351,9 @@ await auth.finishPasskeyRegistration({
 const challenge = await auth.beginPasskeySignIn();
 const assertion = await navigator.credentials.get({
   publicKey: challenge.options.publicKey,
+  // Conditional mediation lets the browser offer the passkey as autofill.
+  // Pair it with an input using autocomplete="username webauthn".
+  mediation: 'conditional',
 });
 const result = await auth.finishPasskeySignIn({
   token: challenge.token,

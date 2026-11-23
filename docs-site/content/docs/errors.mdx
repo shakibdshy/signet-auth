@@ -23,7 +23,7 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrMissingRateLimiter | 500 internal_error | No RateLimiter supplied. Set `cfg.RateLimiter`. |
 | ErrInsecureConfig | 500 internal_error | Cookies are not secure. Use `DefaultConfig()` or the explicit `Insecure*` opt-in. |
 | ErrInvalidCSRFConfig | 500 internal_error | `CSRFKey` is not 32 bytes and `JWTOnly` is false. |
-| ErrInvalidPasskeysConfig | 500 internal_error | `Passkeys` is configured without `RPID` or `RPOrigins`. |
+| ErrInvalidPasskeysConfig | 500 internal_error | `Passkeys` is configured with a missing or invalid Relying party ID or origins. |
 | ErrInvalidOAuthConfig | 500 internal_error | OAuth providers, redirects or `StateKey` are invalid. |
 | ErrInvalidPasswordlessConfig | 500 internal_error | `Passwordless.MagicLinkTTL` or `Passwordless.OTPTTL` is negative. |
 | ErrInvalidJWTAlgorithm | 500 internal_error | Algorithm is outside the allowlist, or a token used a different one. |

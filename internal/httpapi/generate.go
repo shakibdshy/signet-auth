@@ -231,8 +231,9 @@ func Generate(contract Contract) ([]byte, error) {
 			op := oasOp{
 				OperationID: endpoint.Name + "_" + strings.ToLower(method.Verb),
 				// The HTTP method is already shown as a colour-coded badge in
-				// the reference UI, so the title carries only the route.
-				Summary:   "/" + endpoint.Name,
+				// the reference UI. Multi-method routes need a short label so
+				// their pages do not share an identical title.
+				Summary:   operationSummary(endpoint.Name, method.Verb, len(endpoint.Methods) > 1),
 				Responses: make(map[string]oasResponse),
 			}
 			if method.Request != nil {
@@ -307,4 +308,21 @@ func statusText(status string) string {
 		return status
 	}
 	return http.StatusText(n)
+}
+
+// operationSummary returns the reference title for an operation. Multi-method
+// routes get a human-readable suffix; the HTTP verb stays in the method badge.
+func operationSummary(name, verb string, shared bool) string {
+	if !shared {
+		return "/" + name
+	}
+	labels := map[string]string{
+		"api-keys|GET": "list", "api-keys|POST": "create",
+		"organizations|GET": "list", "organizations|POST": "create",
+		"sessions|GET": "list", "sessions|DELETE": "revoke all",
+	}
+	if label, ok := labels[name+"|"+verb]; ok {
+		return "/" + name + " · " + label
+	}
+	return "/" + name
 }

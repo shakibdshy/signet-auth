@@ -643,3 +643,35 @@ func TestPasskeySignInRecordsLastMethod(t *testing.T) {
 		t.Fatalf("last method cookie missing: %+v", rec.Result().Cookies())
 	}
 }
+
+func TestPasskeyCeremonyRevokedByTokenDeletion(t *testing.T) {
+	client, cfg := passkeyClient(t, newFakePasskeyStore(), &fakePasskeyProtocol{})
+	userID, token := passkeyUser(t, client)
+	ctx := context.Background()
+	begin, err := client.BeginPasskeyRegistration(ctx, signet.PasskeyRegistrationInput{
+		UserID: userID, SessionToken: token,
+	})
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	store := cfg.Store.(*testutil.Store)
+	if err := store.DeleteTokensForUser(ctx, userID, signet.TokenPasskeyRegistration); err != nil {
+		t.Fatalf("revoke tokens: %v", err)
+	}
+	if err := client.FinishPasskeyRegistration(ctx, signet.PasskeyFinishInput{
+		Token: begin.Token, Response: json.RawMessage(`{}`), SessionToken: token,
+	}); !errors.Is(err, signet.ErrTokenInvalid) {
+		t.Fatalf("revoked ceremony error = %v", err)
+	}
+}
+
+func TestPasskeyListingOwnerScoped(t *testing.T) {
+	client, _ := passkeyClient(t, newFakePasskeyStore(), &fakePasskeyProtocol{})
+	_, token := passkeyUser(t, client)
+	_, err := client.ListPasskeys(context.Background(), signet.PasskeyListInput{
+		UserID: "some-other-user", SessionToken: token,
+	})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("cross-owner listing error = %v", err)
+	}
+}

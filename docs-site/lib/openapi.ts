@@ -23,16 +23,22 @@ export function referenceGroup(route: string): string {
   const path = route.replace(/^\//, '');
   if (path.startsWith('passkeys')) return 'Passkeys';
   if (path.startsWith('admin-user') || path === 'impersonate' || path === 'stop-impersonating') return 'Admin users';
-  if (path.startsWith('organization') || path.includes('active-organization') || path === 'clear-active-organization') return 'Organizations';
+  if (path.includes('organization')) return 'Organizations';
   if (path.startsWith('api-keys') || path.startsWith('revoke-api-key') || path === 'verify-api-key') return 'API keys';
-  if (path.startsWith('oauth/') || path === 'last-sign-in-method') return 'OAuth and federation';
+  if (path.startsWith('oauth/')) return 'OAuth and federation';
   if (path.includes('two-factor') || path === 'regenerate-backup-codes') return 'Second factor';
   if (path === 'send-magic-link' || path === 'verify-magic-link' || path === 'send-otp' || path === 'verify-otp') return 'Passwordless';
   if (path === 'signup' || path === 'signin' || path === 'signout' || path === 'token') return 'Authentication';
-  if (path === 'sessions' || path === 'session') return 'Sessions';
+  if (path === 'sessions' || path === 'session' || path === 'last-sign-in-method') return 'Sessions';
   if (path === 'accounts' || path === 'unlink-account') return 'Accounts';
   if (path === 'csrf-token') return 'Utilities';
-  return 'Email and verification';
+  if (
+    path === 'change-email' || path === 'verify-change-email' ||
+    path === 'send-verification' || path === 'verify-email' ||
+    path === 'change-password' || path === 'send-password-reset' || path === 'reset-password' ||
+    path === 'request-account-deletion' || path === 'confirm-account-deletion'
+  ) return 'Email and verification';
+  return 'Other';
 }
 
 /** Flat file name inside an accordion; operationIds can contain slashes. */
