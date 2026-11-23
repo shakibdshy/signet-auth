@@ -43,6 +43,8 @@ type Client struct {
 	jwtService            *token.JWTService
 	jwtKeys               []any
 	lastMethod            *lastmethod.Manager
+	activeOrg             *lastmethod.Manager
+	activeOrgToken        string
 	lastMethodBeforeStore func(context.Context, string) bool
 	csrf                  *csrf.Guard
 	cookies               *httpapi.Cookies
@@ -178,6 +180,12 @@ func New(cfg Config) (*Client, error) {
 				return err == nil && fresh
 			}),
 		lastMethod: lastMethodManager,
+		activeOrg: func() *lastmethod.Manager {
+			if cfg.OrganizationStore == nil || len(csrfKeys) == 0 {
+				return nil
+			}
+			return lastmethod.New(csrfKeys[0], "signet_active_org", 30*24*time.Hour)
+		}(),
 		lastMethodBeforeStore: func() func(context.Context, string) bool {
 			if cfg.LastSignInMethod == nil {
 				return nil
@@ -520,6 +528,76 @@ func (c *Client) JWKSHandler() http.Handler {
 	return httpapi.JWKSHandler(c.jwtKeys)
 }
 
+// CreateOrganization creates an Organization owned by a User.
+func (c *Client) CreateOrganization(ctx context.Context, in CreateOrganizationInput) (*CreateOrganizationResult, error) {
+	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, in.OwnerID, PermissionOrgsCreate) {
+		return nil, ErrForbidden
+	}
+	org := &Organization{ID: secret.NewID(), OwnerID: in.OwnerID, Name: in.Name, CreatedAt: c.cfg.Clock.Now()}
+	if err := c.cfg.OrganizationStore.Create(ctx, org); err != nil {
+		return nil, err
+	}
+	return &CreateOrganizationResult{Organization: org}, nil
+}
+
+// ListOrganizations returns a User's Organizations.
+func (c *Client) ListOrganizations(ctx context.Context, in ListOrganizationsInput) (*ListOrganizationsResult, error) {
+	if c.cfg.OrganizationStore == nil {
+		return nil, ErrForbidden
+	}
+	orgs, err := c.cfg.OrganizationStore.List(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return &ListOrganizationsResult{Organizations: orgs}, nil
+}
+
+// AddOrganizationMember adds a Member with a role to an Organization.
+func (c *Client) AddOrganizationMember(ctx context.Context, in AddOrganizationMemberInput) error {
+	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, in.ActorID, PermissionOrgsMemberAdd) {
+		return ErrForbidden
+	}
+	return c.cfg.OrganizationStore.AddMember(ctx, in.OrgID, in.UserID, in.Role)
+}
+
+// ListOrganizationMembers returns an Organization's Members.
+func (c *Client) ListOrganizationMembers(ctx context.Context, in ListOrganizationMembersInput) (*ListOrganizationMembersResult, error) {
+	if c.cfg.OrganizationStore == nil {
+		return nil, ErrForbidden
+	}
+	if _, err := c.cfg.OrganizationStore.MemberRole(ctx, in.OrgID, in.UserID); err != nil {
+		return nil, ErrForbidden
+	}
+	members, err := c.cfg.OrganizationStore.Members(ctx, in.OrgID)
+	if err != nil {
+		return nil, err
+	}
+	return &ListOrganizationMembersResult{Members: members}, nil
+}
+
+// SetActiveOrganization verifies membership and selects an Active organization.
+func (c *Client) SetActiveOrganization(ctx context.Context, in SetActiveOrganizationInput) error {
+	if c.cfg.OrganizationStore == nil {
+		return ErrForbidden
+	}
+	if _, err := c.cfg.OrganizationStore.MemberRole(ctx, in.OrgID, in.UserID); err != nil {
+		return ErrForbidden
+	}
+	if c.activeOrg != nil {
+		// Cookie write happens through the adapter; Go callers read it explicitly.
+		c.activeOrgToken = in.OrgID
+	}
+	return nil
+}
+
+// ActiveOrganizationFromRequest reads the signed Active organization cookie.
+func (c *Client) ActiveOrganizationFromRequest(r *http.Request) *ActiveOrganization {
+	if c.activeOrg == nil {
+		return &ActiveOrganization{}
+	}
+	return &ActiveOrganization{ID: c.activeOrg.Method(r)}
+}
+
 // Authorize reports whether a User holds a permission.
 func (c *Client) Authorize(ctx context.Context, userID, resource, action string) bool {
 	return c.authorization.Authorize(ctx, userID, resource, action)
@@ -692,6 +770,11 @@ func (a httpAdapter) SetSessionCookies(w http.ResponseWriter, token string) (str
 	return a.cookies.SetSessionAndCSRF(w, token)
 }
 func (a httpAdapter) CookieName() string { return a.cookies.Name() }
+func (a httpAdapter) SetActiveOrganizationCookie(w http.ResponseWriter, orgID string) {
+	if a.activeOrg != nil && orgID != "" {
+		a.activeOrg.SetCookie(w, orgID)
+	}
+}
 func (a httpAdapter) LastSignInMethod(r *http.Request) string {
 	return a.Client.LastSignInMethod(r.Context(), r)
 }

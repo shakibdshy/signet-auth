@@ -40,6 +40,9 @@ type API interface {
 	RevokeAPIKey(context.Context, core.RevokeAPIKeyInput) error
 	APIKeyProtectedEndpoints() []string
 	SetPrincipal(*http.Request, *core.Principal) *http.Request
+	SetActiveOrganization(context.Context, core.SetActiveOrganizationInput) error
+	SetActiveOrganizationCookie(http.ResponseWriter, string)
+	ActiveOrganizationFromRequest(*http.Request) *core.ActiveOrganization
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -94,6 +97,8 @@ var Endpoints = []Endpoint{
 	{Name: "disable-two-factor"},
 	{Name: "regenerate-backup-codes"},
 	{Name: "last-sign-in-method", Anonymous: true},
+	{Name: "set-active-organization"},
+	{Name: "active-organization", Anonymous: true},
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -155,6 +160,10 @@ func (h *Handler) Handler() http.Handler {
 			h.handleRegenerateBackupCodes(w, r)
 		case "last-sign-in-method":
 			h.handleLastSignInMethod(w, r)
+		case "set-active-organization":
+			h.handleSetActiveOrganization(w, r)
+		case "active-organization":
+			h.handleActiveOrganization(w, r)
 		case "accounts":
 			h.handleAccounts(w, r)
 		case "unlink-account":
@@ -563,6 +572,37 @@ func (h *Handler) handleLastSignInMethod(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"method": h.api.LastSignInMethod(r)})
+}
+
+func (h *Handler) handleSetActiveOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.SetActiveOrganizationInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.UserID = user.ID
+	if err := h.api.SetActiveOrganization(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	h.api.SetActiveOrganizationCookie(w, in.OrgID)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleActiveOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, http.StatusOK, h.api.ActiveOrganizationFromRequest(r))
 }
 
 func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {

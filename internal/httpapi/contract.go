@@ -104,6 +104,12 @@ func ContractFor() Contract {
 			{Name: "last-sign-in-method", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("method")}}, Status: http.StatusOK,
 			}}},
+			{Name: "set-active-organization", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SetActiveOrganizationInput{}), Status: http.StatusOK,
+			}}},
+			{Name: "active-organization", Anonymous: true, Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("id")}}, Status: http.StatusOK,
+			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
 					typeField("accounts", []core.AccountInfo{}),

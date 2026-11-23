@@ -307,6 +307,72 @@ type RevokeAPIKeyInput struct {
 	ID           string `json:"id"`
 }
 
+// Organization is a group of Users sharing membership and roles.
+type Organization struct {
+	ID        string
+	OwnerID   string
+	Name      string
+	CreatedAt time.Time
+}
+
+// OrganizationStore persists Organizations and Memberships. It is optional.
+type OrganizationStore interface {
+	Create(context.Context, *Organization) error
+	List(context.Context, string) ([]*Organization, error)
+	AddMember(ctx context.Context, orgID, userID, role string) error
+	RemoveMember(ctx context.Context, orgID, userID string) error
+	MemberRole(ctx context.Context, orgID, userID string) (string, error)
+	SetMemberRole(ctx context.Context, orgID, userID, role string) error
+	Members(context.Context, string) ([]*MemberInfo, error)
+}
+
+// CreateOrganizationInput describes a new Organization.
+type CreateOrganizationInput struct {
+	OwnerID string
+	Name    string
+}
+
+// CreateOrganizationResult carries the created Organization.
+type CreateOrganizationResult struct{ Organization *Organization }
+
+// ListOrganizationsInput selects a User's Organizations.
+type ListOrganizationsInput struct{ UserID string }
+
+// ListOrganizationsResult contains a User's Organizations.
+type ListOrganizationsResult struct{ Organizations []*Organization }
+
+// AddOrganizationMemberInput adds a Member to an Organization.
+type AddOrganizationMemberInput struct {
+	OrgID   string
+	UserID  string
+	Role    string
+	ActorID string
+}
+
+// ListOrganizationMembersInput selects an Organization's Members.
+type ListOrganizationMembersInput struct {
+	OrgID  string
+	UserID string
+}
+
+// MemberInfo is a safe representation of a Membership.
+type MemberInfo struct {
+	UserID string
+	Role   string
+}
+
+// ListOrganizationMembersResult contains an Organization's Members.
+type ListOrganizationMembersResult struct{ Members []*MemberInfo }
+
+// SetActiveOrganizationInput selects an Active organization.
+type SetActiveOrganizationInput struct {
+	OrgID  string `json:"org_id"`
+	UserID string `json:"-"`
+}
+
+// ActiveOrganization is the currently selected Organization.
+type ActiveOrganization struct{ ID string }
+
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {
 	TTL         time.Duration
@@ -520,6 +586,7 @@ type Config struct {
 	RoleWriter               RoleWriter
 	APIKeyStore              APIKeyStore
 	APIKeyProtectedEndpoints []string
+	OrganizationStore        OrganizationStore
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
