@@ -532,7 +532,7 @@ func (c *Client) JWKSHandler() http.Handler {
 
 // AdminListUsers returns safe User fields for an administrator.
 func (c *Client) AdminListUsers(ctx context.Context, in AdminListUsersInput) (*AdminListUsersResult, error) {
-	if c.cfg.AdminUserStore == nil || !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) {
+	if c.cfg.AdminUserStore == nil || !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersBan) {
 		return nil, ErrForbidden
 	}
 	all, err := c.cfg.AdminUserStore.ListUsersForAdmin(ctx)
@@ -551,7 +551,7 @@ func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
 	if in.ActorID == in.UserID {
 		return ErrForbidden
 	}
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
+	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return ErrForbidden
 	}
 	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
@@ -568,7 +568,7 @@ func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
 
 // UnbanUser re-enables a User account.
 func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
+	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return ErrForbidden
 	}
 	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
@@ -585,7 +585,7 @@ func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
 
 // AdminSetUserRole writes global roles for a User.
 func (c *Client) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersSetRole) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
+	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersSetRole) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return ErrForbidden
 	}
 	if c.cfg.RoleWriter == nil {
@@ -603,7 +603,7 @@ func (c *Client) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (
 	if in.ActorID == in.UserID {
 		return nil, ErrForbidden
 	}
-	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersImpersonate) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
+	if !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionUsersImpersonate) || !c.freshActor(ctx, in.ActorID, in.SessionToken) {
 		return nil, ErrForbidden
 	}
 	raw := secret.NewToken()
@@ -640,7 +640,7 @@ func (c *Client) emitAdminAudit(ctx context.Context, name, actorID, userID strin
 
 // RemoveOrganizationMember removes a Member from an Organization.
 func (c *Client) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID string) error {
-	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, actorID, PermissionOrgsMemberRemove) {
+	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, actorID, PermissionOrgsMemberRemove) {
 		return ErrForbidden
 	}
 	return c.cfg.OrganizationStore.RemoveMember(ctx, orgID, userID)
@@ -648,7 +648,7 @@ func (c *Client) RemoveOrganizationMember(ctx context.Context, orgID, userID, ac
 
 // SetOrganizationMemberRole changes a Member's role in an Organization.
 func (c *Client) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID string) error {
-	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, actorID, PermissionOrgsMemberRole) {
+	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, actorID, PermissionOrgsMemberRole) {
 		return ErrForbidden
 	}
 	return c.cfg.OrganizationStore.SetMemberRole(ctx, orgID, userID, role)
@@ -663,7 +663,7 @@ func (c *Client) ClearActiveOrganization(w http.ResponseWriter) {
 
 // CreateOrganization creates an Organization owned by a User.
 func (c *Client) CreateOrganization(ctx context.Context, in CreateOrganizationInput) (*CreateOrganizationResult, error) {
-	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, in.OwnerID, PermissionOrgsCreate) {
+	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, in.OwnerID, PermissionOrgsCreate) {
 		return nil, ErrForbidden
 	}
 	org := &Organization{ID: secret.NewID(), OwnerID: in.OwnerID, Name: in.Name, CreatedAt: c.cfg.Clock.Now()}
@@ -687,7 +687,7 @@ func (c *Client) ListOrganizations(ctx context.Context, in ListOrganizationsInpu
 
 // AddOrganizationMember adds a Member with a role to an Organization.
 func (c *Client) AddOrganizationMember(ctx context.Context, in AddOrganizationMemberInput) error {
-	if c.cfg.OrganizationStore == nil || !c.authorizePermission(ctx, in.ActorID, PermissionOrgsMemberAdd) {
+	if c.cfg.OrganizationStore == nil || !c.authorization.AuthorizePermission(ctx, in.ActorID, PermissionOrgsMemberAdd) {
 		return ErrForbidden
 	}
 	return c.cfg.OrganizationStore.AddMember(ctx, in.OrgID, in.UserID, in.Role)
