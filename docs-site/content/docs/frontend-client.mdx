@@ -202,6 +202,14 @@ All codes are listed in [Errors](/docs/errors); request and response shapes come
 generated [OpenAPI contract](/docs/openapi). Server setup lives in [Passwordless sign-in](/docs/passwordless),
 [Second factor](/docs/two-factor) and [Username and accounts](/docs/accounts).
 
+## OAuth providers
+
+Google, GitHub and [generic OIDC](/docs/oidc) providers all use the same OAuth endpoints. Start a
+flow with `auth.oauthStart({ provider: 'acme', redirect: 'https://app.example.com/callback' })`
+and redirect the browser to the returned `url`. Signet owns the callback; your app only needs to
+handle the final redirect to `redirect`. The provider ID is whatever the backend registered in
+`Config.OAuth.Providers`.
+
 ## Separate backend repository
 
 The backend team can merge this base spec into its own application spec and publish a versioned

@@ -16,37 +16,73 @@ go get github.com/shakibdshy/signet/oauth/oidc
 ```go
 import (
 	"context"
+	"log"
+	"os"
 
 	"github.com/shakibdshy/signet"
 	"github.com/shakibdshy/signet/oauth/oidc"
 )
 
+ctx := context.Background()
+
+// 1. Build the Provider. Discovery runs here, once.
 provider, err := oidc.NewProvider(ctx, oidc.Config{
-	ProviderID:   "acme",
+	ProviderID:   "acme", // unique; not "google" or "github"
 	ClientID:     os.Getenv("OIDC_CLIENT_ID"),
 	ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
 	Issuer:       "https://idp.example.com",
-	Scopes:       []string{"profile", "email"},
+	Scopes:       []string{"profile", "email"}, // "openid" is added automatically
 })
 if err != nil {
 	log.Fatal(err) // discovery failures are startup errors
 }
 
+// 2. Register it like any other OAuth Provider.
 cfg.OAuth = &signet.OAuthConfig{
 	Providers:        []signet.OAuthProvider{provider},
 	RedirectBaseURL:  "https://api.example.com",
-	AllowedRedirects: []string{"https://app.example.com/dashboard"},
-	StateKey:         stateKey, // exactly 32 bytes
+	AllowedRedirects: []string{"https://app.example.com/callback"},
+	StateKey:         stateKey, // exactly 32 random bytes
 }
+cfg.PathPrefix = "/auth"
+cfg.AppURL = "https://api.example.com"
+
+auth, err := signet.New(cfg)
+if err != nil {
+	log.Fatal(err)
+}
+
+// 3. Mount the HTTP endpoints.
+mux := http.NewServeMux()
+mux.Handle("/auth/", auth.Handler())
 ```
 
+Register `https://api.example.com/auth/oauth/callback` as an allowed redirect URI with your
+identity provider. `PathPrefix` decides the path — adjust both values together.
+
 `NewProvider` fetches `.well-known/openid-configuration` once. Explicit endpoint fields override
-discovered values. Every network URL — discovery, JWKS, UserInfo and overrides — must be HTTPS and
-may not redirect; a failed fetch is an error, never a downgrade. Supply `HTTPClient` when you need
-custom TLS trust or timeouts.
+discovered values. If your provider needs a nonstandard discovery path, set `DiscoveryURL`
+explicitly — tenant paths are preserved. Every network URL — discovery, JWKS, UserInfo and
+overrides — must be HTTPS and may not redirect; a failed fetch is an error, never a downgrade.
+Supply `HTTPClient` when you need custom TLS trust or timeouts.
 
 `ProviderID` must be unique and cannot be `google` or `github`; a duplicate or reserved ID makes
 `signet.New` return `ErrOAuthProviderConflict`.
+
+## Start sign-in
+
+```text
+POST /auth/oauth/start
+Content-Type: application/json
+
+{"provider":"acme","redirect":"https://app.example.com/callback"}
+```
+
+The response is `{"url":"https://idp.example.com/authorize?..."}`. Redirect the browser to that URL.
+Signet handles `GET /auth/oauth/callback` automatically; do not implement it yourself.
+
+For the frontend client, see [Frontend client](/docs/frontend-client) — its `baseURL` must include
+the backend `PathPrefix` (`https://api.example.com/auth`).
 
 ## How sign-in works
 
