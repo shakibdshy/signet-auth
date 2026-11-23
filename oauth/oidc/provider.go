@@ -3,6 +3,7 @@ package oidc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -33,13 +34,16 @@ type Config struct {
 
 // Provider implements signet.OAuthProvider using OIDC discovery.
 type Provider struct {
-	cfg     Config
-	doc     *oidc.Document
-	client  *http.Client
-	keys    *oidc.KeySet
-	issuer  string
-	algs    []string
-	authURL string
+	cfg         Config
+	doc         *oidc.Document
+	client      *http.Client
+	keys        *oidc.KeySet
+	issuer      string
+	algs        []string
+	authURL     string
+	tokenURL    string
+	userInfoURL string
+	authMethods []string
 }
 
 // NewProvider fetches discovery once and returns a configured Provider.
@@ -99,6 +103,7 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	provider := &Provider{
 		cfg: cfg, doc: doc, client: client, keys: keys,
 		issuer: doc.Issuer, algs: algorithms, authURL: authURL,
+		tokenURL: tokenURL, userInfoURL: userInfoURL, authMethods: doc.AuthMethods,
 	}
 	return provider, nil
 }
@@ -177,7 +182,152 @@ func (p *Provider) authURLWithNonce(clientID, redirectURI, state, challenge, non
 	return p.authURL + separator + query.Encode()
 }
 
-// Exchange is implemented in the identity-verification part of the adapter.
-func (p *Provider) Exchange(context.Context, string, string, string) (*signet.OAuthIdentity, error) {
-	return nil, errors.New("oidc: exchange not configured")
+type tokenResponse struct {
+	AccessToken string `json:"access_token"`
+	IDToken     string `json:"id_token"`
+	TokenType   string `json:"token_type"`
+}
+
+type userInfoResponse struct {
+	Subject       string `json:"sub"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Name          string `json:"name"`
+}
+
+func (p *Provider) authStyle() string {
+	if p.cfg.TokenEndpointAuth == "client_secret_post" {
+		return "post"
+	}
+	if p.cfg.TokenEndpointAuth == "client_secret_basic" {
+		return "basic"
+	}
+	for _, method := range p.authMethods {
+		if method == "client_secret_basic" {
+			return "basic"
+		}
+		if method == "client_secret_post" {
+			return "post"
+		}
+	}
+	return "basic"
+}
+
+func (p *Provider) exchangeTokens(ctx context.Context, code, verifier, redirectURI string) (*tokenResponse, error) {
+	form := url.Values{}
+	form.Set("grant_type", "authorization_code")
+	form.Set("code", code)
+	form.Set("redirect_uri", redirectURI)
+	form.Set("code_verifier", verifier)
+	style := p.authStyle()
+	if style == "post" {
+		form.Set("client_id", p.cfg.ClientID)
+		form.Set("client_secret", p.cfg.ClientSecret)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.tokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if style == "basic" {
+		req.SetBasicAuth(p.cfg.ClientID, p.cfg.ClientSecret)
+	}
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("oidc: token status %d", resp.StatusCode)
+	}
+	var tokens tokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+		return nil, fmt.Errorf("oidc: decode token response: %w", err)
+	}
+	if tokens.AccessToken == "" {
+		return nil, errors.New("oidc: token response has no access token")
+	}
+	return &tokens, nil
+}
+
+func (p *Provider) userInfo(ctx context.Context, accessToken string) (*userInfoResponse, error) {
+	if p.userInfoURL == "" {
+		return nil, nil
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.userInfoURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("oidc: userinfo status %d", resp.StatusCode)
+	}
+	var info userInfoResponse
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return nil, fmt.Errorf("oidc: decode userinfo: %w", err)
+	}
+	return &info, nil
+}
+
+func (p *Provider) exchange(ctx context.Context, code, verifier, redirectURI, nonce string) (*signet.OAuthIdentity, error) {
+	tokens, err := p.exchangeTokens(ctx, code, verifier, redirectURI)
+	if err != nil {
+		return nil, err
+	}
+	var verified *oidc.Claims
+	if tokens.IDToken != "" && p.keys != nil {
+		verified, err = oidc.Verify(ctx, p.keys, tokens.IDToken, p.issuer, p.cfg.ClientID, p.algs)
+		if err != nil {
+			return nil, err
+		}
+		if nonce != "" && verified.Nonce != nonce {
+			return nil, errors.New("oidc: id token nonce mismatch")
+		}
+	}
+	info, err := p.userInfo(ctx, tokens.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+	var subject, email string
+	var emailVerified bool
+	if verified != nil {
+		subject = verified.Subject
+		email = verified.Email
+		emailVerified = verified.EmailVerified
+	}
+	if info != nil {
+		if subject == "" {
+			subject = info.Subject
+		} else if info.Subject != "" && info.Subject != subject {
+			return nil, errors.New("oidc: userinfo subject mismatch")
+		}
+		if email == "" {
+			email = info.Email
+		}
+		if !emailVerified && info.EmailVerified {
+			emailVerified = true
+		}
+	}
+	if subject == "" || email == "" {
+		return nil, signet.ErrOAuthEmailNotVerified
+	}
+	return &signet.OAuthIdentity{
+		Provider: p.cfg.ProviderID, ProviderUserID: subject,
+		Email: email, EmailVerified: emailVerified,
+	}, nil
+}
+
+// Exchange redeems an authorization code and verifies the resulting identity.
+func (p *Provider) Exchange(ctx context.Context, code, verifier, redirectURI string) (*signet.OAuthIdentity, error) {
+	return p.exchange(ctx, code, verifier, redirectURI, "")
+}
+
+// ExchangeWithNonce also binds the ID token to the OIDC nonce.
+func (p *Provider) ExchangeWithNonce(ctx context.Context, code, verifier, redirectURI, nonce string) (*signet.OAuthIdentity, error) {
+	return p.exchange(ctx, code, verifier, redirectURI, nonce)
 }

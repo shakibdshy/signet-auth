@@ -115,6 +115,7 @@ type Claims struct {
 	Email         string
 	EmailVerified bool
 	Name          string
+	Nonce         string
 }
 
 func boolClaim(value any) bool {
@@ -166,5 +167,6 @@ func Verify(ctx context.Context, set *KeySet, raw, issuer, audience string, algo
 		Email:         stringClaim(claims, "email"),
 		EmailVerified: boolClaim(claims["email_verified"]),
 		Name:          stringClaim(claims, "name"),
+		Nonce:         stringClaim(claims, "nonce"),
 	}, nil
 }
