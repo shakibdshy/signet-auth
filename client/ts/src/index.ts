@@ -244,8 +244,8 @@ export function createSignetClient(options: SignetClientOptions) {
 
 		async deleteSSOConnection(
 			id: string,
-		): Promise<SuccessBody<"/sso/connections/delete", "post", 200>> {
-			return unwrap(await api.POST("/sso/connections/delete", { body: { id }, headers: await csrfHeaders() }));
+		): Promise<SuccessBody<"/sso/connections", "delete", 200>> {
+			return unwrap(await api.DELETE("/sso/connections", { body: { id }, headers: await csrfHeaders() }));
 		},
 
 		async deviceToken(

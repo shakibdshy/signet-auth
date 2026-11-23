@@ -15,6 +15,8 @@ cfg.SSO = &signet.SSOConfig{
         return myDNS.Check(ctx, orgID, domain)
     },
     DefaultRole: "member",
+    // Optional: override normalized claims before provisioning.
+    MapClaims: func(ctx context.Context, claims *signet.SSOClaims) *signet.SSOClaims { return claims },
 }
 ```
 
@@ -65,4 +67,4 @@ Browser examples are in [Frontend client](/docs/frontend-client). SAML and SCIM 
 
 ## Go API and types
 
-`CreateSSOConnection` uses `CreateSSOConnectionInput` and returns `SSOConnectionInfo`. `ListSSOConnections` and `DeleteSSOConnection` (with `DeleteSSOConnectionInput`) manage connections. `StartSSOSignIn` returns `SSOStartResult`; `CompleteSSOSignIn` returns `SSOCallbackResult`. Connections are stored through the optional `SSOConnectionStore`. Missing connections, unverified domains and invalid assertions return `ErrSSOConnectionNotFound`, `ErrSSODomainNotVerified` and `ErrSSOInvalidAssertion`.
+`CreateSSOConnection` uses `CreateSSOConnectionInput` and returns `SSOConnectionInfo`. `ListSSOConnections` and `DeleteSSOConnection` (with `DeleteSSOConnectionInput`) manage connections. `StartSSOSignIn` returns `SSOStartResult`; `CompleteSSOSignIn` returns `SSOCallbackResult`. Connections are stored through the optional `SSOConnectionStore`; `SSOClaims` can be mapped before provisioning with `MapClaims`. Missing connections, unverified domains and invalid assertions return `ErrSSOConnectionNotFound`, `ErrSSODomainNotVerified` and `ErrSSOInvalidAssertion`.

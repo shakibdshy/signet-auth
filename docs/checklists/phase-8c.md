@@ -10,7 +10,7 @@ Source: issue #109; tickets #110–#113. Tests live in `tests/sso_test.go`.
 | "connection config in optional store" | `TestSSOConnectionAndSignIn` |
 | "fail-closed domain verification" | `TestSSODomainNotVerified` |
 | "start with email or Organization ID" | `TestSSOConnectionAndSignIn`, `TestSSOHTTPEndpoints` |
-| "generic failure for unknown connections" | `TestSSOUnknownConnectionGeneric` |
+| "generic failure for unknown connections" | `TestSSOUnknownConnectionGeneric`, `TestSSOStartHidesUnverifiedDomain` |
 | "single-use state token" | `TestSSOConnectionAndSignIn` |
 | "verified email JIT provisioning" | `TestSSOConnectionAndSignIn` |
 | "unverified email rejected" | `TestSSOUnverifiedEmailRejected` |
@@ -23,7 +23,7 @@ Source: issue #109; tickets #110–#113. Tests live in `tests/sso_test.go`.
 | --- | --- | --- |
 | Opt-in | disabled denies sign-in | `TestSSODisabled` |
 | Domain verification | unverified domain denied | `TestSSODomainNotVerified` |
-| Anti-enumeration | unknown domain denied generically | `TestSSOUnknownConnectionGeneric` |
+| Anti-enumeration | unknown/unverified domains denied generically | `TestSSOUnknownConnectionGeneric`, `TestSSOStartHidesUnverifiedDomain` |
 | Single-use state | replayed callback rejected | `TestSSOConnectionAndSignIn` |
 | Verified email | unverified assertion rejected | `TestSSOUnverifiedEmailRejected` |
 | Freshness | stale session cannot manage connections | `TestSSOConnectionCRUDRequiresFreshSession` |

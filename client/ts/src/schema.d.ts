@@ -886,24 +886,8 @@ export interface paths {
         put?: never;
         /** /sso/connections */
         post: operations["sso/connections_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sso/connections/delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** /sso/connections/delete */
-        post: operations["sso/connections/delete_post"];
-        delete?: never;
+        /** /sso/connections */
+        delete: operations["sso/connections_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6789,7 +6773,7 @@ export interface operations {
             };
         };
     };
-    "sso/connections/delete_post": {
+    "sso/connections_delete": {
         parameters: {
             query?: never;
             header?: {

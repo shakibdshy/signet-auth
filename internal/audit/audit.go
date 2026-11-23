@@ -50,8 +50,12 @@ const (
 	OAuthConsentDenied         = "oauth_consent_denied"
 	OAuthCodeIssued            = "oauth_code_issued"
 	//nolint:gosec // G101: event name, not a credential.
-	OAuthTokenIssued    = "oauth_token_issued"
-	OAuthDeviceApproved = "oauth_device_approved"
+	OAuthTokenIssued     = "oauth_token_issued"
+	OAuthDeviceApproved  = "oauth_device_approved"
+	SSODomainUnverified  = "sso_domain_unverified"
+	SSOConnectionCreated = "sso_connection_created"
+	SSOConnectionDeleted = "sso_connection_deleted"
+	SSOSignIn            = "sso_sign_in"
 )
 
 // Emit records an event when a sink is configured. A sink failure is logged

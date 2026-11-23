@@ -26,6 +26,7 @@ type Deps struct {
 	Tokens   *token.Service
 	Sessions *session.Service
 	Logger   *slog.Logger
+	Resolve  func(context.Context, string) (*core.User, error)
 }
 
 // Service implements the public SSO operations.
@@ -37,6 +38,22 @@ func New(deps Deps) *Service { return &Service{deps: deps} }
 // Enabled reports whether SSO is configured.
 func (s *Service) Enabled() bool {
 	return s.deps.Config.SSO != nil && s.deps.Config.SSO.Connections != nil
+}
+
+func (s *Service) actor(ctx context.Context, raw string) (*core.User, bool) {
+	if s.deps.Resolve == nil {
+		return nil, false
+	}
+	user, err := s.deps.Resolve(ctx, raw)
+	return user, err == nil && user != nil
+}
+
+func (s *Service) owns(ctx context.Context, orgID, userID string) bool {
+	if s.deps.Config.OrganizationStore == nil {
+		return true
+	}
+	role, err := s.deps.Config.OrganizationStore.MemberRole(ctx, orgID, userID)
+	return err == nil && (role == "owner" || role == "admin")
 }
 
 func (s *Service) fresh(ctx context.Context, raw string) bool {
@@ -55,8 +72,11 @@ func (s *Service) emit(ctx context.Context, name, userID, orgID, outcome string)
 }
 
 // ClaimInput carries a safe view of a connection for creation.
-func fromCreate(in core.CreateSSOConnectionInput) *core.SSOConnection {
+func (s *Service) fromCreate(in core.CreateSSOConnectionInput) *core.SSOConnection {
 	role := in.DefaultRole
+	if role == "" {
+		role = s.deps.Config.SSO.DefaultRole
+	}
 	if role == "" {
 		role = "member"
 	}
@@ -68,20 +88,21 @@ func fromCreate(in core.CreateSSOConnectionInput) *core.SSOConnection {
 
 // CreateConnection stores a verified SSO connection.
 func (s *Service) CreateConnection(ctx context.Context, in core.CreateSSOConnectionInput) (*core.SSOConnectionInfo, error) {
-	if !s.Enabled() || !s.fresh(ctx, in.SessionToken) {
+	actor, ok := s.actor(ctx, in.SessionToken)
+	if !s.Enabled() || !ok || !s.fresh(ctx, in.SessionToken) || !s.owns(ctx, in.OrganizationID, actor.ID) {
 		return nil, core.ErrForbidden
 	}
 	for _, domain := range in.Domains {
 		if s.deps.Config.SSO.VerifyDomain == nil || !s.deps.Config.SSO.VerifyDomain(ctx, in.OrganizationID, strings.ToLower(domain)) {
-			s.emit(ctx, "sso_domain_unverified", in.OrganizationID, in.OrganizationID, "denied")
+			s.emit(ctx, audit.SSODomainUnverified, in.OrganizationID, in.OrganizationID, "denied")
 			return nil, core.ErrSSODomainNotVerified
 		}
 	}
-	connection := fromCreate(in)
+	connection := s.fromCreate(in)
 	if err := s.deps.Config.SSO.Connections.Create(ctx, connection); err != nil {
 		return nil, err
 	}
-	s.emit(ctx, "sso_connection_created", in.OrganizationID, in.OrganizationID, "success")
+	s.emit(ctx, audit.SSOConnectionCreated, in.OrganizationID, in.OrganizationID, "success")
 	return &core.SSOConnectionInfo{
 		ID: connection.ID, OrganizationID: connection.OrganizationID,
 		Issuer: connection.Issuer, Domains: connection.Domains, DefaultRole: connection.DefaultRole,
@@ -90,7 +111,8 @@ func (s *Service) CreateConnection(ctx context.Context, in core.CreateSSOConnect
 
 // ListConnections returns safe connection views.
 func (s *Service) ListConnections(ctx context.Context, sessionToken string) ([]*core.SSOConnectionInfo, error) {
-	if !s.Enabled() || !s.fresh(ctx, sessionToken) {
+	actor, ok := s.actor(ctx, sessionToken)
+	if !s.Enabled() || !ok || !s.fresh(ctx, sessionToken) {
 		return nil, core.ErrForbidden
 	}
 	connections, err := s.deps.Config.SSO.Connections.List(ctx)
@@ -99,6 +121,9 @@ func (s *Service) ListConnections(ctx context.Context, sessionToken string) ([]*
 	}
 	out := make([]*core.SSOConnectionInfo, 0, len(connections))
 	for _, c := range connections {
+		if !s.owns(ctx, c.OrganizationID, actor.ID) {
+			continue
+		}
 		out = append(out, &core.SSOConnectionInfo{
 			ID: c.ID, OrganizationID: c.OrganizationID, Issuer: c.Issuer,
 			Domains: c.Domains, DefaultRole: c.DefaultRole,
@@ -109,13 +134,18 @@ func (s *Service) ListConnections(ctx context.Context, sessionToken string) ([]*
 
 // DeleteConnection removes a connection after a freshness check.
 func (s *Service) DeleteConnection(ctx context.Context, id, sessionToken string) error {
-	if !s.Enabled() || !s.fresh(ctx, sessionToken) {
+	actor, ok := s.actor(ctx, sessionToken)
+	if !s.Enabled() || !ok || !s.fresh(ctx, sessionToken) {
+		return core.ErrForbidden
+	}
+	connection, err := s.deps.Config.SSO.Connections.ByID(ctx, id)
+	if err != nil || !s.owns(ctx, connection.OrganizationID, actor.ID) {
 		return core.ErrForbidden
 	}
 	if err := s.deps.Config.SSO.Connections.Delete(ctx, id); err != nil {
 		return err
 	}
-	s.emit(ctx, "sso_connection_deleted", id, "", "success")
+	s.emit(ctx, audit.SSOConnectionDeleted, id, "", "success")
 	return nil
 }
 
@@ -151,7 +181,7 @@ func (s *Service) Start(ctx context.Context, in core.SSOStartInput) (*core.SSOSt
 	}
 	for _, domain := range connection.Domains {
 		if s.deps.Config.SSO.VerifyDomain == nil || !s.deps.Config.SSO.VerifyDomain(ctx, connection.OrganizationID, strings.ToLower(domain)) {
-			return nil, core.ErrSSODomainNotVerified
+			return nil, core.ErrSSOConnectionNotFound
 		}
 	}
 	provider, err := s.deps.Config.SSO.Provider(ctx, connection)
@@ -233,7 +263,7 @@ func (s *Service) Callback(ctx context.Context, in core.SSOCallbackInput) (*core
 	if err != nil {
 		return nil, err
 	}
-	s.emit(ctx, "sso_sign_in", user.ID, "", "success")
+	s.emit(ctx, audit.SSOSignIn, user.ID, "", "success")
 	return &core.SSOCallbackResult{SessionToken: sessionToken, OrganizationID: connection.OrganizationID}, nil
 }
 
@@ -241,7 +271,12 @@ func (s *Service) provision(ctx context.Context, identity *core.OAuthIdentity, c
 	provider := "sso:" + connection.ID
 	account, err := s.deps.Store.AccountByProvider(ctx, provider, identity.ProviderUserID)
 	if err == nil {
-		return s.deps.Store.UserByID(ctx, account.UserID)
+		linked, err := s.deps.Store.UserByID(ctx, account.UserID)
+		if err != nil || linked.Disabled || !linked.EmailVerified ||
+			!strings.EqualFold(linked.Email, identity.Email) {
+			return nil, core.ErrSSOInvalidAssertion
+		}
+		return linked, nil
 	}
 	user, err := s.deps.Store.UserByEmail(ctx, identity.Email)
 	if err == nil {
@@ -264,6 +299,9 @@ func (s *Service) provision(ctx context.Context, identity *core.OAuthIdentity, c
 	}
 	if s.deps.Config.OrganizationStore != nil && connection.OrganizationID != "" {
 		role := connection.DefaultRole
+		if role == "" {
+			role = s.deps.Config.SSO.DefaultRole
+		}
 		if role == "" {
 			role = "member"
 		}

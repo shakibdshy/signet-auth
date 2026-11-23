@@ -445,12 +445,21 @@ type SSOConnectionStore interface {
 // SSOProviderFactory builds an OIDC provider for a connection.
 type SSOProviderFactory func(context.Context, *SSOConnection) (OAuthProvider, error)
 
+// SSOClaims are the normalized identity claims from an SSO assertion.
+type SSOClaims struct {
+	Subject       string
+	Email         string
+	EmailVerified bool
+	Name          string
+}
+
 // SSOConfig enables per-organization OIDC SSO.
 type SSOConfig struct {
 	Connections  SSOConnectionStore
 	VerifyDomain func(context.Context, string, string) bool
 	DefaultRole  string
 	Provider     SSOProviderFactory
+	MapClaims    func(context.Context, *SSOClaims) *SSOClaims
 }
 
 // SSOConnectionInfo is the safe public view of an SSO connection.

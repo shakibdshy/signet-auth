@@ -20,9 +20,10 @@ type oidcProvider struct {
 	connection *core.SSOConnection
 	document   *oidc.Document
 	keys       *oidc.KeySet
+	mapClaims  func(context.Context, *core.SSOClaims) *core.SSOClaims
 }
 
-func newOIDCProvider(ctx context.Context, connection *core.SSOConnection) (*oidcProvider, error) {
+func newOIDCProvider(ctx context.Context, connection *core.SSOConnection, mapper func(context.Context, *core.SSOClaims) *core.SSOClaims) (*oidcProvider, error) {
 	client := oidc.SafeHTTP(nil)
 	document, err := oidc.Discover(ctx, client, connection.Issuer, "")
 	if err != nil {
@@ -30,7 +31,7 @@ func newOIDCProvider(ctx context.Context, connection *core.SSOConnection) (*oidc
 	}
 	return &oidcProvider{
 		client: client, connection: connection, document: document,
-		keys: oidc.NewKeySet(client, document.JWKSURI),
+		keys: oidc.NewKeySet(client, document.JWKSURI), mapClaims: mapper,
 	}, nil
 }
 
@@ -116,15 +117,25 @@ func (p *oidcProvider) exchangeWithNonce(ctx context.Context, code, verifier, re
 	if nonce != "" && claims.Nonce != nonce {
 		return nil, core.ErrSSOInvalidAssertion
 	}
+	mapped := &core.SSOClaims{
+		Subject: claims.Subject, Email: claims.Email, EmailVerified: claims.EmailVerified,
+	}
+	if p.mapClaims != nil {
+		if result := p.mapClaims(ctx, mapped); result != nil {
+			mapped = result
+		}
+	}
 	return &core.OAuthIdentity{
-		Provider: p.Name(), ProviderUserID: claims.Subject,
-		Email: claims.Email, EmailVerified: claims.EmailVerified,
+		Provider: p.Name(), ProviderUserID: mapped.Subject,
+		Email: mapped.Email, EmailVerified: mapped.EmailVerified,
 	}, nil
 }
 
-// DefaultProviderFactory returns the built-in OIDC provider factory.
-func DefaultProviderFactory(ctx context.Context, connection *core.SSOConnection) (core.OAuthProvider, error) {
-	return newOIDCProvider(ctx, connection)
+// NewProviderFactory returns a factory using the given claim mapper.
+func NewProviderFactory(mapper func(context.Context, *core.SSOClaims) *core.SSOClaims) core.SSOProviderFactory {
+	return func(ctx context.Context, connection *core.SSOConnection) (core.OAuthProvider, error) {
+		return newOIDCProvider(ctx, connection, mapper)
+	}
 }
 
 var _ core.OAuthProvider = (*oidcProvider)(nil)

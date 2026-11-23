@@ -94,7 +94,7 @@ func (p *fakeSSOProvider) ExchangeWithNonce(_ context.Context, _, _, _, nonce st
 	return p.identity, nil
 }
 
-func ssoClient(t *testing.T, provider *fakeSSOProvider, verify func(context.Context, string, string) bool) (*signet.Client, string) {
+func ssoClient(t *testing.T, provider *fakeSSOProvider, verify func(context.Context, string, string) bool) (*signet.Client, string, string) {
 	t.Helper()
 	store := testutil.NewStore()
 	connections := newFakeSSOConnectionStore()
@@ -125,12 +125,13 @@ func ssoClient(t *testing.T, provider *fakeSSOProvider, verify func(context.Cont
 	if err != nil {
 		t.Fatalf("SignIn: %v", err)
 	}
-	if _, err := client.CreateOrganization(ctx, signet.CreateOrganizationInput{
+	created, err := client.CreateOrganization(ctx, signet.CreateOrganizationInput{
 		OwnerID: signUp.User.ID, Name: "Acme", SessionToken: session.SessionToken,
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("CreateOrganization: %v", err)
 	}
-	return client, session.SessionToken
+	return client, session.SessionToken, created.Organization.ID
 }
 
 func verifyTrue(context.Context, string, string) bool { return true }
@@ -140,10 +141,10 @@ func TestSSOConnectionAndSignIn(t *testing.T) {
 		Provider: "sso:fake", ProviderUserID: "subject-1",
 		Email: "member@acme.com", EmailVerified: true,
 	}}
-	client, token := ssoClient(t, provider, verifyTrue)
+	client, token, orgID := ssoClient(t, provider, verifyTrue)
 	ctx := context.Background()
 	created, err := client.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
-		OrganizationID: "org-1", Issuer: "https://idp.example.com",
+		OrganizationID: orgID, Issuer: "https://idp.example.com",
 		ClientID: "client", ClientSecret: "secret", Domains: []string{"acme.com"},
 		SessionToken: token,
 	})
@@ -170,9 +171,9 @@ func TestSSOConnectionAndSignIn(t *testing.T) {
 
 func TestSSODomainNotVerified(t *testing.T) {
 	provider := &fakeSSOProvider{}
-	client, token := ssoClient(t, provider, func(context.Context, string, string) bool { return false })
+	client, token, orgID := ssoClient(t, provider, func(context.Context, string, string) bool { return false })
 	_, err := client.CreateSSOConnection(context.Background(), signet.CreateSSOConnectionInput{
-		OrganizationID: "org-1", Issuer: "https://idp.example.com",
+		OrganizationID: orgID, Issuer: "https://idp.example.com",
 		Domains: []string{"acme.com"}, SessionToken: token,
 	})
 	if !errors.Is(err, signet.ErrSSODomainNotVerified) {
@@ -184,10 +185,10 @@ func TestSSOUnverifiedEmailRejected(t *testing.T) {
 	provider := &fakeSSOProvider{identity: &signet.OAuthIdentity{
 		ProviderUserID: "subject-2", Email: "member@acme.com", EmailVerified: false,
 	}}
-	client, token := ssoClient(t, provider, verifyTrue)
+	client, token, orgID := ssoClient(t, provider, verifyTrue)
 	ctx := context.Background()
 	if _, err := client.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
-		OrganizationID: "org-1", Issuer: "https://idp.example.com",
+		OrganizationID: orgID, Issuer: "https://idp.example.com",
 		Domains: []string{"acme.com"}, SessionToken: token,
 	}); err != nil {
 		t.Fatalf("connection: %v", err)
@@ -203,7 +204,7 @@ func TestSSOUnverifiedEmailRejected(t *testing.T) {
 
 func TestSSOUnknownConnectionGeneric(t *testing.T) {
 	provider := &fakeSSOProvider{}
-	client, _ := ssoClient(t, provider, verifyTrue)
+	client, _, _ := ssoClient(t, provider, verifyTrue)
 	_, err := client.StartSSOSignIn(context.Background(), signet.SSOStartInput{Email: "nobody@unknown.com"})
 	if !errors.Is(err, signet.ErrSSOConnectionNotFound) {
 		t.Fatalf("unknown connection error = %v", err)
@@ -226,10 +227,10 @@ func TestSSODisabled(t *testing.T) {
 
 func TestSSOConnectionCRUDRequiresFreshSession(t *testing.T) {
 	provider := &fakeSSOProvider{}
-	client, _ := ssoClient(t, provider, verifyTrue)
+	client, _, orgID := ssoClient(t, provider, verifyTrue)
 	ctx := context.Background()
 	if _, err := client.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
-		OrganizationID: "org-1", Domains: []string{"acme.com"}, SessionToken: "stale",
+		OrganizationID: orgID, Domains: []string{"acme.com"}, SessionToken: "stale",
 	}); !errors.Is(err, signet.ErrForbidden) {
 		t.Fatalf("stale create error = %v", err)
 	}
@@ -242,11 +243,11 @@ func TestSSOHTTPEndpoints(t *testing.T) {
 	provider := &fakeSSOProvider{identity: &signet.OAuthIdentity{
 		ProviderUserID: "subject-3", Email: "web@acme.com", EmailVerified: true,
 	}}
-	client, token := ssoClient(t, provider, verifyTrue)
+	client, token, orgID := ssoClient(t, provider, verifyTrue)
 	csrfToken, csrfCookie := issueCSRFToken(t, client)
 	cookies := &http.Cookie{Name: "__Host-signet_session", Value: token, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}
 	createReq := httptest.NewRequest(http.MethodPost, "/sso/connections",
-		strings.NewReader(`{"organization_id":"org-1","issuer":"https://idp.example.com","domains":["acme.com"]}`))
+		strings.NewReader(`{"organization_id":"`+orgID+`","issuer":"https://idp.example.com","domains":["acme.com"]}`))
 	createReq.AddCookie(cookies)
 	createReq.AddCookie(csrfCookie)
 	createReq.Header.Set("X-CSRF-Token", csrfToken)
@@ -272,5 +273,22 @@ func TestSSOHTTPEndpoints(t *testing.T) {
 	client.Handler().ServeHTTP(rr, callbackReq)
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "session_token") {
 		t.Fatalf("callback status = %d body = %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestSSOStartHidesUnverifiedDomain(t *testing.T) {
+	provider := &fakeSSOProvider{}
+	verified := true
+	client, token, orgID := ssoClient(t, provider, func(context.Context, string, string) bool { return verified })
+	ctx := context.Background()
+	if _, err := client.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
+		OrganizationID: orgID, Domains: []string{"acme.com"}, SessionToken: token,
+	}); err != nil {
+		t.Fatalf("setup connection: %v", err)
+	}
+	verified = false
+	_, err := client.StartSSOSignIn(ctx, signet.SSOStartInput{Email: "member@acme.com"})
+	if !errors.Is(err, signet.ErrSSOConnectionNotFound) {
+		t.Fatalf("unverified start error = %v, want generic not-found", err)
 	}
 }

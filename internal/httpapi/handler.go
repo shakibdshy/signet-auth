@@ -165,7 +165,7 @@ var Endpoints = []Endpoint{
 	{Name: "sso/start", Anonymous: true},
 	{Name: "sso/callback", Anonymous: true},
 	{Name: "sso/connections"},
-	{Name: "sso/connections/delete"},
+
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -283,8 +283,7 @@ func (h *Handler) Handler() http.Handler {
 			h.handleSSOCallback(w, r)
 		case "sso/connections":
 			h.handleSSOConnections(w, r)
-		case "sso/connections/delete":
-			h.handleSSODelete(w, r)
+
 		case "set-active-organization":
 			h.handleSetActiveOrganization(w, r)
 		case "active-organization":
@@ -1329,6 +1328,8 @@ func (h *Handler) handleSSOConnections(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
+	case http.MethodDelete:
+		h.handleSSODelete(w, r)
 	case http.MethodPost:
 		var in core.CreateSSOConnectionInput
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {

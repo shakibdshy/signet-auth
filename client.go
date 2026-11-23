@@ -137,7 +137,7 @@ func New(cfg Config) (*Client, error) {
 			return nil, ErrInvalidSSOConfig
 		}
 		if cfg.SSO.Provider == nil {
-			cfg.SSO.Provider = sso.DefaultProviderFactory
+			cfg.SSO.Provider = sso.NewProviderFactory(cfg.SSO.MapClaims)
 		}
 	}
 	if cfg.OAuth != nil {
@@ -249,6 +249,7 @@ func New(cfg Config) (*Client, error) {
 	}
 	c.sso = sso.New(sso.Deps{
 		Config: &cfg, Store: cfg.Store, Tokens: c.tokens, Sessions: sessions, Logger: cfg.Logger,
+		Resolve: sessions.Resolve,
 	})
 	requireVerified := cfg.RequireVerifiedEmail == nil || *cfg.RequireVerifiedEmail
 	sendVerification := cfg.SendVerificationOnSignUp == nil || *cfg.SendVerificationOnSignUp

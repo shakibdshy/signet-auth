@@ -213,9 +213,8 @@ func ContractFor() Contract {
 			}, {
 				Verb: "POST", Request: reflect.TypeOf(core.CreateSSOConnectionInput{}),
 				Response: ResponseSpec{Ref: "SSOConnectionInfo"}, Status: http.StatusCreated,
-			}}},
-			{Name: "sso/connections/delete", Methods: []Method{{
-				Verb: "POST", Request: reflect.TypeOf(core.DeleteSSOConnectionInput{}), Status: http.StatusOK,
+			}, {
+				Verb: "DELETE", Request: reflect.TypeOf(core.DeleteSSOConnectionInput{}), Status: http.StatusOK,
 			}}},
 			{Name: "set-active-organization", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SetActiveOrganizationInput{}), Status: http.StatusOK,
