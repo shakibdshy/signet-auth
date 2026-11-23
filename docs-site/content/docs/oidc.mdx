@@ -1,22 +1,26 @@
 ---
 title: Generic OIDC provider
-description: Add any OpenID Connect provider without changing Signet's core.
+description: Configure any OpenID Connect provider, from discovery to a signed-in User, step by step.
 ---
 
 The `oauth/oidc` adapter implements Signet's `OAuthProvider` interface, so a generic OIDC Provider
 is registered in `Config.OAuth.Providers` exactly like [Google](/docs/google) or
-[GitHub](/docs/github). It uses Provider discovery, PKCE, an OIDC nonce and verified ID tokens.
+[GitHub](/docs/github). It uses Provider discovery, PKCE, an OIDC nonce and verified ID tokens,
+without changing Signet's core or adding a new dependency.
+
+## 1. Install the adapter
 
 ```bash
 go get github.com/shakibdshy/signet/oauth/oidc
 ```
 
-## Configure a Provider
+## 2. Build the Provider — discovery happens here
 
 ```go
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/shakibdshy/signet"
@@ -25,7 +29,6 @@ import (
 
 ctx := context.Background()
 
-// 1. Build the Provider. Discovery runs here, once.
 provider, err := oidc.NewProvider(ctx, oidc.Config{
 	ProviderID:   "acme", // unique; not "google" or "github"
 	ClientID:     os.Getenv("OIDC_CLIENT_ID"),
@@ -36,8 +39,41 @@ provider, err := oidc.NewProvider(ctx, oidc.Config{
 if err != nil {
 	log.Fatal(err) // discovery failures are startup errors
 }
+```
 
-// 2. Register it like any other OAuth Provider.
+`NewProvider` fetches `.well-known/openid-configuration` **once** and keeps:
+
+| Discovery field | Used for |
+| --- | --- |
+| `authorization_endpoint` | The URL the browser is sent to. |
+| `token_endpoint` | Redeeming the authorization code. |
+| `userinfo_endpoint` | Fetching or cross-checking the identity. |
+| `issuer` | Checking the ID token's `iss` claim. |
+| `jwks_uri` | Fetching public keys to verify the ID token signature. |
+| `id_token_signing_alg_values_supported` | The allowed signing algorithms. |
+| `token_endpoint_auth_methods_supported` | How to authenticate at the token endpoint. |
+
+Explicit fields on `oidc.Config` override discovered values. If your provider needs a nonstandard
+discovery path, set `DiscoveryURL` explicitly — tenant paths are preserved:
+
+```go
+provider, err := oidc.NewProvider(ctx, oidc.Config{
+	ProviderID:   "acme",
+	ClientID:     os.Getenv("OIDC_CLIENT_ID"),
+	ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
+	Issuer:       "https://idp.example.com",
+	DiscoveryURL: "https://idp.example.com/tenant/.well-known/openid-configuration",
+	HTTPClient:   &http.Client{}, // inject custom TLS trust or timeouts
+})
+```
+
+Every network URL — discovery, JWKS, UserInfo and overrides — must be HTTPS and may not redirect.
+A failed fetch is an error, never a downgrade. `ProviderID` must be unique and cannot be `google`
+or `github`; a duplicate makes `signet.New` return `ErrOAuthProviderConflict`.
+
+## 3. Register the Provider and mount the HTTP API
+
+```go
 cfg.OAuth = &signet.OAuthConfig{
 	Providers:        []signet.OAuthProvider{provider},
 	RedirectBaseURL:  "https://api.example.com",
@@ -52,24 +88,14 @@ if err != nil {
 	log.Fatal(err)
 }
 
-// 3. Mount the HTTP endpoints.
 mux := http.NewServeMux()
 mux.Handle("/auth/", auth.Handler())
 ```
 
 Register `https://api.example.com/auth/oauth/callback` as an allowed redirect URI with your
-identity provider. `PathPrefix` decides the path — adjust both values together.
+identity provider. `PathPrefix` decides that path — change both values together.
 
-`NewProvider` fetches `.well-known/openid-configuration` once. Explicit endpoint fields override
-discovered values. If your provider needs a nonstandard discovery path, set `DiscoveryURL`
-explicitly — tenant paths are preserved. Every network URL — discovery, JWKS, UserInfo and
-overrides — must be HTTPS and may not redirect; a failed fetch is an error, never a downgrade.
-Supply `HTTPClient` when you need custom TLS trust or timeouts.
-
-`ProviderID` must be unique and cannot be `google` or `github`; a duplicate or reserved ID makes
-`signet.New` return `ErrOAuthProviderConflict`.
-
-## Start sign-in
+## 4. Start the sign-in from the browser
 
 ```text
 POST /auth/oauth/start
@@ -78,43 +104,63 @@ Content-Type: application/json
 {"provider":"acme","redirect":"https://app.example.com/callback"}
 ```
 
-The response is `{"url":"https://idp.example.com/authorize?..."}`. Redirect the browser to that URL.
-Signet handles `GET /auth/oauth/callback` automatically; do not implement it yourself.
+The response is:
 
-For the frontend client, see [Frontend client](/docs/frontend-client) — its `baseURL` must include
-the backend `PathPrefix` (`https://api.example.com/auth`).
+```json
+{"url":"https://idp.example.com/authorize?client_id=acme&code_challenge=...&nonce=..."}
+```
 
-## How sign-in works
+Redirect the browser to `url`. Signet owns `GET /auth/oauth/callback` — do not implement it.
+For browser code, see [Frontend client](/docs/frontend-client#oauth-providers); its `baseURL` must
+include the backend `PathPrefix` (`https://api.example.com/auth`).
 
-1. `POST /oauth/start` generates a PKCE challenge and an OIDC nonce, seals both in the single-use
-   OAuth state and builds the authorization URL with `openid`, the challenge and the nonce.
-2. The Provider redirects back to `GET /oauth/callback`. Signet consumes the state, redeems the code
-   and calls the Provider.
-3. When discovery publishes a JWKS URI, the ID token is verified against the discovered issuer,
-   the client ID as audience, expiry and issued-at (30-second tolerance), and the discovered
-   algorithm allowlist. `none` and HS256 are always rejected. The token's nonce must match the
-   sealed state.
-4. UserInfo supplies or cross-checks the identity. A verified ID token alone is sufficient; without
-   a JWKS or ID token, UserInfo is required. A subject mismatch is an error.
-5. Signet creates a Session exactly as it does for Google and GitHub, and records the `ProviderID`
-   as the Last sign-in method.
+## 5. What happens on the callback, in order
 
-Adapters that bind the nonce implement the optional `AuthURLWithNonce` and `ExchangeWithNonce`
-interfaces. Google and GitHub do not implement them and keep working unchanged.
+1. `POST /oauth/start` generates a PKCE verifier and a random OIDC nonce, seals both into the
+   single-use OAuth state, and builds the authorization URL with `openid`, `code_challenge`,
+   `code_challenge_method=S256` and `nonce`.
+2. The Provider redirects to `GET /auth/oauth/callback?code=...&state=...`. Signet consumes the
+   state Token, decrypts it, checks the 10-minute expiry and revalidates the callback URL.
+3. Signet redeems the code at the discovered `token_endpoint` with the PKCE verifier.
+4. If discovery published `jwks_uri`, Signet fetches and caches the keys, then verifies the ID
+   token: signature, `iss` = discovered issuer, `aud` = client ID, `exp`/`iat` with a 30-second
+   tolerance, allowed algorithms, and `nonce` = the sealed value. `none` and HS256 are always
+   rejected. A key fetch failure is a hard error.
+5. UserInfo is fetched with the access token. Its `sub` must match the verified ID token's `sub`.
+   Email and `email_verified` fall back per field from the token to UserInfo.
+6. A verified ID token alone can supply identity. Without a JWKS or ID token, UserInfo is required.
+   If neither yields a subject, sign-in fails.
+7. Signet creates a Session exactly as it does for Google and GitHub, records `acme` as the Last
+   sign-in method, and redirects the browser to the `redirect` you supplied.
 
-## Token endpoint authentication
+## Code-level details
 
-When `NewProvider` fetches discovery, it keeps the `token_endpoint_auth_methods_supported` list.
-At code redemption time Signet chooses a style: `client_secret_basic` if the list contains it,
-otherwise `client_secret_post`, and Basic if the list is absent.
+### Nonce binding
 
-- **Basic** — credentials go in the `Authorization: Basic …` header; the form body carries only
+The core generates the nonce and seals it with the PKCE verifier. Two optional interfaces carry it
+without breaking existing adapters:
+
+```go
+type AuthURLWithNonce interface {
+	AuthURLWithNonce(clientID, redirectURI, state, pkceChallenge, nonce string) string
+}
+
+type ExchangeWithNonce interface {
+	ExchangeWithNonce(context.Context, string, string, string, string) (*OAuthIdentity, error)
+}
+```
+
+The OIDC adapter implements both; Google and GitHub do not, and keep working unchanged.
+
+### Token endpoint authentication
+
+Discovery's `token_endpoint_auth_methods_supported` is kept as `p.authMethods`. At redemption
+time Signet chooses a style: `client_secret_basic` if present, otherwise `client_secret_post`,
+and Basic if the list is absent. An explicit config value overrides it.
+
+- **Basic** → `Authorization: Basic base64(clientID:clientSecret)`; the form body carries only
   `grant_type`, `code`, `redirect_uri` and `code_verifier`.
-- **Post** — `client_id` and `client_secret` are added to the form body instead, and no Basic
-  header is sent.
-
-Either way, the token request uses the discovered `token_endpoint` over HTTPS with redirects
-refused. Override the choice explicitly when a provider advertises the wrong value:
+- **Post** → no Basic header; `client_id` and `client_secret` are added to the form body.
 
 ```go
 provider, err := oidc.NewProvider(ctx, oidc.Config{
@@ -126,12 +172,29 @@ provider, err := oidc.NewProvider(ctx, oidc.Config{
 })
 ```
 
+### Algorithms
 
-## Identity mapping
+The discovered list is intersected with `RS256`, `PS256`, `ES256`, `ES384`, `ES512` and `EdDSA`.
+JWKS keys may be RSA, EC or Ed25519; the key type must match the token's signing method. An empty
+intersection makes `NewProvider` fail.
 
-The subject from a verified ID token is authoritative; UserInfo's subject is only a match check.
+### Identity mapping
+
+The subject from a verified ID token is authoritative; UserInfo's `sub` is only a match check.
 Email and verification flag come from the token when present and fall back per field to UserInfo.
 An unverified email follows Signet's normal explicit-linking flow rather than being auto-linked.
 
-See [OAuth sign-in](/docs/oauth) for the shared endpoint contract, state encryption and redirect
-rules, and [ADR-0012](https://github.com/shakibdshy/signet/blob/main/docs/adr/0012-generic-oidc-is-an-adapter.md).
+## Error cases
+
+| Condition | Result |
+| --- | --- |
+| Discovery unreachable, non-HTTPS or redirecting | `NewProvider` error at startup |
+| Issuer mismatch, no supported algorithms | `NewProvider` error at startup |
+| Duplicate/reserved `ProviderID` | `ErrOAuthProviderConflict` from `signet.New` |
+| Invalid state, expired state, bad redirect | `invalid_request` (400) |
+| JWKS fetch failure, bad signature, wrong issuer/audience/nonce | Callback fails; no Session is created |
+| Subject mismatch between token and UserInfo | Callback fails |
+| Email missing or unverified | Explicit account-linking flow |
+
+See [OAuth sign-in](/docs/oauth) for the shared endpoint contract and state encryption, and
+[ADR-0012](https://github.com/shakibdshy/signet/blob/main/docs/adr/0012-generic-oidc-is-an-adapter.md).
