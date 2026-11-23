@@ -61,7 +61,7 @@ The callback sets the Session and active-organization cookies and records `sso` 
 | `GET` | `/sso/callback` | none | Verify the assertion and create a Session |
 | `POST` | `/sso/connections` | Session | Create a verified connection |
 | `GET` | `/sso/connections` | Session | List connections |
-| `POST` | `/sso/connections/delete` | Session | Delete a connection |
+| `DELETE` | `/sso/connections` | Session | Delete a connection |
 
 Browser examples are in [Frontend client](/docs/frontend-client). SAML and SCIM are not included in this phase.
 
