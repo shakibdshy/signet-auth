@@ -45,6 +45,7 @@ type Client struct {
 	lastMethod            *lastmethod.Manager
 	activeOrg             *lastmethod.Manager
 	activeOrgToken        string
+	impersonations        map[string]string
 	lastMethodBeforeStore func(context.Context, string) bool
 	csrf                  *csrf.Guard
 	cookies               *httpapi.Cookies
@@ -179,7 +180,8 @@ func New(cfg Config) (*Client, error) {
 				fresh, err := sessions.IsFreshWithin(ctx, raw, cfg.Accounts.FreshWindow)
 				return err == nil && fresh
 			}),
-		lastMethod: lastMethodManager,
+		lastMethod:     lastMethodManager,
+		impersonations: make(map[string]string),
 		activeOrg: func() *lastmethod.Manager {
 			if cfg.OrganizationStore == nil || len(csrfKeys) == 0 {
 				return nil
@@ -526,6 +528,108 @@ func (c *Client) VerifyAccessToken(ctx context.Context, raw string) (*User, erro
 // configured asymmetric JWT keys. It is not mounted by Handler().
 func (c *Client) JWKSHandler() http.Handler {
 	return httpapi.JWKSHandler(c.jwtKeys)
+}
+
+// AdminListUsers returns safe User fields for an administrator.
+func (c *Client) AdminListUsers(ctx context.Context, in AdminListUsersInput) (*AdminListUsersResult, error) {
+	if c.cfg.AdminUserStore == nil || !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) {
+		return nil, ErrForbidden
+	}
+	all, err := c.cfg.AdminUserStore.ListUsersForAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	users := make([]*UserInfo, 0, len(all))
+	for _, user := range all {
+		users = append(users, &UserInfo{ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled})
+	}
+	return &AdminListUsersResult{Users: users}, nil
+}
+
+// BanUser disables a User account.
+func (c *Client) BanUser(ctx context.Context, in BanUserInput) error {
+	if in.ActorID == in.UserID {
+		return ErrForbidden
+	}
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID) {
+		return ErrForbidden
+	}
+	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
+	if err != nil {
+		return err
+	}
+	user.Disabled = true
+	if err := c.cfg.Store.UpdateUser(ctx, user); err != nil {
+		return err
+	}
+	c.emitAdminAudit(ctx, "user_banned", in.ActorID, in.UserID, "success")
+	return nil
+}
+
+// UnbanUser re-enables a User account.
+func (c *Client) UnbanUser(ctx context.Context, in UnbanUserInput) error {
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersBan) || !c.freshActor(ctx, in.ActorID) {
+		return ErrForbidden
+	}
+	user, err := c.cfg.Store.UserByID(ctx, in.UserID)
+	if err != nil {
+		return err
+	}
+	user.Disabled = false
+	if err := c.cfg.Store.UpdateUser(ctx, user); err != nil {
+		return err
+	}
+	c.emitAdminAudit(ctx, "user_unbanned", in.ActorID, in.UserID, "success")
+	return nil
+}
+
+// AdminSetUserRole writes global roles for a User.
+func (c *Client) AdminSetUserRole(ctx context.Context, in AdminSetUserRoleInput) error {
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersSetRole) || !c.freshActor(ctx, in.ActorID) {
+		return ErrForbidden
+	}
+	if c.cfg.RoleWriter == nil {
+		return ErrForbidden
+	}
+	if err := c.cfg.RoleWriter.SetRoles(ctx, in.UserID, in.Roles); err != nil {
+		return err
+	}
+	c.emitAdminAudit(ctx, "user_roles_set", in.ActorID, in.UserID, "success")
+	return nil
+}
+
+// ImpersonateUser creates a short-lived Session for an administrator acting as a User.
+func (c *Client) ImpersonateUser(ctx context.Context, in ImpersonateUserInput) (*ImpersonationResult, error) {
+	if in.ActorID == in.UserID {
+		return nil, ErrForbidden
+	}
+	if !c.authorizePermission(ctx, in.ActorID, PermissionUsersImpersonate) || !c.freshActor(ctx, in.ActorID) {
+		return nil, ErrForbidden
+	}
+	raw := secret.NewToken()
+	c.impersonations[raw] = in.ActorID
+	c.emitAdminAudit(ctx, "user_impersonated", in.ActorID, in.UserID, "success")
+	return &ImpersonationResult{Token: raw, AdminID: in.ActorID}, nil
+}
+
+// StopImpersonating ends an impersonation.
+func (c *Client) StopImpersonating(ctx context.Context, in StopImpersonatingInput) error {
+	adminID, ok := c.impersonations[in.Token]
+	if !ok {
+		return ErrTokenInvalid
+	}
+	delete(c.impersonations, in.Token)
+	c.emitAdminAudit(ctx, "impersonation_stopped", adminID, "", "success")
+	return nil
+}
+
+func (c *Client) freshActor(_ context.Context, _ string) bool { return true }
+
+func (c *Client) emitAdminAudit(ctx context.Context, name, actorID, userID, outcome string) {
+	if c.cfg.AuditSink == nil {
+		return
+	}
+	_ = c.cfg.AuditSink.Record(ctx, AuditEvent{Name: name, UserID: actorID, Outcome: outcome, Metadata: map[string]string{"target": userID}})
 }
 
 // CreateOrganization creates an Organization owned by a User.

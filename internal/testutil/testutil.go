@@ -44,6 +44,15 @@ func (s *Store) CreateUser(_ context.Context, u *signet.User) error {
 	return nil
 }
 
+// ListUsersForAdmin implements signet.AdminUserStore.
+func (s *Store) ListUsersForAdmin(context.Context) ([]*signet.User, error) {
+	out := make([]*signet.User, 0, len(s.Users))
+	for _, user := range s.Users {
+		out = append(out, user)
+	}
+	return out, nil
+}
+
 // UserByID implements signet.UserStore.
 func (s *Store) UserByID(_ context.Context, id string) (*signet.User, error) {
 	if u, ok := s.Users[id]; ok {

@@ -234,6 +234,33 @@ type SetActiveOrganizationInput = core.SetActiveOrganizationInput
 // ActiveOrganization is the currently selected Organization.
 type ActiveOrganization = core.ActiveOrganization
 
+// UserInfo is a safe representation of a User.
+type UserInfo = core.UserInfo
+
+// AdminListUsersInput selects the User list for an administrator.
+type AdminListUsersInput = core.AdminListUsersInput
+
+// AdminListUsersResult contains safe User fields.
+type AdminListUsersResult = core.AdminListUsersResult
+
+// BanUserInput describes an administrative ban.
+type BanUserInput = core.BanUserInput
+
+// UnbanUserInput identifies a User to unban.
+type UnbanUserInput = core.UnbanUserInput
+
+// AdminSetUserRoleInput assigns global roles to a User.
+type AdminSetUserRoleInput = core.AdminSetUserRoleInput
+
+// ImpersonateUserInput starts an impersonation Session.
+type ImpersonateUserInput = core.ImpersonateUserInput
+
+// ImpersonationResult carries the temporary credentials.
+type ImpersonationResult = core.ImpersonationResult
+
+// StopImpersonatingInput identifies an impersonation to stop.
+type StopImpersonatingInput = core.StopImpersonatingInput
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

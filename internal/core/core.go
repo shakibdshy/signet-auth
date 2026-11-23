@@ -326,6 +326,11 @@ type OrganizationStore interface {
 	Members(context.Context, string) ([]*MemberInfo, error)
 }
 
+// AdminUserStore lists Users for administrative management. It is optional.
+type AdminUserStore interface {
+	ListUsersForAdmin(context.Context) ([]*User, error)
+}
+
 // CreateOrganizationInput describes a new Organization.
 type CreateOrganizationInput struct {
 	OwnerID string
@@ -372,6 +377,55 @@ type SetActiveOrganizationInput struct {
 
 // ActiveOrganization is the currently selected Organization.
 type ActiveOrganization struct{ ID string }
+
+// AdminListUsersInput selects the User list for an administrator.
+type AdminListUsersInput struct{ ActorID string }
+
+// AdminListUsersResult contains safe User fields.
+type AdminListUsersResult struct{ Users []*UserInfo }
+
+// UserInfo is a safe representation of a User.
+type UserInfo struct {
+	ID       string
+	Email    string
+	Name     string
+	Disabled bool
+}
+
+// BanUserInput describes an administrative ban.
+type BanUserInput struct {
+	ActorID string
+	UserID  string
+	Reason  string
+}
+
+// UnbanUserInput identifies a User to unban.
+type UnbanUserInput struct {
+	ActorID string
+	UserID  string
+}
+
+// AdminSetUserRoleInput assigns global roles to a User.
+type AdminSetUserRoleInput struct {
+	ActorID string
+	UserID  string
+	Roles   []string
+}
+
+// ImpersonateUserInput starts an impersonation Session.
+type ImpersonateUserInput struct {
+	ActorID string
+	UserID  string
+}
+
+// ImpersonationResult carries the temporary credentials.
+type ImpersonationResult struct {
+	Token   string
+	AdminID string
+}
+
+// StopImpersonatingInput identifies an impersonation to stop.
+type StopImpersonatingInput struct{ Token string }
 
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {
@@ -587,6 +641,7 @@ type Config struct {
 	APIKeyStore              APIKeyStore
 	APIKeyProtectedEndpoints []string
 	OrganizationStore        OrganizationStore
+	AdminUserStore           AdminUserStore
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
