@@ -383,6 +383,15 @@ type SSOCallbackInput = core.SSOCallbackInput
 // SSOCallbackResult carries the Session and Organization.
 type SSOCallbackResult = core.SSOCallbackResult
 
+// SAMLStartInput starts an SP-initiated SAML ceremony.
+type SAMLStartInput = core.SAMLStartInput
+
+// SAMLStartResult carries the IdP URL and state Token.
+type SAMLStartResult = core.SAMLStartResult
+
+// SAMLACSResult carries the Session after assertion validation.
+type SAMLACSResult = core.SAMLACSResult
+
 // CreateSSOConnectionInput describes a new SSO connection.
 type CreateSSOConnectionInput = core.CreateSSOConnectionInput
 

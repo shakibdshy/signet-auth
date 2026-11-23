@@ -430,6 +430,10 @@ type SSOConnection struct {
 	ClientSecret   string
 	Domains        []string
 	DefaultRole    string
+	Protocol       string
+	Metadata       string
+	SPHost         string
+	SPEntityID     string
 }
 
 // SSOConnectionStore persists SSO connections. It is optional.
@@ -509,7 +513,29 @@ type CreateSSOConnectionInput struct {
 	ClientSecret   string   `json:"client_secret"`
 	Domains        []string `json:"domains"`
 	DefaultRole    string   `json:"default_role"`
+	Protocol       string   `json:"protocol"`
+	Metadata       string   `json:"metadata"`
 	SessionToken   string   `json:"-"`
+}
+
+// SAMLStartInput starts an SP-initiated SAML ceremony.
+type SAMLStartInput struct {
+	OrganizationID string `json:"organization_id"`
+	Email          string `json:"email"`
+}
+
+// SAMLStartResult carries the IdP URL, tracking cookies and state Token.
+type SAMLStartResult struct {
+	URL       string         `json:"url"`
+	State     string         `json:"state"`
+	Cookies   []*http.Cookie `json:"-"`
+	RequestID string         `json:"-"`
+}
+
+// SAMLACSResult carries the Session and Organization after assertion validation.
+type SAMLACSResult struct {
+	SessionToken   string `json:"session_token"`
+	OrganizationID string `json:"organization_id"`
 }
 
 // AuditSink receives Audit events. Implementations own persistence and retention.
@@ -1443,6 +1469,12 @@ var (
 	ErrSSOInvalidAssertion = errors.New("signet: sso invalid assertion")
 	// ErrInvalidSSOConfig reports a misconfigured SSO feature.
 	ErrInvalidSSOConfig = errors.New("signet: invalid sso configuration")
+	// ErrSAMLInvalidAssertion reports a rejected SAML assertion.
+	ErrSAMLInvalidAssertion = errors.New("signet: saml invalid assertion")
+	// ErrSAMLConnectionNotFound reports an unknown SAML connection.
+	ErrSAMLConnectionNotFound = errors.New("signet: saml connection not found")
+	// ErrSAMLReplay reports a replayed SAML assertion.
+	ErrSAMLReplay = errors.New("signet: saml replay")
 	// ErrForbidden reports an authorization denial.
 	ErrForbidden = errors.New("signet: forbidden")
 )

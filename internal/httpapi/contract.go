@@ -196,6 +196,13 @@ func ContractFor() Contract {
 			{Name: "oauth/device/approve", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.DeviceApproveInput{}), Status: http.StatusOK,
 			}}},
+			{Name: "saml/start", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.SAMLStartInput{}),
+				Response: ResponseSpec{Ref: "SAMLStartResult"}, Status: http.StatusOK,
+			}}},
+			{Name: "saml/acs", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Response: ResponseSpec{Ref: "SAMLACSResult"}, Status: http.StatusOK,
+			}}},
 			{Name: "sso/start", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SSOStartInput{}),
 				Response: ResponseSpec{Ref: "SSOStartResult"}, Status: http.StatusOK,
@@ -370,6 +377,9 @@ func ContractFor() Contract {
 			{core.ErrSSOConnectionNotFound, http.StatusNotFound, "sso_connection_not_found", "sso connection not found"},
 			{core.ErrSSODomainNotVerified, http.StatusForbidden, "sso_domain_not_verified", "sso domain not verified"},
 			{core.ErrSSOInvalidAssertion, http.StatusUnauthorized, "sso_invalid_assertion", "sso assertion rejected"},
+			{core.ErrSAMLInvalidAssertion, http.StatusUnauthorized, "saml_invalid_assertion", "saml assertion rejected"},
+			{core.ErrSAMLConnectionNotFound, http.StatusNotFound, "saml_connection_not_found", "saml connection not found"},
+			{core.ErrSAMLReplay, http.StatusUnauthorized, "saml_replay", "saml assertion replayed"},
 			{core.ErrPasswordCompromised, http.StatusBadRequest, "password_compromised", "password has been compromised"},
 			{core.ErrCaptchaRequired, http.StatusBadRequest, "invalid_input", "captcha token required"},
 			{core.ErrCaptchaInvalid, http.StatusBadRequest, "invalid_input", "captcha verification failed"},

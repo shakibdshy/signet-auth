@@ -132,4 +132,10 @@ var (
 	ErrSSOInvalidAssertion = core.ErrSSOInvalidAssertion
 	// ErrInvalidSSOConfig reports a misconfigured SSO feature.
 	ErrInvalidSSOConfig = core.ErrInvalidSSOConfig
+	// ErrSAMLInvalidAssertion reports a rejected SAML assertion.
+	ErrSAMLInvalidAssertion = core.ErrSAMLInvalidAssertion
+	// ErrSAMLConnectionNotFound reports an unknown SAML connection.
+	ErrSAMLConnectionNotFound = core.ErrSAMLConnectionNotFound
+	// ErrSAMLReplay reports a replayed SAML assertion.
+	ErrSAMLReplay = core.ErrSAMLReplay
 )

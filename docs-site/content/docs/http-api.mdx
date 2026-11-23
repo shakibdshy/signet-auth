@@ -139,3 +139,12 @@ Both endpoints set Session and CSRF cookies only when a Session was issued. See
 | POST `/oauth/device/approve` | Session | required | Approve a User code. |
 
 All five accept form-encoded or JSON bodies and return OAuth-standard errors. See [Authorization server](/docs/authorization-server).
+
+## SAML endpoints
+
+| Method + path | Auth | Description |
+| --- | --- | --- |
+| POST `/saml/start` | none | Build a signed AuthnRequest and return the IdP URL. |
+| POST `/saml/acs` | none | Validate a signed assertion and create a Session. |
+
+See [SAML SSO](/docs/saml).
