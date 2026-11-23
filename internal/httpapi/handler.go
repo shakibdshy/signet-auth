@@ -34,6 +34,12 @@ type API interface {
 	ListAccounts(context.Context, core.ListAccountsInput) (*core.ListAccountsResult, error)
 	UnlinkAccount(context.Context, core.UnlinkAccountInput) error
 	SessionTokenFromRequest(*http.Request) string
+	VerifyAPIKey(context.Context, string) (*core.Principal, error)
+	ListAPIKeys(context.Context, core.ListAPIKeysInput) (*core.ListAPIKeysResult, error)
+	CreateAPIKey(context.Context, core.CreateAPIKeyInput) (*core.CreateAPIKeyResult, error)
+	RevokeAPIKey(context.Context, core.RevokeAPIKeyInput) error
+	APIKeyProtectedEndpoints() []string
+	SetPrincipal(*http.Request, *core.Principal) *http.Request
 	LastSignInMethod(*http.Request) string
 	SetLastMethodCookie(http.ResponseWriter, string)
 	ListSessions(context.Context, core.ListSessionsInput) (*core.ListSessionsResult, error)
@@ -105,6 +111,9 @@ var Endpoints = []Endpoint{
 	{Name: "oauth/start", Anonymous: true},
 	{Name: "oauth/callback", Anonymous: true},
 	{Name: "csrf-token", Anonymous: true},
+	{Name: "api-keys", Anonymous: true},
+	{Name: "verify-api-key", Anonymous: true},
+	{Name: "revoke-api-key"},
 }
 
 // Handler returns a plain http.Handler serving Signet's authentication
@@ -178,6 +187,12 @@ func (h *Handler) Handler() http.Handler {
 			h.handleOAuthStart(w, r)
 		case "oauth/callback":
 			h.handleOAuthCallback(w, r)
+		case "api-keys":
+			h.handleAPIKeys(w, r)
+		case "verify-api-key":
+			h.handleVerifyAPIKey(w, r)
+		case "revoke-api-key":
+			h.handleRevokeAPIKey(w, r)
 		case "csrf-token":
 			h.api.ServeCSRFToken(w, r)
 		default:
@@ -185,11 +200,102 @@ func (h *Handler) Handler() http.Handler {
 		}
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.api.APIKeyProtectedEndpoints() != nil {
+			prefix := strings.TrimRight(h.prefix, "/") + "/"
+			name := strings.TrimPrefix(r.URL.Path, prefix)
+			for _, protected := range h.api.APIKeyProtectedEndpoints() {
+				if "/"+protected == r.URL.Path || protected == name {
+					raw := r.Header.Get("X-API-Key")
+					if raw == "" {
+						writeError(w, http.StatusUnauthorized, "invalid_token", "api key required")
+						return
+					}
+					principal, err := h.api.VerifyAPIKey(r.Context(), raw)
+					if err != nil {
+						writeAuthError(w, err)
+						return
+					}
+					r = h.api.SetPrincipal(r, principal)
+					base.ServeHTTP(w, r)
+					return
+				}
+			}
+		}
 		if h.api.CSRFGuard(w, r) {
 			return
 		}
 		base.ServeHTTP(w, r)
 	})
+}
+
+func (h *Handler) handleAPIKeys(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		result, err := h.api.ListAPIKeys(r.Context(), core.ListAPIKeysInput{
+			OwnerUserID: user.ID, SessionToken: h.api.SessionTokenFromRequest(r),
+		})
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	case http.MethodPost:
+		var in core.CreateAPIKeyInput
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+			return
+		}
+		in.OwnerUserID = user.ID
+		in.SessionToken = h.api.SessionTokenFromRequest(r)
+		result, err := h.api.CreateAPIKey(r.Context(), in)
+		if err != nil {
+			writeAuthError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, result)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Handler) handleRevokeAPIKey(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	var in core.RevokeAPIKeyInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
+		return
+	}
+	in.OwnerUserID = user.ID
+	in.SessionToken = h.api.SessionTokenFromRequest(r)
+	if err := h.api.RevokeAPIKey(r.Context(), in); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleVerifyAPIKey(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	principal, err := h.api.VerifyAPIKey(r.Context(), r.Header.Get("X-API-Key"))
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, principal)
 }
 
 func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {

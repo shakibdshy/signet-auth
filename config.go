@@ -58,6 +58,15 @@ type AuditEvent = core.AuditEvent
 // LastSignInMethodConfig controls the Last sign-in method cookie.
 type LastSignInMethodConfig = core.LastSignInMethodConfig
 
+// Authorizer answers read-only authorization questions.
+type Authorizer = core.Authorizer
+
+// RoleWriter persists global role assignments.
+type RoleWriter = core.RoleWriter
+
+// AuthorizeIn authorizes an action within an Organization.
+type AuthorizeIn = core.AuthorizeIn
+
 // PasswordlessConfig controls magic-link and email-OTP sign-in.
 type PasswordlessConfig = core.PasswordlessConfig
 

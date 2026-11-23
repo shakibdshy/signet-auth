@@ -19,6 +19,8 @@
     "github",
     "oidc",
     "---Verification and recovery---",
+    "authorization",
+    "api-keys",
     "verification-and-reset",
     "passwordless-verification",
     "---Database---",

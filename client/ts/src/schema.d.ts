@@ -21,6 +21,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api-keys */
+        get: operations["api-keys_get"];
+        put?: never;
+        /** POST /api-keys */
+        post: operations["api-keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/change-email": {
         parameters: {
             query?: never;
@@ -225,6 +243,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/revoke-api-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /revoke-api-key */
+        post: operations["revoke-api-key_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/send-magic-link": {
         parameters: {
             query?: never;
@@ -413,6 +448,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/verify-api-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** POST /verify-api-key */
+        post: operations["verify-api-key_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/verify-change-email": {
         parameters: {
             query?: never;
@@ -502,6 +554,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        APIKey: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            hash: string;
+            id: string;
+            name: string;
+            owner_user_id: string;
+            prefix: string;
+            remaining: number;
+            /** Format: date-time */
+            revoked_at?: string | null;
+            roles: string[];
+        };
         AccountInfo: {
             /** Format: date-time */
             created_at: string;
@@ -513,7 +580,7 @@ export interface components {
         };
         ApiError: {
             /** @enum {string} */
-            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
+            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
             message: string;
         };
         ChangeEmailInput: {
@@ -527,11 +594,26 @@ export interface components {
         ConfirmDeleteUserInput: {
             token: string;
         };
+        CreateAPIKeyInput: {
+            /** Format: date-time */
+            expires_at: string;
+            name: string;
+            owner_user_id: string;
+            remaining: number;
+            roles: string[];
+        };
+        CreateAPIKeyResult: {
+            key: components["schemas"]["APIKey"];
+            raw: string;
+        };
         DisableTwoFactorInput: {
             password: string;
         };
         EnableTwoFactorInput: {
             password: string;
+        };
+        ListAPIKeysResult: {
+            keys: components["schemas"]["APIKey"][];
         };
         OAuthStartInput: {
             provider: string;
@@ -540,12 +622,20 @@ export interface components {
         OAuthStartResult: {
             url: string;
         };
+        Principal: {
+            owner_user_id: string;
+            roles: string[];
+        };
         RegenerateBackupCodesInput: {
             password: string;
         };
         ResetPasswordInput: {
             new_password: string;
             token: string;
+        };
+        RevokeAPIKeyInput: {
+            id: string;
+            owner_user_id: string;
         };
         SendEmailOTPInput: {
             email: string;
@@ -660,7 +750,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -669,7 +759,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -678,7 +768,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -687,7 +777,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -696,7 +786,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -705,7 +795,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -714,7 +804,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -723,7 +813,197 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "api-keys_get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListAPIKeysResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "api-keys_post": {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAPIKeyInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateAPIKeyResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -756,7 +1036,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -765,7 +1045,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -774,7 +1054,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -783,7 +1063,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -792,7 +1072,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -801,7 +1081,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -810,7 +1090,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -819,7 +1099,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -852,7 +1132,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -861,7 +1141,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -870,7 +1150,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -879,7 +1159,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -888,7 +1168,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -897,7 +1177,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -906,7 +1186,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -915,7 +1195,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -948,7 +1228,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -957,7 +1237,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -966,7 +1246,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -975,7 +1255,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -984,7 +1264,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -993,7 +1273,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1002,7 +1282,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1011,7 +1291,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1042,7 +1322,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1051,7 +1331,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1060,7 +1340,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1069,7 +1349,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1078,7 +1358,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1087,7 +1367,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1096,7 +1376,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1105,7 +1385,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1138,7 +1418,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1147,7 +1427,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1156,7 +1436,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1165,7 +1445,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1174,7 +1454,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1183,7 +1463,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1192,7 +1472,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1201,7 +1481,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1240,7 +1520,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1249,7 +1529,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1258,7 +1538,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1267,7 +1547,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1276,7 +1556,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1285,7 +1565,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1294,7 +1574,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1303,7 +1583,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1334,7 +1614,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1343,7 +1623,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1352,7 +1632,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1361,7 +1641,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1370,7 +1650,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1379,7 +1659,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1388,7 +1668,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1397,7 +1677,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1427,7 +1707,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1436,7 +1716,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1445,7 +1725,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1454,7 +1734,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1463,7 +1743,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1472,7 +1752,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1481,7 +1761,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1490,7 +1770,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1523,7 +1803,7 @@ export interface operations {
                     "application/json": components["schemas"]["OAuthStartResult"];
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1532,7 +1812,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1541,7 +1821,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1550,7 +1830,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1559,7 +1839,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1568,7 +1848,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1577,7 +1857,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1586,7 +1866,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1623,7 +1903,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1632,7 +1912,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1641,7 +1921,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1650,7 +1930,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1659,7 +1939,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1668,7 +1948,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1677,7 +1957,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1686,7 +1966,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1715,7 +1995,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1724,7 +2004,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1733,7 +2013,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1742,7 +2022,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1751,7 +2031,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1760,7 +2040,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1769,7 +2049,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1778,7 +2058,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1811,7 +2091,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1820,7 +2100,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1829,7 +2109,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1838,7 +2118,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1847,7 +2127,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1856,7 +2136,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1865,7 +2145,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1874,7 +2154,103 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "revoke-api-key_post": {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeAPIKeyInput"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1905,7 +2281,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1914,7 +2290,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1923,7 +2299,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1932,7 +2308,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1941,7 +2317,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1950,7 +2326,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -1959,7 +2335,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1968,7 +2344,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1999,7 +2375,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2008,7 +2384,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2017,7 +2393,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2026,7 +2402,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2035,7 +2411,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2044,7 +2420,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2053,7 +2429,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2062,7 +2438,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2095,7 +2471,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2104,7 +2480,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2113,7 +2489,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2122,7 +2498,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2131,7 +2507,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2140,7 +2516,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2149,7 +2525,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2158,7 +2534,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2191,7 +2567,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2200,7 +2576,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2209,7 +2585,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2218,7 +2594,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2227,7 +2603,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2236,7 +2612,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2245,7 +2621,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2254,7 +2630,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2283,7 +2659,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2292,7 +2668,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2301,7 +2677,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2310,7 +2686,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2319,7 +2695,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2328,7 +2704,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2337,7 +2713,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2346,7 +2722,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2377,7 +2753,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2386,7 +2762,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2395,7 +2771,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2404,7 +2780,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2413,7 +2789,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2422,7 +2798,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2431,7 +2807,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2440,7 +2816,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2469,7 +2845,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2478,7 +2854,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2487,7 +2863,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2496,7 +2872,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2505,7 +2881,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2514,7 +2890,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2523,7 +2899,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2532,7 +2908,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2571,7 +2947,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2580,7 +2956,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2589,7 +2965,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2598,7 +2974,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2607,7 +2983,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2616,7 +2992,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2625,7 +3001,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2634,7 +3010,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2667,7 +3043,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2676,7 +3052,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2685,7 +3061,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2694,7 +3070,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2703,7 +3079,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2712,7 +3088,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2721,7 +3097,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2730,7 +3106,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2765,7 +3141,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2774,7 +3150,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2783,7 +3159,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2792,7 +3168,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2801,7 +3177,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2810,7 +3186,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2819,7 +3195,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2828,7 +3204,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2861,7 +3237,7 @@ export interface operations {
                     "application/json": components["schemas"]["TokenPair"];
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2870,7 +3246,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2879,7 +3255,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2888,7 +3264,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2897,7 +3273,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2906,7 +3282,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -2915,7 +3291,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2924,7 +3300,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -2957,7 +3333,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2966,7 +3342,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2975,7 +3351,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2984,7 +3360,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2993,7 +3369,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3002,7 +3378,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3011,7 +3387,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3020,7 +3396,99 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "verify-api-key_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Principal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3053,7 +3521,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3062,7 +3530,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3071,7 +3539,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3080,7 +3548,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3089,7 +3557,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3098,7 +3566,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3107,7 +3575,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3116,7 +3584,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3149,7 +3617,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3158,7 +3626,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3167,7 +3635,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3176,7 +3644,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3185,7 +3653,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3194,7 +3662,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3203,7 +3671,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3212,7 +3680,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3247,7 +3715,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3256,7 +3724,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3265,7 +3733,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3274,7 +3742,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3283,7 +3751,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3292,7 +3760,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3301,7 +3769,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3310,7 +3778,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3346,7 +3814,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3355,7 +3823,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3364,7 +3832,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3373,7 +3841,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3382,7 +3850,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3391,7 +3859,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3400,7 +3868,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3409,7 +3877,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3445,7 +3913,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description password_compromised */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3454,7 +3922,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description code_already_used */
+            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3463,7 +3931,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description email_not_verified */
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3472,7 +3940,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description not_found */
+            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3481,7 +3949,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description oauth_account_conflict */
+            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3490,7 +3958,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description rate_limited */
+            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -3499,7 +3967,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description internal_error */
+            /** @description Internal Server Error */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -3508,7 +3976,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description captcha_unavailable */
+            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;

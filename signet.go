@@ -1,15 +1,31 @@
 package signet
 
 import (
+	"context"
 	"time"
 
 	"github.com/shakibdshy/signet/internal/auth"
+	"github.com/shakibdshy/signet/internal/authorization"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/mail"
 )
 
 // RateLimitRule overrides the limiter and key prefix for one endpoint.
 type RateLimitRule = core.RateLimitRule
+
+// NewMemoryAuthorizer returns an in-memory Authorizer from role statements
+// and a callback that supplies a User's roles.
+func NewMemoryAuthorizer(statements RoleStatements, roles func(context.Context, string) []string) Authorizer {
+	converted := make(map[string][]string, len(statements))
+	for role, permissions := range statements {
+		for _, permission := range permissions {
+			converted[role] = append(converted[role], string(permission))
+		}
+	}
+	return authorization.NewMemoryAuthorizer(authorization.MemoryConfig{
+		Statements: converted, Roles: roles,
+	})
+}
 
 // Version is the current Signet version. It remains a development placeholder
 // until the first release is tagged.
@@ -60,6 +76,29 @@ type User = core.User
 // to an external identity provider. A User has one credential Account and may
 // have several provider Accounts.
 type Account = core.Account
+
+// SystemOwnerID scopes API keys with no owning User.
+const SystemOwnerID = core.SystemOwnerID
+
+// RoleStatements maps role names to their granted permissions.
+type RoleStatements = core.RoleStatements
+
+// Permission is an exact resource:action authorization string.
+type Permission = core.Permission
+
+// Published permission strings used by guarded operations.
+const (
+	PermissionUsersBan         = core.PermissionUsersBan
+	PermissionUsersSetRole     = core.PermissionUsersSetRole
+	PermissionUsersImpersonate = core.PermissionUsersImpersonate
+	PermissionSessionsRevoke   = core.PermissionSessionsRevoke
+	PermissionAPIKeysCreate    = core.PermissionAPIKeysCreate
+	PermissionAPIKeysRevoke    = core.PermissionAPIKeysRevoke
+	PermissionOrgsCreate       = core.PermissionOrgsCreate
+	PermissionOrgsMemberAdd    = core.PermissionOrgsMemberAdd
+	PermissionOrgsMemberRemove = core.PermissionOrgsMemberRemove
+	PermissionOrgsMemberRole   = core.PermissionOrgsMemberRole
+)
 
 // TokenKind identifies the sensitive flow a Token proves.
 type TokenKind = core.TokenKind
@@ -137,6 +176,27 @@ type Argon2idHasher = auth.Argon2idHasher
 
 // Session is one authenticated visit by a User.
 type Session = core.Session
+
+// APIKey is a digest-only credential for a non-human client.
+type APIKey = core.APIKey
+
+// Principal is the identity attached to a verified API key.
+type Principal = core.Principal
+
+// CreateAPIKeyInput describes a new API key.
+type CreateAPIKeyInput = core.CreateAPIKeyInput
+
+// CreateAPIKeyResult carries the raw key once and its stored record.
+type CreateAPIKeyResult = core.CreateAPIKeyResult
+
+// ListAPIKeysInput selects the keys owned by a User.
+type ListAPIKeysInput = core.ListAPIKeysInput
+
+// ListAPIKeysResult contains a User's API keys.
+type ListAPIKeysResult = core.ListAPIKeysResult
+
+// RevokeAPIKeyInput identifies a key to revoke.
+type RevokeAPIKeyInput = core.RevokeAPIKeyInput
 
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo

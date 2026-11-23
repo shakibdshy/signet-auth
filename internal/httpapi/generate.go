@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"sort"
 	"strconv"
@@ -15,8 +16,11 @@ import (
 var timeType = reflect.TypeOf(time.Time{})
 
 var namedTypes = map[string]reflect.Type{
-	"TokenPair":        reflect.TypeOf(core.TokenPair{}),
-	"OAuthStartResult": reflect.TypeOf(core.OAuthStartResult{}),
+	"TokenPair":          reflect.TypeOf(core.TokenPair{}),
+	"OAuthStartResult":   reflect.TypeOf(core.OAuthStartResult{}),
+	"ListAPIKeysResult":  reflect.TypeOf(core.ListAPIKeysResult{}),
+	"CreateAPIKeyResult": reflect.TypeOf(core.CreateAPIKeyResult{}),
+	"Principal":          reflect.TypeOf(core.Principal{}),
 }
 
 type oasDocument struct {
@@ -252,13 +256,18 @@ func Generate(contract Contract) ([]byte, error) {
 				success.Content = map[string]oasMedia{"application/json": {Schema: schema}}
 			}
 			op.Responses[strconv.Itoa(method.Status)] = success
+			// A status can carry several error codes, so describe the status
+			// itself rather than picking one code that mislabels other endpoints.
+			statuses := make(map[string]bool)
 			for _, spec := range contract.Errors {
-				status := strconv.Itoa(spec.Status)
+				statuses[strconv.Itoa(spec.Status)] = true
+			}
+			for status := range statuses {
 				if _, exists := op.Responses[status]; exists {
 					continue
 				}
 				op.Responses[status] = oasResponse{
-					Description: spec.Code,
+					Description: statusText(status),
 					Content: map[string]oasMedia{
 						"application/json": {Schema: map[string]any{"$ref": "#/components/schemas/ApiError"}},
 					},
@@ -279,4 +288,12 @@ func Generate(contract Contract) ([]byte, error) {
 	}
 
 	return json.MarshalIndent(doc, "", "  ")
+}
+
+func statusText(status string) string {
+	n, err := strconv.Atoi(status)
+	if err != nil {
+		return status
+	}
+	return http.StatusText(n)
 }

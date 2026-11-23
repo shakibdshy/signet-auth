@@ -1,0 +1,59 @@
+---
+title: API keys
+description: Issue and verify digest-only credentials for non-human clients.
+---
+
+An API key is a credential for a non-human client. It is not an Account and creates no Session.
+You supply an `APIKeyStore`; without one, the feature is disabled. The raw key is returned once
+and never stored — only its digest is persisted. The `Principal` returned by verification carries
+the owner ID and roles. A key with no owner uses `SystemOwnerID`.
+
+```go
+cfg.APIKeyStore = myAPIKeyStore
+cfg.Authorizer = myAuthorizer // must grant api-keys:create and api-keys:revoke
+created, err := auth.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
+    OwnerUserID: "user-1", SessionToken: sessionToken,
+    Name: "ci", Roles: []string{"ci"}, Remaining: 10,
+})
+principal, err := auth.VerifyAPIKey(ctx, created.Raw)
+listed, _ := auth.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1", SessionToken: sessionToken})
+err = auth.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{
+    OwnerUserID: "user-1", SessionToken: sessionToken, ID: created.Key.ID,
+})
+```
+
+`CreateAPIKeyResult` carries the raw value once and its stored digest record; `ListAPIKeysResult`
+and `RevokeAPIKeyInput` cover management. Issuance and revocation are state-changing operations:
+they require the published permission, a Session within `Accounts.FreshWindow` (passed as
+`SessionToken`) and emit an Audit event. A stale Session or missing grant returns `ErrForbidden`.
+
+`VerifyAPIKey` hashes the supplied key and calls `APIKeyStore.ConsumeAPIKey(ctx, digest)` — the store
+receives only the digest, never the raw key, and must atomically look up, check expiry and remaining
+uses, and decrement. A missing, expired or exhausted key returns `ErrTokenInvalid`.
+
+## HTTP endpoints
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api-keys` | Session | Create a key for the signed-in User |
+| `GET` | `/api-keys` | Session | List the signed-in User's keys |
+| `POST` | `/verify-api-key` | `X-API-Key` header | Verify a key and return its `Principal` |
+| `POST` | `/revoke-api-key` | Session | Revoke a key by `id` in the JSON body |
+
+Create, list and revoke derive the owner from the session cookie — a caller cannot act on another
+User's keys. All three require a valid Session; create/revoke additionally require it to be fresh.
+
+## Per-route middleware
+
+`APIKeyProtectedEndpoints` is an opt-in list of endpoint names. On those routes the `X-API-Key`
+header is required and the Session cookie is ignored, so there is never a mixed principal. The
+verified `Principal` is attached to the request context and can be read server-side:
+
+```go
+cfg.APIKeyProtectedEndpoints = []string{"my-protected-endpoint"}
+// Inside your handler:
+principal, ok := signet.PrincipalFromContext(r.Context())
+```
+
+A missing or invalid key returns 401 before the endpoint runs. Endpoints not in the list keep their
+normal Session-based behaviour.

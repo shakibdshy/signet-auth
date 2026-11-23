@@ -214,6 +214,18 @@ func ContractFor() Contract {
 			{Name: "csrf-token", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("token")}}, Status: http.StatusOK,
 			}}},
+			{Name: "api-keys", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "ListAPIKeysResult"}, Status: http.StatusOK,
+			}, {
+				Verb: "POST", Request: reflect.TypeOf(core.CreateAPIKeyInput{}),
+				Response: ResponseSpec{Ref: "CreateAPIKeyResult"}, Status: http.StatusCreated,
+			}}},
+			{Name: "verify-api-key", Anonymous: true, Methods: []Method{{
+				Verb: "POST", Response: ResponseSpec{Ref: "Principal"}, Status: http.StatusOK,
+			}}},
+			{Name: "revoke-api-key", Methods: []Method{{
+				Verb: "POST", Request: reflect.TypeOf(core.RevokeAPIKeyInput{}), Status: http.StatusOK,
+			}}},
 		},
 		OptionalFields: map[string][]string{
 			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
@@ -229,6 +241,7 @@ func ContractFor() Contract {
 			{core.ErrInvalidOTP, http.StatusUnauthorized, "invalid_code", "invalid or expired code"},
 			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
 			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
+			{core.ErrForbidden, http.StatusForbidden, "forbidden", "permission denied"},
 			{core.ErrPasswordCompromised, http.StatusBadRequest, "password_compromised", "password has been compromised"},
 			{core.ErrCaptchaRequired, http.StatusBadRequest, "invalid_input", "captcha token required"},
 			{core.ErrCaptchaInvalid, http.StatusBadRequest, "invalid_input", "captcha verification failed"},

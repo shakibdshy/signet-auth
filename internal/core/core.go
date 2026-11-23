@@ -204,6 +204,109 @@ type AuditSink interface {
 	Record(context.Context, AuditEvent) error
 }
 
+// SystemOwnerID scopes API keys with no owning User.
+const SystemOwnerID = "signet:system"
+
+// Permission is an exact resource:action authorization string.
+type Permission string
+
+// Published permission strings used by Signet's guarded operations.
+const (
+	PermissionUsersBan         Permission = "users:ban"
+	PermissionUsersSetRole     Permission = "users:set-role"
+	PermissionUsersImpersonate Permission = "users:impersonate"
+	PermissionSessionsRevoke   Permission = "sessions:revoke"
+	PermissionAPIKeysCreate    Permission = "api-keys:create"
+	PermissionAPIKeysRevoke    Permission = "api-keys:revoke"
+	PermissionOrgsCreate       Permission = "organizations:create"
+	PermissionOrgsMemberAdd    Permission = "organizations:member-add"
+	PermissionOrgsMemberRemove Permission = "organizations:member-remove"
+	PermissionOrgsMemberRole   Permission = "organizations:member-role"
+)
+
+// RoleStatements maps role names to their granted permissions.
+type RoleStatements map[string][]Permission
+
+// Authorizer answers read-only authorization questions.
+type Authorizer interface {
+	Roles(context.Context, string) []string
+	Authorize(ctx context.Context, userID, resource, action string) bool
+}
+
+// RoleWriter persists global role assignments.
+type RoleWriter interface {
+	SetRoles(context.Context, string, []string) error
+}
+
+// AuthorizeIn authorizes an action within an Organization.
+type AuthorizeIn interface {
+	AuthorizeIn(ctx context.Context, userID, orgID, resource, action string) bool
+}
+
+// APIKey is a digest-only credential for a non-human client.
+type APIKey struct {
+	ID          string     `json:"id"`
+	OwnerUserID string     `json:"owner_user_id"`
+	Name        string     `json:"name"`
+	Hash        string     `json:"hash"`
+	Prefix      string     `json:"prefix"`
+	Roles       []string   `json:"roles"`
+	Remaining   int        `json:"remaining"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
+}
+
+// APIKeyStore persists digest-only API keys. It is optional. ConsumeAPIKey
+// receives a digest, never the raw key. It must atomically look up the key,
+// reject expired or exhausted keys and decrement Remaining in one operation.
+type APIKeyStore interface {
+	Create(context.Context, *APIKey) error
+	ConsumeAPIKey(context.Context, string) (*APIKey, error)
+	List(context.Context, string) ([]*APIKey, error)
+	Revoke(context.Context, string) error
+}
+
+// Principal is the identity attached to a verified API key.
+type Principal struct {
+	OwnerUserID string   `json:"owner_user_id"`
+	Roles       []string `json:"roles"`
+}
+
+// CreateAPIKeyInput describes a new API key.
+type CreateAPIKeyInput struct {
+	OwnerUserID  string    `json:"owner_user_id"`
+	SessionToken string    `json:"-"`
+	Name         string    `json:"name"`
+	Roles        []string  `json:"roles"`
+	Remaining    int       `json:"remaining"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+
+// CreateAPIKeyResult carries the raw key once and its stored record.
+type CreateAPIKeyResult struct {
+	Raw string  `json:"raw"`
+	Key *APIKey `json:"key"`
+}
+
+// ListAPIKeysInput selects the keys owned by a User.
+type ListAPIKeysInput struct {
+	OwnerUserID  string `json:"owner_user_id"`
+	SessionToken string `json:"-"`
+}
+
+// ListAPIKeysResult contains a User's API keys.
+type ListAPIKeysResult struct {
+	Keys []*APIKey `json:"keys"`
+}
+
+// RevokeAPIKeyInput identifies a key to revoke and its owner.
+type RevokeAPIKeyInput struct {
+	OwnerUserID  string `json:"owner_user_id"`
+	SessionToken string `json:"-"`
+	ID           string `json:"id"`
+}
+
 // LastSignInMethodConfig controls the optional Last sign-in method cookie.
 type LastSignInMethodConfig struct {
 	TTL         time.Duration
@@ -412,6 +515,11 @@ type Config struct {
 	CaptchaVerifier          CaptchaVerifier
 	CaptchaEndpoints         []string
 	AuditSink                AuditSink
+	Authorizer               Authorizer
+	AuthorizeIn              AuthorizeIn
+	RoleWriter               RoleWriter
+	APIKeyStore              APIKeyStore
+	APIKeyProtectedEndpoints []string
 	LastSignInMethod         *LastSignInMethodConfig
 	CSRFKey                  []byte
 	CSRFKeys                 [][]byte
@@ -848,6 +956,8 @@ var (
 	ErrOAuthAccountConflict = errors.New("signet: oauth account conflict")
 	// ErrInvalidCSRFConfig reports an invalid CSRF key.
 	ErrInvalidCSRFConfig = errors.New("signet: invalid csrf configuration")
+	// ErrForbidden reports an authorization denial.
+	ErrForbidden = errors.New("signet: forbidden")
 )
 
 // ListSessionsInput selects the User whose Sessions should be listed.

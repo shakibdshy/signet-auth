@@ -88,6 +88,34 @@ _Avoid_: bot check, challenge
 A structured record of a security-relevant action and its outcome.
 _Avoid_: log entry, audit log
 
+**Role**:
+A named set of permissions that can be granted to a User or an API key.
+_Avoid_: group, privilege level
+
+**Permission**:
+An action allowed on a named resource.
+_Avoid_: scope, right
+
+**Organization**:
+A group of Users that share membership and role assignments.
+_Avoid_: tenant, team
+
+**Membership**:
+A User's role-bearing association with an Organization.
+_Avoid_: member role, org membership
+
+**Active organization**:
+The Organization selected for the current authenticated visit.
+_Avoid_: current org, selected tenant
+
+**API key**:
+A credential issued to a non-human client and presented instead of a User Session. It is not an Account.
+_Avoid_: token, service account
+
+**Impersonation**:
+A temporary Session created by an administrator acting as another User.
+_Avoid_: sudo, act-as
+
 **Last sign-in method**:
 The method used in a User's most recent successful sign-in.
 _Avoid_: last login method
