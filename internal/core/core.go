@@ -290,7 +290,10 @@ type CreateAPIKeyResult struct {
 }
 
 // ListAPIKeysInput selects the keys owned by a User.
-type ListAPIKeysInput struct{ OwnerUserID string }
+type ListAPIKeysInput struct {
+	OwnerUserID  string `json:"owner_user_id"`
+	SessionToken string `json:"-"`
+}
 
 // ListAPIKeysResult contains a User's API keys.
 type ListAPIKeysResult struct {

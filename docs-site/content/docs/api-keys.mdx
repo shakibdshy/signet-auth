@@ -16,7 +16,7 @@ created, err := auth.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
     Name: "ci", Roles: []string{"ci"}, Remaining: 10,
 })
 principal, err := auth.VerifyAPIKey(ctx, created.Raw)
-listed, _ := auth.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1"})
+listed, _ := auth.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1", SessionToken: sessionToken})
 err = auth.RevokeAPIKey(ctx, signet.RevokeAPIKeyInput{
     OwnerUserID: "user-1", SessionToken: sessionToken, ID: created.Key.ID,
 })
@@ -41,7 +41,7 @@ uses, and decrement. A missing, expired or exhausted key returns `ErrTokenInvali
 | `POST` | `/revoke-api-key` | Session | Revoke a key by `id` in the JSON body |
 
 Create, list and revoke derive the owner from the session cookie — a caller cannot act on another
-User's keys — and create/revoke require a fresh Session.
+User's keys. All three require a valid Session; create/revoke additionally require it to be fresh.
 
 ## Per-route middleware
 

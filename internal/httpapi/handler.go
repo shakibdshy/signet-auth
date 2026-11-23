@@ -235,7 +235,9 @@ func (h *Handler) handleAPIKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		result, err := h.api.ListAPIKeys(r.Context(), core.ListAPIKeysInput{OwnerUserID: user.ID})
+		result, err := h.api.ListAPIKeys(r.Context(), core.ListAPIKeysInput{
+			OwnerUserID: user.ID, SessionToken: h.api.SessionTokenFromRequest(r),
+		})
 		if err != nil {
 			writeAuthError(w, err)
 			return

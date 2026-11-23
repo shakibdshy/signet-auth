@@ -139,7 +139,7 @@ func (s *Service) VerifyAPIKey(ctx context.Context, raw string) (*core.Principal
 
 // ListAPIKeys returns a User's API keys.
 func (s *Service) ListAPIKeys(ctx context.Context, in core.ListAPIKeysInput) (*core.ListAPIKeysResult, error) {
-	if s.cfg.APIKeyStore == nil || !s.AuthorizePermission(ctx, in.OwnerUserID, core.PermissionAPIKeysRevoke) {
+	if s.cfg.APIKeyStore == nil || !s.AuthorizePermission(ctx, in.OwnerUserID, core.PermissionAPIKeysRevoke) || !s.fresh(ctx, in.SessionToken) {
 		return nil, core.ErrForbidden
 	}
 	keys, err := s.cfg.APIKeyStore.List(ctx, in.OwnerUserID)

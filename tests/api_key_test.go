@@ -20,8 +20,9 @@ type apiKeyRecord struct {
 }
 
 type fakeAPIKeyStore struct {
-	keys      map[string]*apiKeyRecord
-	ownerKeys map[string][]string
+	keys         map[string]*apiKeyRecord
+	ownerKeys    map[string][]string
+	consumeCalls int
 }
 
 func newFakeAPIKeyStore() *fakeAPIKeyStore {
@@ -35,6 +36,7 @@ func (s *fakeAPIKeyStore) Create(_ context.Context, key *signet.APIKey) error {
 }
 
 func (s *fakeAPIKeyStore) ConsumeAPIKey(_ context.Context, digest string) (*signet.APIKey, error) {
+	s.consumeCalls++
 	for _, record := range s.keys {
 		if record.Hash == digest && record.remaining > 0 &&
 			(record.ExpiresAt.IsZero() || time.Now().Before(record.ExpiresAt)) {
@@ -111,7 +113,7 @@ func TestAPIKeyCreateVerifyRevoke(t *testing.T) {
 	if _, err := client.VerifyAPIKey(ctx, created.Raw); !errors.Is(err, signet.ErrTokenInvalid) {
 		t.Fatalf("exhausted key error = %v", err)
 	}
-	list, err := client.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1"})
+	list, err := client.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "user-1", SessionToken: session})
 	if err != nil || len(list.Keys) != 1 {
 		t.Fatalf("list = %+v, err = %v", list, err)
 	}
@@ -140,7 +142,7 @@ func TestAPIKeyOwnerScoping(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateAPIKey: %v", err)
 	}
-	list, _ := client.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "other"})
+	list, _ := client.ListAPIKeys(ctx, signet.ListAPIKeysInput{OwnerUserID: "other", SessionToken: session})
 	if len(list.Keys) != 0 {
 		t.Fatalf("other owner sees %d keys", len(list.Keys))
 	}
@@ -372,5 +374,51 @@ func TestAPIKeyRevokeHTTPEndpoint(t *testing.T) {
 	}
 	if _, err := client.VerifyAPIKey(ctx, created.Raw); !errors.Is(err, signet.ErrTokenInvalid) {
 		t.Fatalf("revoked key error = %v", err)
+	}
+}
+
+func TestAPIKeyVerifyUsesSingleAtomicStoreCall(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}})
+	ctx := context.Background()
+	created, err := client.CreateAPIKey(ctx, signet.CreateAPIKeyInput{
+		OwnerUserID: "user-1", SessionToken: session, Remaining: 3,
+	})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	before := store.consumeCalls
+	if _, err := client.VerifyAPIKey(ctx, created.Raw); err != nil {
+		t.Fatalf("VerifyAPIKey: %v", err)
+	}
+	if store.consumeCalls != before+1 {
+		t.Fatalf("consume calls = %d, want %d", store.consumeCalls, before+1)
+	}
+}
+
+func TestAPIKeyPrefixIsNotRaw(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, session := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:create": true}})
+	created, err := client.CreateAPIKey(context.Background(), signet.CreateAPIKeyInput{
+		OwnerUserID: "user-1", SessionToken: session,
+	})
+	if err != nil {
+		t.Fatalf("CreateAPIKey: %v", err)
+	}
+	for _, record := range store.keys {
+		if strings.Contains(record.Prefix, created.Raw) || strings.Contains(created.Raw, record.Prefix) {
+			t.Fatalf("prefix %q derived from raw key", record.Prefix)
+		}
+	}
+}
+
+func TestAPIKeyListingRequiresSession(t *testing.T) {
+	store := newFakeAPIKeyStore()
+	client, _ := apiKeyClient(t, store, &fakeAuthorizer{allowed: map[string]bool{"api-keys:revoke": true}})
+	_, err := client.ListAPIKeys(context.Background(), signet.ListAPIKeysInput{
+		OwnerUserID: "user-1", SessionToken: "stale-token",
+	})
+	if !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("listing error = %v", err)
 	}
 }
