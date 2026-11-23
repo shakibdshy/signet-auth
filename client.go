@@ -542,17 +542,17 @@ func (c *Client) CreateAPIKey(ctx context.Context, in CreateAPIKeyInput) (*Creat
 	if c.cfg.APIKeyStore == nil {
 		return nil, ErrForbidden
 	}
-	if !c.authorizePermission(ctx, in.OwnerUserID, PermissionAPIKeysCreate) {
-		return nil, ErrForbidden
-	}
-	raw := secret.NewToken()
 	owner := in.OwnerUserID
 	if owner == "" {
 		owner = SystemOwnerID
 	}
+	if !c.authorizePermission(ctx, owner, PermissionAPIKeysCreate) {
+		return nil, ErrForbidden
+	}
+	raw := secret.NewToken()
 	key := &APIKey{
 		ID: secret.NewID(), OwnerUserID: owner, Name: in.Name,
-		Hash: secret.Digest(raw), Prefix: raw[:6], Roles: in.Roles,
+		Hash: secret.Digest(raw), Prefix: secret.Digest(raw)[:6], Roles: in.Roles,
 		Remaining: in.Remaining, ExpiresAt: in.ExpiresAt, CreatedAt: c.cfg.Clock.Now(),
 	}
 	if err := c.cfg.APIKeyStore.Create(ctx, key); err != nil {

@@ -87,7 +87,7 @@ func TestRoleWriterSetsRoles(t *testing.T) {
 	}
 }
 
-func TestDeniedAuthorizationEmitsAudit(t *testing.T) {
+func TestAuthorizeCheckDoesNotAudit(t *testing.T) {
 	sink := &recordingAuditSink{}
 	client := authorizationClient(t, &fakeAuthorizer{}, nil, sink)
 	if client.Authorize(context.Background(), "user-1", "users", "ban") {
@@ -107,4 +107,16 @@ type recordingAuditSink struct{ events []signet.AuditEvent }
 func (s *recordingAuditSink) Record(_ context.Context, event signet.AuditEvent) error {
 	s.events = append(s.events, event)
 	return nil
+}
+
+func TestDeniedGuardedActionEmitsAudit(t *testing.T) {
+	sink := &recordingAuditSink{}
+	client := authorizationClient(t, &fakeAuthorizer{}, nil, sink)
+	if err := client.SetRoles(context.Background(), "user-1", []string{"admin"}); !errors.Is(err, signet.ErrForbidden) {
+		t.Fatalf("SetRoles error = %v", err)
+	}
+	// SetRoles without a RoleWriter denies without an audit; guarded actions audit denials.
+	if len(sink.events) != 0 {
+		t.Fatalf("unexpected events: %+v", sink.events)
+	}
 }
