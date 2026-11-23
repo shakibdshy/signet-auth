@@ -1148,6 +1148,10 @@ export interface components {
             password: string;
             username?: string;
         };
+        SignUpResult: {
+            User: components["schemas"]["User"];
+            session_token?: string;
+        };
         StopImpersonatingInput: {
             token: string;
         };
@@ -1189,6 +1193,10 @@ export interface components {
             Email: string;
             ID: string;
             Name: string;
+        };
+        VerifyEmailAndSignInResult: {
+            session_token?: string;
+            user: components["schemas"]["User"];
         };
         VerifyEmailChangeInput: {
             token: string;
@@ -5707,10 +5715,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        session_token: string;
-                        user: components["schemas"]["User"];
-                    };
+                    "application/json": components["schemas"]["SignUpResult"];
                 };
             };
             /** @description Bad Request */
@@ -6286,9 +6291,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        session_token: string;
-                    };
+                    "application/json": components["schemas"]["VerifyEmailAndSignInResult"];
                 };
             };
             /** @description Bad Request */

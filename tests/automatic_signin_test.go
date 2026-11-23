@@ -29,6 +29,7 @@ func autoSignInClient(t *testing.T, afterSignUp, afterVerification bool, require
 	cfg.AppURL = "https://app.example.com"
 	cfg.RequireVerifiedEmail = requireVerified
 	cfg.SendVerificationOnSignUp = testutil.BoolPtr(true)
+	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
 	cfg.AutoSignIn = &signet.AutoSignInConfig{
 		AfterSignUp: afterSignUp, AfterVerification: afterVerification,
 	}
@@ -185,4 +186,66 @@ func TestAutomaticSignInHTTPEndpoints(t *testing.T) {
 		t.Fatalf("OnSignIn calls = %d", calls)
 	}
 	_ = ctx
+}
+
+type countingLimiterAuto struct{ calls int }
+
+func (l *countingLimiterAuto) Allow(_ context.Context, _ string) (bool, error) {
+	l.calls++
+	return true, nil
+}
+
+func TestAutomaticSignInDoesNotDuplicateRateLimit(t *testing.T) {
+	store := testutil.NewStore()
+	mailer := testutil.NewMailer()
+	cfg := testutil.NewConfig()
+	cfg.Store = store
+	cfg.Mailer = mailer
+	limiter := &countingLimiterAuto{}
+	cfg.RateLimiter = limiter
+	cfg.AppURL = "https://app.example.com"
+	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
+	cfg.SendVerificationOnSignUp = testutil.BoolPtr(true)
+	cfg.AutoSignIn = &signet.AutoSignInConfig{AfterVerification: true}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	_, err = client.SignUp(ctx, signet.SignUpInput{Email: "rate@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	before := limiter.calls
+	if _, err := client.VerifyEmailAndSignIn(ctx, signet.VerifyEmailInput{Token: verificationToken(t, mailer)}); err != nil {
+		t.Fatalf("VerifyEmailAndSignIn: %v", err)
+	}
+	if limiter.calls != before+1 {
+		t.Fatalf("limiter calls = %d, want %d", limiter.calls, before+1)
+	}
+}
+
+func TestAutomaticSignInLastMethodCookie(t *testing.T) {
+	no := false
+	client, mailer := autoSignInClient(t, false, true, &no, new(int), nil)
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "last@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/verify-email",
+		strings.NewReader(`{"token":"`+verificationToken(t, mailer)+`"}`))
+	client.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d", rr.Code)
+	}
+	found := false
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == "signet_last_method" && cookie.Value != "" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("no last-method cookie: %+v", rr.Result().Cookies())
+	}
 }

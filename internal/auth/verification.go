@@ -166,7 +166,7 @@ func (s *VerificationService) issueAutomaticSession(ctx context.Context, user *c
 	if err != nil {
 		return "", err
 	}
-	s.deps.OnSignIn(ctx, user)
+	s.deps.OnSignIn(ctx, redacted(user))
 	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{
 		Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success",
 		Metadata: map[string]string{"method": "email"},

@@ -89,7 +89,7 @@ func ContractFor() Contract {
 		Endpoints: []ContractEndpoint{
 			{Name: "signup", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignUpInput{}),
-				Response: ResponseSpec{Fields: []Field{user, strField("session_token")}}, Status: http.StatusCreated,
+				Response: ResponseSpec{Ref: "SignUpResult"}, Status: http.StatusCreated,
 			}}},
 			{Name: "signin", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SignInInput{}),
@@ -257,7 +257,7 @@ func ContractFor() Contract {
 			}}},
 			{Name: "verify-email", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.VerifyEmailInput{}),
-				Response: ResponseSpec{Fields: []Field{strField("session_token")}}, Status: http.StatusOK,
+				Response: ResponseSpec{Ref: "VerifyEmailAndSignInResult"}, Status: http.StatusOK,
 			}}},
 			{Name: "send-password-reset", Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.SendPasswordResetInput{}), Status: http.StatusOK,
@@ -312,13 +312,14 @@ func ContractFor() Contract {
 			}}},
 		},
 		OptionalFields: map[string][]string{
-			"TokenInput":         {"email", "password", "refresh_token", "challenge", "code"},
-			"SignUpInput":        {"username"},
-			"SignInInput":        {"username"},
-			"SignUpResult":       {"session_token"},
-			"SignOutInput":       {"session_token"},
-			"SendMagicLinkInput": {"name", "callback_url"},
-			"SendEmailOTPInput":  {"name"},
+			"TokenInput":                 {"email", "password", "refresh_token", "challenge", "code"},
+			"SignUpInput":                {"username"},
+			"SignInInput":                {"username"},
+			"SignUpResult":               {"session_token"},
+			"VerifyEmailAndSignInResult": {"session_token"},
+			"SignOutInput":               {"session_token"},
+			"SendMagicLinkInput":         {"name", "callback_url"},
+			"SendEmailOTPInput":          {"name"},
 		},
 		Errors: []ErrorSpec{
 			{core.ErrRateLimited, http.StatusTooManyRequests, "rate_limited", "too many requests"},

@@ -1250,7 +1250,7 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	body := map[string]any{}
+	body := map[string]any{"user": result.User}
 	if result.SessionToken != "" {
 		if _, err := h.api.SetSessionCookies(w, result.SessionToken); err != nil {
 			writeAuthError(w, err)

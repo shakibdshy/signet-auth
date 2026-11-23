@@ -95,7 +95,7 @@ when it is not implemented.
 
 `POST /request-account-deletion` sends a single-use proof to the current email.
 `POST /confirm-account-deletion` consumes it and removes Sessions, all Tokens, Accounts and
-the User row in that order, as recorded in ADR 0006. A failure at any step is returned and
+the User row in that order. A failure at any step is returned and
 leaves no live Session. The optional `DeleteUserTemplates` interface supplies the message,
 with a built-in default for existing `EmailTemplates` implementations.
 
