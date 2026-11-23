@@ -514,6 +514,7 @@ type CreateSSOConnectionInput struct {
 	Domains        []string `json:"domains"`
 	DefaultRole    string   `json:"default_role"`
 	Protocol       string   `json:"protocol"`
+	Metadata       string   `json:"metadata"`
 	SessionToken   string   `json:"-"`
 }
 
@@ -525,9 +526,10 @@ type SAMLStartInput struct {
 
 // SAMLStartResult carries the IdP URL, tracking cookies and state Token.
 type SAMLStartResult struct {
-	URL     string         `json:"url"`
-	State   string         `json:"state"`
-	Cookies []*http.Cookie `json:"-"`
+	URL       string         `json:"url"`
+	State     string         `json:"state"`
+	Cookies   []*http.Cookie `json:"-"`
+	RequestID string         `json:"-"`
 }
 
 // SAMLACSResult carries the Session and Organization after assertion validation.

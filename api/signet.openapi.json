@@ -7980,6 +7980,9 @@
           "issuer": {
             "type": "string"
           },
+          "metadata": {
+            "type": "string"
+          },
           "organization_id": {
             "type": "string"
           },
@@ -7994,7 +7997,8 @@
           "client_secret",
           "domains",
           "default_role",
-          "protocol"
+          "protocol",
+          "metadata"
         ],
         "type": "object"
       },

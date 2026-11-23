@@ -87,6 +87,7 @@ func (s *Service) fromCreate(in core.CreateSSOConnectionInput) *core.SSOConnecti
 	return &core.SSOConnection{
 		ID: secret.NewID(), OrganizationID: in.OrganizationID, Issuer: in.Issuer,
 		ClientID: in.ClientID, ClientSecret: in.ClientSecret, Domains: in.Domains, DefaultRole: role,
+		Protocol: in.Protocol, Metadata: in.Metadata,
 	}
 }
 
@@ -170,16 +171,19 @@ func (s *Service) StartSAML(ctx context.Context, in core.SAMLStartInput) (*core.
 	}
 	connection.SPHost = spURL.Host
 	connection.SPEntityID = strings.TrimRight(s.deps.Config.AppURL, "/") + "/saml/metadata"
-	result, err := s.deps.SAML.Start(ctx, connection, "/saml/acs")
+	result, err := s.deps.SAML.Start(ctx, connection, strings.TrimRight(s.deps.Config.AppURL, "/")+"/saml/acs")
 	if err != nil {
 		return nil, err
 	}
-	state, _, err := s.deps.Tokens.IssueWithData(ctx, "", core.TokenOAuthState, stateTTL,
-		`{"protocol":"saml","connection_id":"`+connection.ID+`"}`)
+	stateData, _ := json.Marshal(struct {
+		Protocol     string `json:"protocol"`
+		ConnectionID string `json:"connection_id"`
+	}{"saml", connection.ID})
+	state, _, err := s.deps.Tokens.IssueWithData(ctx, "", core.TokenOAuthState, stateTTL, string(stateData))
 	if err != nil {
 		return nil, err
 	}
-	return &core.SAMLStartResult{URL: result.URL, State: state}, nil
+	return &core.SAMLStartResult{URL: result.URL, State: state, RequestID: result.RequestID}, nil
 }
 
 // CompleteSAML validates an assertion and provisions a Session.
@@ -188,16 +192,20 @@ func (s *Service) CompleteSAML(ctx context.Context, state string, request *http.
 		return nil, core.ErrForbidden
 	}
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenOAuthState, state); err != nil {
+		s.emit(ctx, audit.SSODomainUnverified, "", "", "denied")
 		return nil, core.ErrSAMLInvalidAssertion
 	}
 	raw, err := token.ParseData(state)
-	if err != nil || !strings.Contains(raw, `"protocol":"saml"`) {
+	if err != nil {
 		return nil, core.ErrSAMLInvalidAssertion
 	}
 	var data struct {
+		Protocol     string `json:"protocol"`
 		ConnectionID string `json:"connection_id"`
 	}
-	_ = json.Unmarshal([]byte(raw), &data)
+	if json.Unmarshal([]byte(raw), &data) != nil || data.Protocol != "saml" {
+		return nil, core.ErrSAMLInvalidAssertion
+	}
 	connection, err := s.deps.Config.SSO.Connections.ByID(ctx, data.ConnectionID)
 	if err != nil {
 		return nil, core.ErrSAMLConnectionNotFound
@@ -205,8 +213,9 @@ func (s *Service) CompleteSAML(ctx context.Context, state string, request *http.
 	spURL, _ := url.Parse(s.deps.Config.AppURL)
 	connection.SPHost = spURL.Host
 	connection.SPEntityID = strings.TrimRight(s.deps.Config.AppURL, "/") + "/saml/metadata"
-	assertion, err := s.deps.SAML.ACS(ctx, connection, "/saml/acs", request.FormValue("SAMLResponse"))
+	assertion, err := s.deps.SAML.ACS(ctx, connection, strings.TrimRight(s.deps.Config.AppURL, "/")+"/saml/acs", request.FormValue("SAMLResponse"))
 	if err != nil {
+		s.emit(ctx, audit.SSOSignIn, "", connection.OrganizationID, "denied")
 		return nil, err
 	}
 	claims := &core.SSOClaims{
@@ -214,7 +223,8 @@ func (s *Service) CompleteSAML(ctx context.Context, state string, request *http.
 		Email:   firstAttribute(assertion.Attributes, "email", "emailaddress", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"),
 		Name:    firstAttribute(assertion.Attributes, "name", "displayname"),
 	}
-	claims.EmailVerified = claims.Email != ""
+	verified := firstAttribute(assertion.Attributes, "email_verified")
+	claims.EmailVerified = strings.EqualFold(verified, "true")
 	if s.deps.Config.SSO.MapClaims != nil {
 		if mapped := s.deps.Config.SSO.MapClaims(ctx, claims); mapped != nil {
 			claims = mapped

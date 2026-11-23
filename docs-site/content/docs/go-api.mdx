@@ -183,3 +183,10 @@ Types: `AuthorizationServerConfig`, `OAuthClient`, `OAuthClientStore`, `DeviceAu
 | `DeleteSSOConnection(ctx, string, string) error` | Delete a connection. |
 | `StartSSOSignIn(ctx, SSOStartInput) (*SSOStartResult, error)` | Begin an SSO ceremony. |
 | `CompleteSSOSignIn(ctx, SSOCallbackInput) (*SSOCallbackResult, error)` | Verify and create a Session. |
+
+## SAML SSO
+
+| Method | Purpose |
+| --- | --- |
+| `StartSAMLSignIn(ctx, SAMLStartInput) (*SAMLStartResult, error)` | Begin an SP-initiated ceremony. |
+| `CompleteSAMLSignIn(ctx, string, *http.Request) (*SAMLACSResult, error)` | Validate the assertion and create a Session. |

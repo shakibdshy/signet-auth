@@ -9,8 +9,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
+	"net/url"
 	"strings"
+	"time"
 
 	saml2 "github.com/russellhaering/gosaml2/v2"
 	"github.com/russellhaering/gosaml2/v2/sp"
@@ -20,15 +23,17 @@ import (
 // Result carries the browser URL and normalized assertion attributes.
 type Result struct {
 	URL        string
+	RequestID  string
 	Attributes map[string][]string
 	NameID     string
 }
 
 // Service builds SAML ceremonies from pinned IdP metadata.
 type Service struct {
-	key     *rsa.PrivateKey
-	certPEM []byte
-	replay  *sp.MemoryAssertionReplayCache
+	key      *rsa.PrivateKey
+	certPEM  []byte
+	replay   *sp.MemoryAssertionReplayCache
+	requests *sp.MemoryRequestTracker
 }
 
 // New returns a Service with an ephemeral SP signing key.
@@ -44,7 +49,7 @@ func New() (*Service, error) {
 	}
 	return &Service{
 		key: key, certPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
-		replay: sp.NewMemoryAssertionReplayCache(),
+		replay: sp.NewMemoryAssertionReplayCache(), requests: sp.NewMemoryRequestTracker(10 * time.Minute),
 	}, nil
 }
 
@@ -58,11 +63,14 @@ func (s *Service) provider(connection *core.SSOConnection, acsURL string) (*sp.S
 	var certificates []*x509.Certificate
 	for _, descriptor := range metadata.IDPSSODescriptor.KeyDescriptors {
 		for _, cert := range descriptor.KeyInfo.X509Data.X509Certificates {
-			block, _ := pem.Decode([]byte("-----BEGIN CERTIFICATE-----\n" + strings.TrimSpace(cert.Data) + "\n-----END CERTIFICATE-----"))
-			if block == nil {
+			der, err := base64.StdEncoding.DecodeString(strings.TrimSpace(cert.Data))
+			if err != nil {
 				continue
 			}
-			parsed, err := x509.ParseCertificate(block.Bytes)
+			if block, _ := pem.Decode(der); block != nil {
+				der = block.Bytes
+			}
+			parsed, err := x509.ParseCertificate(der)
 			if err == nil {
 				certificates = append(certificates, parsed)
 			}
@@ -71,9 +79,16 @@ func (s *Service) provider(connection *core.SSOConnection, acsURL string) (*sp.S
 	if len(certificates) == 0 {
 		return nil, errors.New("SAML metadata has no signing certificate")
 	}
-	_, ssoURL := saml2.SelectEndpoint(metadata.IDPSSODescriptor.SingleSignOnServices)
+	ssoURL := ""
+	for _, service := range metadata.IDPSSODescriptor.SingleSignOnServices {
+		parsed, err := url.Parse(service.Location)
+		if err == nil && parsed.Scheme == "https" && parsed.Host != "" {
+			ssoURL = service.Location
+			break
+		}
+	}
 	if ssoURL == "" {
-		return nil, errors.New("SAML metadata has no SSO endpoint")
+		return nil, errors.New("SAML SSO URL must be HTTPS")
 	}
 	provider := &sp.ServiceProvider{
 		EntityID: connection.SPEntityID, ACSURL: acsURL,
@@ -84,6 +99,7 @@ func (s *Service) provider(connection *core.SSOConnection, acsURL string) (*sp.S
 		SPSigningKeyStore:    &saml2.KeyStore{Signer: s.key, Cert: s.certPEM},
 		AudienceURIs:         []string{connection.SPEntityID},
 		AssertionReplayCache: s.replay,
+		RequestTracker:       s.requests,
 	}
 	return provider, nil
 }
@@ -95,35 +111,41 @@ func (s *Service) Start(_ context.Context, connection *core.SSOConnection, acsUR
 	}
 	provider, err := s.provider(connection, acsURL)
 	if err != nil {
-		return nil, core.ErrSAMLInvalidAssertion
+		return nil, fmt.Errorf("%w: %w", core.ErrSAMLInvalidAssertion, err)
 	}
 	document, err := provider.BuildAuthRequestDocument()
 	if err != nil {
+		return nil, fmt.Errorf("%w: %w", core.ErrSAMLInvalidAssertion, err)
+	}
+	requestID := ""
+	if id := document.Root().SelectAttr("ID"); id != nil {
+		requestID = id.Value
+	}
+	if requestID == "" {
+		return nil, core.ErrSAMLInvalidAssertion
+	}
+	if err := s.requests.StoreRequest(context.Background(), requestID); err != nil {
 		return nil, core.ErrSAMLInvalidAssertion
 	}
 	location, err := provider.BuildAuthURLFromDocument("", document)
 	if err != nil {
 		return nil, core.ErrSAMLInvalidAssertion
 	}
-	return &Result{URL: location}, nil
+	return &Result{URL: location, RequestID: requestID}, nil
 }
 
 // ACS validates an assertion and returns its normalized attributes.
 func (s *Service) ACS(ctx context.Context, connection *core.SSOConnection, acsURL string, response string) (*Result, error) {
 	provider, err := s.provider(connection, acsURL)
 	if err != nil {
-		return nil, core.ErrSAMLInvalidAssertion
+		return nil, fmt.Errorf("%w: %w", core.ErrSAMLInvalidAssertion, err)
 	}
-	decoded, err := base64.StdEncoding.DecodeString(response)
+	parsed, err := provider.ValidateEncodedResponse(ctx, response)
 	if err != nil {
-		return nil, core.ErrSAMLInvalidAssertion
-	}
-	parsed, err := provider.ValidateEncodedResponse(ctx, string(decoded))
-	if err != nil {
-		return nil, core.ErrSAMLInvalidAssertion
+		return nil, fmt.Errorf("%w: %w", core.ErrSAMLInvalidAssertion, err)
 	}
 	if len(parsed.Assertions) == 0 || parsed.Assertions[0].Subject == nil || parsed.Assertions[0].Subject.NameID == nil {
-		return nil, core.ErrSAMLInvalidAssertion
+		return nil, fmt.Errorf("%w: assertion has no subject", core.ErrSAMLInvalidAssertion)
 	}
 	assertion := parsed.Assertions[0]
 	result := &Result{NameID: assertion.Subject.NameID.Value, Attributes: map[string][]string{}}

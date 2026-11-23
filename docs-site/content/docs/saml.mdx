@@ -24,19 +24,19 @@ connection, err := auth.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput
 })
 ```
 
-IdP metadata is pinned in the connection; URLs must be HTTPS and changes require an explicit connection update. XML signature handling is isolated in an internal package using a pinned protocol library.
+IdP metadata is pinned in the connection; SSO URLs must be HTTPS and changes require an explicit connection update. XML signature handling is isolated in an internal package using a pinned protocol library.
 
 ## Sign in
 
 ```go
 start, err := auth.StartSAMLSignIn(ctx, signet.SAMLStartInput{OrganizationID: orgID})
-// start.URL is the IdP destination; start.Cookies must be set on the response.
+// start.URL is the IdP destination; start.State is the single-use ceremony Token.
 
 result, err := auth.CompleteSAMLSignIn(ctx, stateFromBrowser, r)
 // result.SessionToken is a normal Session; result.OrganizationID is the active org.
 ```
 
-Assertions must be signed and carry the configured issuer, SP audience, a valid validity window and a matching `InResponseTo`. `NameID` becomes the external Subject; attribute names for email and name are configurable with `SSOConfig.MapClaims`. Missing or unverified email is rejected. A successful assertion creates a User with a namespaced Account, adds the User to the Organization with the configured default role, sets the active-organization cookie and records `saml` as the Last sign-in method.
+Assertions must be signed and carry the configured issuer, SP audience, a valid validity window and a matching `InResponseTo`. `NameID` becomes the external Subject; email and `email_verified` attributes are normalized from the assertion, then `SSOConfig.MapClaims` may override the resulting claims. Missing or unverified email is rejected. A successful assertion creates a User with a namespaced Account, adds the User to the Organization with the configured default role, sets the active-organization cookie and records `saml` as the Last sign-in method.
 
 ## HTTP endpoints
 

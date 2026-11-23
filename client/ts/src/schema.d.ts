@@ -1186,6 +1186,7 @@ export interface components {
             default_role: string;
             domains: string[];
             issuer: string;
+            metadata: string;
             organization_id: string;
             protocol: string;
         };
