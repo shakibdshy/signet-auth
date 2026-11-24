@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shakibdshy/signet/internal/httpapi"
+	"github.com/shakibdshy/signet-auth/internal/httpapi"
 )
 
 func main() {

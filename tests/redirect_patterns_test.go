@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func patternClient(t *testing.T, patterns []string, configure func(*signet.Config)) *signet.Client {

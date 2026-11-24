@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 var timeType = reflect.TypeOf(time.Time{})

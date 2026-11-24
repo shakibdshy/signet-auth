@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/mailer/console"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/mailer/console"
 )
 
 func TestMailerWritesMessage(t *testing.T) {

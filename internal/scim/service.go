@@ -12,9 +12,9 @@ import (
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
-	"github.com/shakibdshy/signet/internal/audit"
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/audit"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/secret"
 )
 
 // Service implements SCIM resource handlers and the mounted HTTP server.

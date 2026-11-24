@@ -10,7 +10,7 @@ import {
 import {
   SignetApiError,
   type SignetClient,
-} from "@shakibdshy/signet-client";
+} from "@shakibdshy/signet-auth-client";
 
 export type SessionStatus = "loading" | "authenticated" | "anonymous";
 export type SessionUser = Awaited<ReturnType<SignetClient["me"]>>;

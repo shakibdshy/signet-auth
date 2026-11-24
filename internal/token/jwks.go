@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 type jsonWebKey struct {

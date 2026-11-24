@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/secret"
 )
 
 // Service manages Sessions against a Store.

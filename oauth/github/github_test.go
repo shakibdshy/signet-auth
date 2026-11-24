@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/oauth/github"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/oauth/github"
 )
 
 func TestProviderImplementsContractAndMapsVerifiedEmail(t *testing.T) {

@@ -5,21 +5,21 @@ description: Reactive session state in React apps using Signet's typed client.
 
 import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
-`@shakibdshy/signet-react` is an optional React binding over the framework-neutral
+`@shakibdshy/signet-auth-react` is an optional React binding over the framework-neutral
 [typed client](/docs/frontend-client). It provides `SignetProvider`, `useSession()` and
 `sessionGuard`, so components can read one shared session state instead of calling the
 client themselves.
 
 <Callout title="Version alignment">
-Both packages are released together at `1.0.0-beta`. `signet-react@1.0.0-beta` depends on
-`signet-client@1.0.0-beta`, so a published install pulls in the typed client automatically.
+Both packages are released together at `1.0.0-beta`. `signet-auth-react@1.0.0-beta` depends on
+`signet-auth-client@1.0.0-beta`, so a published install pulls in the typed client automatically.
 Before publication, install both packages from a local checkout as shown below.
 </Callout>
 
 | Package | Version | Role |
 | --- | --- | --- |
-| `@shakibdshy/signet-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
-| `@shakibdshy/signet-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
+| `@shakibdshy/signet-auth-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
+| `@shakibdshy/signet-auth-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
 
 ## 1. Install
 
@@ -27,10 +27,10 @@ Before publication, install both packages from a local checkout as shown below.
   <Tab>
 
 ```bash
-npm install @shakibdshy/signet-react
+npm install @shakibdshy/signet-auth-react
 ```
 
-This also installs `@shakibdshy/signet-client@1.0.0-beta`; do not install the client separately.
+This also installs `@shakibdshy/signet-auth-client@1.0.0-beta`; do not install the client separately.
 
   </Tab>
   <Tab>
@@ -53,8 +53,8 @@ A local install keeps both packages at the version in your checkout.
 ## 2. Create the typed client
 
 ```ts
-// signet-client.ts
-import { createSignetClient } from '@shakibdshy/signet-client';
+// signet-auth-client.ts
+import { createSignetClient } from '@shakibdshy/signet-auth-client';
 
 export const auth = createSignetClient({
   baseURL: 'https://api.example.com/auth', // must include Config.PathPrefix
@@ -68,8 +68,8 @@ the `baseURL` rules.
 
 ```tsx
 // main.tsx
-import { SignetProvider } from '@shakibdshy/signet-react';
-import { auth } from './signet-client';
+import { SignetProvider } from '@shakibdshy/signet-auth-react';
+import { auth } from './signet-auth-client';
 import { App } from './App';
 
 export function Root() {
@@ -89,7 +89,7 @@ with every consumer.
 ```tsx
 // Profile.tsx
 import { useState } from 'react';
-import { useSession } from '@shakibdshy/signet-react';
+import { useSession } from '@shakibdshy/signet-auth-react';
 
 export function Profile() {
   const { status, user, error, signIn, signOut, refresh } = useSession();
@@ -129,7 +129,7 @@ Errors are the generated `SignetApiError` from the typed client, unchanged.
 
 ```ts
 // middleware.ts (Next.js example)
-import { sessionGuard } from '@shakibdshy/signet-react';
+import { sessionGuard } from '@shakibdshy/signet-auth-react';
 
 export async function middleware(request: Request) {
   const ok = await sessionGuard(

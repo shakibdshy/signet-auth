@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 const usernameProvider = "username"

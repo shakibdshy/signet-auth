@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func stateFromURL(t *testing.T, raw string) string {

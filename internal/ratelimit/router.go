@@ -5,7 +5,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 type router struct {

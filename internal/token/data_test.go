@@ -6,10 +6,10 @@ import (
 
 	"time"
 
-	"github.com/shakibdshy/signet/internal/token"
+	"github.com/shakibdshy/signet-auth/internal/token"
 
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func TestIssueWithDataRoundTrip(t *testing.T) {

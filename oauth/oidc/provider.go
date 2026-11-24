@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/oidc"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/oidc"
 )
 
 const (

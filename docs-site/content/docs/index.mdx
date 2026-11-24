@@ -7,7 +7,7 @@ Signet is a Go library for adding authentication to your application. You own th
 database schema and the router; Signet provides the flows, the security checks and
 a small typed API.
 
-- **Embedded, not a service.** Import `github.com/shakibdshy/signet` and create a
+- **Embedded, not a service.** Import `github.com/shakibdshy/signet-auth` and create a
   `Client` once at startup.
 - **Router-agnostic.** `Client.Handler()` returns a standard `http.Handler`;
   `RequireAuth` and `OptionalAuth` are standard middleware.

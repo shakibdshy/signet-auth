@@ -19,7 +19,7 @@ There is no patched 0.1.x series; upgrade to `v1.0.0-beta` or `main` to receive 
 Please **do not** open a public GitHub issue for security problems.
 
 Report vulnerabilities privately through
-[GitHub's private vulnerability reporting](https://github.com/shakibdshy/signet/security/advisories/new).
+[GitHub's private vulnerability reporting](https://github.com/shakibdshy/signet-auth/security/advisories/new).
 Include:
 
 - the affected version or commit
@@ -30,5 +30,5 @@ You should receive an acknowledgement within three business days and an update a
 least every seven days while the report is investigated. Please allow up to 30 days
 for a coordinated fix and disclosure before publishing details.
 
-Security controls in Signet are opt-in; see the [security guide](https://shakibdshy.github.io/signet/docs/security)
+Security controls in Signet are opt-in; see the [security guide](https://shakibdshy.github.io/signet-auth/docs/security)
 for the threat model and configuration.

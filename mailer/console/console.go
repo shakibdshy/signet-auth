@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 // Mailer writes messages to a writer instead of delivering them.

@@ -3,7 +3,7 @@ package smtp_test
 import (
 	"testing"
 
-	"github.com/shakibdshy/signet/mailer/smtp"
+	"github.com/shakibdshy/signet-auth/mailer/smtp"
 )
 
 func TestNewValidatesConfiguration(t *testing.T) {

@@ -11,7 +11,7 @@ without changing Signet's core or adding a new dependency.
 ## 1. Install the adapter
 
 ```bash
-go get github.com/shakibdshy/signet/oauth/oidc
+go get github.com/shakibdshy/signet-auth/oauth/oidc
 ```
 
 ## 2. Build the Provider — discovery happens here
@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/oauth/oidc"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/oauth/oidc"
 )
 
 ctx := context.Background()

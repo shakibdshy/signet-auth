@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 func TestContractCoversEveryRoute(t *testing.T) {

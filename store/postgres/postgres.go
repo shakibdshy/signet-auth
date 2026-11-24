@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/sqlfiles"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/sqlfiles"
 )
 
 // Migrations contains the default schema, applied explicitly by Migrate.

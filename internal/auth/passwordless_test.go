@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/mail"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/mail"
 )
 
 func TestConsumedTokenStillMatchesInvalidToken(t *testing.T) {

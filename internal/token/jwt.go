@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/shakibdshy/signet/internal/audit"
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/audit"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/secret"
 )
 
 const (

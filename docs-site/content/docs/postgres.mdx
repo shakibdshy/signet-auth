@@ -3,11 +3,11 @@ title: PostgreSQL
 description: Bundled PostgreSQL Store adapter and its migrations.
 ---
 
-Signet ships a PostgreSQL adapter in `github.com/shakibdshy/signet/store/postgres`, built on
+Signet ships a PostgreSQL adapter in `github.com/shakibdshy/signet-auth/store/postgres`, built on
 `pgxpool`.
 
 ```bash
-go get github.com/shakibdshy/signet/store/postgres
+go get github.com/shakibdshy/signet-auth/store/postgres
 go get github.com/jackc/pgx/v5
 ```
 
@@ -17,7 +17,7 @@ go get github.com/jackc/pgx/v5
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/shakibdshy/signet/store/postgres"
+	"github.com/shakibdshy/signet-auth/store/postgres"
 )
 
 pool, err := pgxpool.New(ctx, dsn)

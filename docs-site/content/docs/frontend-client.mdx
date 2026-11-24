@@ -5,12 +5,12 @@ description: Call Signet from a browser app with a typed TypeScript client.
 
 import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
 
-The `@shakibdshy/signet-client` package is generated from Signet's OpenAPI contract, so the
+The `@shakibdshy/signet-auth-client` package is generated from Signet's OpenAPI contract, so the
 methods and error codes match the server. You need **Node.js 20+**. This page covers the
 framework-neutral client; for React session state, see [React session hooks](/docs/react-hooks).
 
 <Callout title="Version alignment">
-`@shakibdshy/signet-client` and the optional `@shakibdshy/signet-react` hooks are released
+`@shakibdshy/signet-auth-client` and the optional `@shakibdshy/signet-auth-react` hooks are released
 together at `1.0.0-beta`. The React package depends on the client at that same version.
 </Callout>
 
@@ -20,7 +20,7 @@ together at `1.0.0-beta`. The React package depends on the client at that same v
   <Tab>
 
 ```bash
-npm install @shakibdshy/signet-client
+npm install @shakibdshy/signet-auth-client
 ```
 
   </Tab>
@@ -44,7 +44,7 @@ is published.
 ## Create the client
 
 ```ts
-import { createSignetClient, SignetApiError } from '@shakibdshy/signet-client';
+import { createSignetClient, SignetApiError } from '@shakibdshy/signet-auth-client';
 
 export const auth = createSignetClient({
   // Origin + your backend's Config.PathPrefix. If the Go server mounts
@@ -66,7 +66,7 @@ caches it, and sends `X-CSRF-Token` on state-changing calls. You do not manage C
 
 ```tsx
 import { useState } from 'react';
-import { auth, SignetApiError } from './signet-client';
+import { auth, SignetApiError } from './signet-auth-client';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -164,7 +164,7 @@ signed cookie through the typed endpoint. Create the client with the backend `Pa
 in `baseURL`:
 
 ```ts
-import { createSignetClient } from '@shakibdshy/signet-client';
+import { createSignetClient } from '@shakibdshy/signet-auth-client';
 
 const auth = createSignetClient({ baseURL: 'https://api.example.com/auth' });
 const { method } = await auth.lastSignInMethod();

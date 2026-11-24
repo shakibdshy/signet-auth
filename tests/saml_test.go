@@ -21,8 +21,8 @@ import (
 	"github.com/russellhaering/gosaml2/v2/idp"
 	"github.com/russellhaering/gosaml2/v2/types"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func samlClient(t *testing.T) (*signet.Client, string, string) {

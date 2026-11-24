@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func lastMethodClient(t *testing.T, configure func(*signet.Config)) *signet.Client {

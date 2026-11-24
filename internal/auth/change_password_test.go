@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 func TestValidateChangePassword(t *testing.T) {

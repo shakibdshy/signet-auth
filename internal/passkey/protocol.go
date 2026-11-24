@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	wa "github.com/go-webauthn/webauthn/webauthn"
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 // Protocol implements core.PasskeyProtocol with go-webauthn.

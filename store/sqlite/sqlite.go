@@ -8,8 +8,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/sqlfiles"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/sqlfiles"
 )
 
 // Migrations contains the default schema, applied explicitly by Migrate.

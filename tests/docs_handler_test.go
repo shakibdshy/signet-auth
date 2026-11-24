@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/openapi"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/openapi"
 )
 
 func TestDocsHandlerServesTheGeneratedSpec(t *testing.T) {

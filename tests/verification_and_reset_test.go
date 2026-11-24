@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func TestVerificationTokenExpiryUsesClock(t *testing.T) {

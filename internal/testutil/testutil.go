@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 // ErrStore is the failure returned by a Store configured to fail account creation.

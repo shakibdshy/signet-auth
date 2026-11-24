@@ -10,9 +10,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/store/conformance"
-	"github.com/shakibdshy/signet/store/postgres"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/store/conformance"
+	"github.com/shakibdshy/signet-auth/store/postgres"
 )
 
 func TestStorePassesConformance(t *testing.T) {

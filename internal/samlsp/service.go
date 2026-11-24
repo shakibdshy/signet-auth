@@ -17,7 +17,7 @@ import (
 
 	saml2 "github.com/russellhaering/gosaml2/v2"
 	"github.com/russellhaering/gosaml2/v2/sp"
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 // Result carries the browser URL and normalized assertion attributes.
