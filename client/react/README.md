@@ -15,6 +15,36 @@ version.
 
 Full guide: [React session hooks](https://shakibdshy.github.io/signet/docs/react-hooks).
 
+## Why this package exists
+
+Signet is an **embeddable Go library**. A Go application mounts `signet.Client.Handler()`
+under a path prefix such as `/auth`, and the TypeScript client calls that handler using
+types generated from the Go HTTP contract. This React package is a thin optional layer on
+top of that client:
+
+```text
+Go application (signet.Handler under Config.PathPrefix)
+  └─ api/signet.openapi.json  (generated from the Go contract)
+       └─ @shakibdshy/signet-client  (typed HTTP client)
+            └─ @shakibdshy/signet-react  ← this package
+```
+
+It does not implement authentication and never reimplements the client. `SignetProvider`
+calls the client's `GET /me`, `useSession()` shares that result with components, and
+`sessionGuard` checks cookies from a server-rendered route. Every request still goes to
+the same Go handler, with the client's cookies and CSRF handling intact.
+
+Use **only** `@shakibdshy/signet-client` if you have a non-React frontend or manage session
+state yourself. Add this package when you want `SignetProvider`, `useSession()` and
+`sessionGuard`. It depends on the client at the same version, so npm installs both.
+
+The Go module (`v1.0.0-beta`), the client (`1.0.0-beta`) and this package (`1.0.0-beta`)
+are released together. Go is distributed through a git tag and the Go module proxy; these
+npm packages are the frontend counterparts of the same release.
+
+Because Signet uses `__Host-` cookies and same-origin CSRF, the React app must reach the Go
+handler on the same origin or through a same-origin proxy.
+
 ## Install
 
 Published package — the typed client is installed automatically:
