@@ -3,7 +3,7 @@ package httpapi
 import (
 	"context"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 type userContextKey struct{}

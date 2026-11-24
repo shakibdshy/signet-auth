@@ -5,7 +5,7 @@ A framework-neutral, generated TypeScript client for Signet's HTTP API. Types co
 `internal/httpapi/contract.go`, so method signatures and error codes match the server.
 
 Current version: **`1.0.0-beta`**. The optional
-[`@shakibdshy/signet-react`](https://github.com/shakibdshy/signet/tree/main/client/react) hooks package is released at the same version and
+[`@shakibdshy/signet-react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react) hooks package is released at the same version and
 depends on this client.
 
 Full guides: [Frontend client](https://shakibdshy.github.io/signet/docs/frontend-client)
@@ -40,7 +40,7 @@ frontend counterparts of that same release.
 
 **Which package do you need?** Use this one for any TypeScript or JavaScript frontend,
 including Vue, Svelte, TanStack Start and Next.js. Use
-[`@shakibdshy/signet-react`](https://github.com/shakibdshy/signet/tree/main/client/react)
+[`@shakibdshy/signet-react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react)
 only if you also want reactive session state in React; it depends on this client.
 
 Because Signet uses `__Host-` cookies and same-origin CSRF, the frontend must reach the Go

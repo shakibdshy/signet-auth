@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/store/conformance"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/store/conformance"
 )
 
 type referenceStore struct {

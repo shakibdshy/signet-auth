@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/auth"
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/httpapi"
-	"github.com/shakibdshy/signet/internal/testutil"
-	"github.com/shakibdshy/signet/internal/token"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/auth"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/httpapi"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
+	"github.com/shakibdshy/signet-auth/internal/token"
 )
 
 var (

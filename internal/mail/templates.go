@@ -7,7 +7,7 @@ import (
 	"io"
 	texttemplate "text/template"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 type defaultTemplates struct {

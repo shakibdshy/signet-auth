@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 func TestVersion(t *testing.T) {

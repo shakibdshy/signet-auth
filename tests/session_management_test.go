@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 func TestListSessionsProgrammatic(t *testing.T) {

@@ -8,7 +8,7 @@ the optional settings and Go API calls you can add when you need them.
 
 ## 1. The foundation
 
-Copy this into `main.go` after `go mod init` and `go get github.com/shakibdshy/signet` plus
+Copy this into `main.go` after `go mod init` and `go get github.com/shakibdshy/signet-auth` plus
 `modernc.org/sqlite`. Run `go mod tidy && go run .`.
 
 ```go
@@ -23,9 +23,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/mailer/console"
-	"github.com/shakibdshy/signet/store/sqlite"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/mailer/console"
+	"github.com/shakibdshy/signet-auth/store/sqlite"
 	_ "modernc.org/sqlite"
 )
 

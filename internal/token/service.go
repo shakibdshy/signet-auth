@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/secret"
 )
 
 // Service issues and consumes one-time Tokens against a TokenStore.

@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
-	"github.com/shakibdshy/signet/oauth/oidc"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
+	"github.com/shakibdshy/signet-auth/oauth/oidc"
 )
 
 type oidcFixture struct {

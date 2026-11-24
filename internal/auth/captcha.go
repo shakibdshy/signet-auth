@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 var defaultCaptchaEndpoints = []string{"signup", "signin", "send-password-reset"}

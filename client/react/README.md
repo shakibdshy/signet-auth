@@ -2,7 +2,7 @@
 
 Optional React session hooks for Signet: `SignetProvider`, `useSession()` and
 `sessionGuard`. They wrap the framework-neutral
-[`@shakibdshy/signet-client`](https://github.com/shakibdshy/signet/tree/main/client/ts) typed client, so components share one live Session
+[`@shakibdshy/signet-client`](https://github.com/shakibdshy/signet-auth/tree/main/client/ts) typed client, so components share one live Session
 state instead of calling the API themselves.
 
 Current version: **`1.0.0-beta`**. Both packages are released together at the same
@@ -78,7 +78,7 @@ export const auth = createSignetClient({
 });
 ```
 
-See the [client README](https://github.com/shakibdshy/signet/blob/main/client/ts/README.md) and the
+See the [client README](https://github.com/shakibdshy/signet-auth/blob/main/client/ts/README.md) and the
 [frontend guide](https://shakibdshy.github.io/signet/docs/frontend-client) for every
 available method and the `baseURL` rules.
 

@@ -15,7 +15,7 @@ import (
 	"net/textproto"
 	"strings"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 // TLSMode selects how the SMTP connection is secured.

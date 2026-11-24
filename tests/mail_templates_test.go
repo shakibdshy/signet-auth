@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 func TestDefaultTemplatesRenderBothBodies(t *testing.T) {

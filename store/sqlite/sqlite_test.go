@@ -7,9 +7,9 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/store/conformance"
-	"github.com/shakibdshy/signet/store/sqlite"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/store/conformance"
+	"github.com/shakibdshy/signet-auth/store/sqlite"
 )
 
 func newStore(t *testing.T) *sqlite.Store {

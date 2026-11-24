@@ -14,9 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/mailer/console"
-	"github.com/shakibdshy/signet/store/postgres"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/mailer/console"
+	"github.com/shakibdshy/signet-auth/store/postgres"
 )
 
 type memoryLimiter struct {

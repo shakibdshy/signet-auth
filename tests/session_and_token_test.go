@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/secret"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func TestAbsoluteExpiryRejectsAndRevokes(t *testing.T) {

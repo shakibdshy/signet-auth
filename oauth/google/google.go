@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 	"golang.org/x/oauth2"
 )
 

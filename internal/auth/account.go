@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 
-	"github.com/shakibdshy/signet/internal/audit"
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/audit"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 // ListAccounts returns the safe fields of a User's Accounts.

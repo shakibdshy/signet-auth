@@ -3,11 +3,11 @@ title: SQLite
 description: Bundled SQLite Store adapter and its migrations.
 ---
 
-Signet ships a SQLite adapter in `github.com/shakibdshy/signet/store/sqlite`. It uses
+Signet ships a SQLite adapter in `github.com/shakibdshy/signet-auth/store/sqlite`. It uses
 `modernc.org/sqlite`, so no CGO is required.
 
 ```bash
-go get github.com/shakibdshy/signet/store/sqlite
+go get github.com/shakibdshy/signet-auth/store/sqlite
 go get modernc.org/sqlite
 ```
 
@@ -17,7 +17,7 @@ go get modernc.org/sqlite
 import (
 	"database/sql"
 
-	"github.com/shakibdshy/signet/store/sqlite"
+	"github.com/shakibdshy/signet-auth/store/sqlite"
 	_ "modernc.org/sqlite"
 )
 

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/oauth/google"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/oauth/google"
 )
 
 func TestProviderImplementsContractAndMapsIdentity(t *testing.T) {

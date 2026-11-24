@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/hash/bcrypt"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/hash/bcrypt"
 )
 
 func TestHasherImplementsPasswordHasher(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/shakibdshy/signet
+module github.com/shakibdshy/signet-auth
 
 go 1.26.0
 

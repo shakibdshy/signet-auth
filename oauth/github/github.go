@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 	"golang.org/x/oauth2"
 )
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 // Config is the complete set of options for a Client. Use DefaultConfig for a

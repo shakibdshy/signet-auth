@@ -1,6 +1,6 @@
 package signet
 
-import "github.com/shakibdshy/signet/internal/core"
+import "github.com/shakibdshy/signet-auth/internal/core"
 
 var (
 	// ErrNotFound reports that a User, Account, Session or Token does not exist.

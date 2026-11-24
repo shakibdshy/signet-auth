@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func signInOverHTTP(t *testing.T, client *signet.Client) (*httptest.ResponseRecorder, string) {

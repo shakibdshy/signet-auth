@@ -19,7 +19,7 @@ There is no patched 0.1.x series; upgrade to `v1.0.0-beta` or `main` to receive 
 Please **do not** open a public GitHub issue for security problems.
 
 Report vulnerabilities privately through
-[GitHub's private vulnerability reporting](https://github.com/shakibdshy/signet/security/advisories/new).
+[GitHub's private vulnerability reporting](https://github.com/shakibdshy/signet-auth/security/advisories/new).
 Include:
 
 - the affected version or commit

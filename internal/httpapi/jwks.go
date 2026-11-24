@@ -3,7 +3,7 @@ package httpapi
 import (
 	"net/http"
 
-	"github.com/shakibdshy/signet/internal/token"
+	"github.com/shakibdshy/signet-auth/internal/token"
 )
 
 // JWKSHandler publishes only the public half of asymmetric signing keys. It is

@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 const ttl = 12 * time.Hour

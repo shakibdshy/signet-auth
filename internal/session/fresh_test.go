@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/secret"
-	"github.com/shakibdshy/signet/internal/session"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/session"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func TestIsFreshUsesCreatedAtNotLastSeen(t *testing.T) {

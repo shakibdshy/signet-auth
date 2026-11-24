@@ -9,7 +9,7 @@ console adapter prints messages instead of sending them.
 ## Console mailer (development only)
 
 ```go
-import "github.com/shakibdshy/signet/mailer/console"
+import "github.com/shakibdshy/signet-auth/mailer/console"
 
 cfg.Mailer = console.New(os.Stdout)
 ```
@@ -21,7 +21,7 @@ flows without an email server.
 ## SMTP mailer
 
 ```go
-import "github.com/shakibdshy/signet/mailer/smtp"
+import "github.com/shakibdshy/signet-auth/mailer/smtp"
 
 m, err := smtp.New(smtp.Config{
     Host:     "smtp.example.com",

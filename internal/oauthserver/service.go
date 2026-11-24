@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/audit"
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/secret"
-	"github.com/shakibdshy/signet/internal/token"
+	"github.com/shakibdshy/signet-auth/internal/audit"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/secret"
+	"github.com/shakibdshy/signet-auth/internal/token"
 )
 
 // Service implements the Authorization server operations.

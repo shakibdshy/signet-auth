@@ -5,7 +5,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 // Event names reuse the strings already emitted through the application logger.

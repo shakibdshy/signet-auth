@@ -1,7 +1,7 @@
 # Signet
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/shakibdshy/signet.svg)](https://pkg.go.dev/github.com/shakibdshy/signet)
-[![CI](https://github.com/shakibdshy/signet/actions/workflows/ci.yml/badge.svg)](https://github.com/shakibdshy/signet/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shakibdshy/signet-auth.svg)](https://pkg.go.dev/github.com/shakibdshy/signet-auth)
+[![CI](https://github.com/shakibdshy/signet-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/shakibdshy/signet-auth/actions/workflows/ci.yml)
 [![Go 1.26+](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -46,9 +46,9 @@ import (
     "os"
     "sync"
 
-    "github.com/shakibdshy/signet"
-    "github.com/shakibdshy/signet/mailer/console"
-    "github.com/shakibdshy/signet/store/sqlite"
+    "github.com/shakibdshy/signet-auth"
+    "github.com/shakibdshy/signet-auth/mailer/console"
+    "github.com/shakibdshy/signet-auth/store/sqlite"
     _ "modernc.org/sqlite"
 )
 

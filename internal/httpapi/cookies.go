@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/csrf"
+	"github.com/shakibdshy/signet-auth/internal/csrf"
 )
 
 // Cookies builds and clears Signet's session cookie and issues the CSRF

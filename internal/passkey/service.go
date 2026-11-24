@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/audit"
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/session"
-	"github.com/shakibdshy/signet/internal/token"
+	"github.com/shakibdshy/signet-auth/internal/audit"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/session"
+	"github.com/shakibdshy/signet-auth/internal/token"
 )
 
 const ceremonyTTL = 5 * time.Minute

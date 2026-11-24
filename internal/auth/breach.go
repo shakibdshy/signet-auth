@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"github.com/shakibdshy/signet/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
 // checkBreach rejects a password that the configured BreachChecker reports as

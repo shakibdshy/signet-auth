@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/internal/testutil"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 func usernameClient(t *testing.T, configure func(*signet.Config)) (*signet.Client, *testutil.Store) {

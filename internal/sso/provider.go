@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/oidc"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/oidc"
 )
 
 // oidcProvider is the default SSO OIDC verifier, built from internal/oidc so

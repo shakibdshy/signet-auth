@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/shakibdshy/signet/internal/auth"
-	"github.com/shakibdshy/signet/internal/authorization"
-	"github.com/shakibdshy/signet/internal/core"
-	"github.com/shakibdshy/signet/internal/mail"
+	"github.com/shakibdshy/signet-auth/internal/auth"
+	"github.com/shakibdshy/signet-auth/internal/authorization"
+	"github.com/shakibdshy/signet-auth/internal/core"
+	"github.com/shakibdshy/signet-auth/internal/mail"
 )
 
 // RateLimitRule overrides the limiter and key prefix for one endpoint.

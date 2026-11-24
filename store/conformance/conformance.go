@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet"
+	"github.com/shakibdshy/signet-auth"
 )
 
 // Run executes the Store conformance suite. The factory must return a fresh,

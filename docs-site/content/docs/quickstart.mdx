@@ -12,7 +12,7 @@ This page gets a small Go server running with email/password sign-up and sign-in
 ```bash
 mkdir signet-demo && cd signet-demo
 go mod init example.com/signet-demo
-go get github.com/shakibdshy/signet
+go get github.com/shakibdshy/signet-auth
 go get modernc.org/sqlite
 ```
 
@@ -30,9 +30,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/shakibdshy/signet"
-	"github.com/shakibdshy/signet/mailer/console"
-	"github.com/shakibdshy/signet/store/sqlite"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/mailer/console"
+	"github.com/shakibdshy/signet-auth/store/sqlite"
 	_ "modernc.org/sqlite"
 )
 
@@ -128,7 +128,7 @@ that cookie to access `/private`. State-changing HTTP requests also need `X-CSRF
 A **User** is the person. An **Account** is one way they sign in (a password, Google, or a
 Username). A **Session** is one authenticated visit, identified by an opaque **Session token**.
 A **Token** is a single-use proof for one sensitive flow — different from a Session token.
-See the [GLOSSARY.md](https://github.com/shakibdshy/signet/blob/main/GLOSSARY.md).
+See the [GLOSSARY.md](https://github.com/shakibdshy/signet-auth/blob/main/GLOSSARY.md).
 </Callout>
 
 - `Store` adapts your database. `Migrate` creates the tables; Signet never migrates implicitly.
