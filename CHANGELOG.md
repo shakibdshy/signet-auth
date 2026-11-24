@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta] - 2026-11-24
+
 ### Added (Phases 5–12)
 
 - Application-managed authorization: roles, permissions, API keys,
