@@ -12,12 +12,16 @@ import (
 )
 
 type fakeWindowLimiter struct {
-	calls int
-	allow bool
+	calls      int
+	allow      bool
+	lastLimit  int
+	lastWindow time.Duration
 }
 
-func (l *fakeWindowLimiter) Allow(context.Context, string, int, time.Duration) (bool, error) {
+func (l *fakeWindowLimiter) Allow(_ context.Context, _ string, limit int, window time.Duration) (bool, error) {
 	l.calls++
+	l.lastLimit = limit
+	l.lastWindow = window
 	return l.allow, nil
 }
 
@@ -272,5 +276,8 @@ func TestWindowLimiterReceivesRuleValues(t *testing.T) {
 	}
 	if window.calls == 0 {
 		t.Fatal("window limiter not called")
+	}
+	if window.lastLimit != 7 || window.lastWindow != 2*time.Minute {
+		t.Fatalf("rule values = %d / %s", window.lastLimit, window.lastWindow)
 	}
 }
