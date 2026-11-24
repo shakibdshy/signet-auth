@@ -39,7 +39,7 @@ They exercise untrusted parsers through the public seam. CI includes a bounded f
 The declarative contract in the HTTP API layer generates the OpenAPI 3.1 document. The
 chain is: contract → `cmd/signet-openapi` → `api/signet.openapi.json` → embedded copy and
 TypeScript schema. `make generate-check` regenerates and diffs both artifacts, restoring
-the originals on failure; CI enforces it. The generated `@shakibdshy/signet-client` package
+the originals on failure; CI enforces it. The generated `@shakibdshy/signet-auth-client` package
 provides typed methods and a typed error union. See [Frontend client](/docs/frontend-client).
 
 ## Documentation site
@@ -73,5 +73,5 @@ configured model. Credentials stay in the OCR CLI configuration, not in git.
 
 `.github/workflows/ci.yml` runs tidy/format checks, vet, lint, race tests, examples, bounded
 fuzzing and govulncheck across Go 1.26/1.27 on Linux and macOS. `docs-site.yml` checks docs
-coverage and builds the site. `signet-client.yml` checks drift and publishes the npm client
+coverage and builds the site. `signet-auth-client.yml` checks drift and publishes the npm client
 on `client-v*` tags. Requirements coverage checklists live in `docs/checklists/`.

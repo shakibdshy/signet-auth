@@ -34,8 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `@shakibdshy/signet-react` now declares a registry dependency on
-  `@shakibdshy/signet-client` (`1.0.0-beta`), so installing the hooks package
+- `@shakibdshy/signet-auth-react` now declares a registry dependency on
+  `@shakibdshy/signet-auth-client` (`1.0.0-beta`), so installing the hooks package
   from npm installs the typed client automatically. Both packages publish on
   `client-v*` tags, client first.
 - Reorganized the repository into real folders. The root `signet` package is now

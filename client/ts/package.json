@@ -1,5 +1,5 @@
 {
-  "name": "@shakibdshy/signet-client",
+  "name": "@shakibdshy/signet-auth-client",
   "version": "1.0.0-beta",
   "description": "Generated TypeScript client for the Signet HTTP API",
   "license": "MIT",

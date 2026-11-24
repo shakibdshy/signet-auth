@@ -1,8 +1,8 @@
-# @shakibdshy/signet-react
+# @shakibdshy/signet-auth-react
 
 Optional React session hooks for Signet: `SignetProvider`, `useSession()` and
 `sessionGuard`. They wrap the framework-neutral
-[`@shakibdshy/signet-client`](https://github.com/shakibdshy/signet-auth/tree/main/client/ts) typed client, so components share one live Session
+[`@shakibdshy/signet-auth-client`](https://github.com/shakibdshy/signet-auth/tree/main/client/ts) typed client, so components share one live Session
 state instead of calling the API themselves.
 
 Current version: **`1.0.0-beta`**. Both packages are released together at the same
@@ -10,8 +10,8 @@ version.
 
 | Package | Version | Role |
 | --- | --- | --- |
-| `@shakibdshy/signet-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
-| `@shakibdshy/signet-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
+| `@shakibdshy/signet-auth-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
+| `@shakibdshy/signet-auth-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
 
 Full guide: [React session hooks](https://shakibdshy.github.io/signet/docs/react-hooks).
 
@@ -25,8 +25,8 @@ top of that client:
 ```text
 Go application (signet.Handler under Config.PathPrefix)
   └─ api/signet.openapi.json  (generated from the Go contract)
-       └─ @shakibdshy/signet-client  (typed HTTP client)
-            └─ @shakibdshy/signet-react  ← this package
+       └─ @shakibdshy/signet-auth-client  (typed HTTP client)
+            └─ @shakibdshy/signet-auth-react  ← this package
 ```
 
 It does not implement authentication and never reimplements the client. `SignetProvider`
@@ -34,7 +34,7 @@ calls the client's `GET /me`, `useSession()` shares that result with components,
 `sessionGuard` checks cookies from a server-rendered route. Every request still goes to
 the same Go handler, with the client's cookies and CSRF handling intact.
 
-Use **only** `@shakibdshy/signet-client` if you have a non-React frontend or manage session
+Use **only** `@shakibdshy/signet-auth-client` if you have a non-React frontend or manage session
 state yourself. Add this package when you want `SignetProvider`, `useSession()` and
 `sessionGuard`. It depends on the client at the same version, so npm installs both.
 
@@ -50,7 +50,7 @@ handler on the same origin or through a same-origin proxy.
 Published package — the typed client is installed automatically:
 
 ```sh
-npm install @shakibdshy/signet-react@1.0.0-beta
+npm install @shakibdshy/signet-auth-react@1.0.0-beta
 ```
 
 From a local checkout of this repository, install both packages:
@@ -70,8 +70,8 @@ Requires React 18 or newer.
 ## Create the typed client
 
 ```ts
-// signet-client.ts
-import { createSignetClient } from "@shakibdshy/signet-client";
+// signet-auth-client.ts
+import { createSignetClient } from "@shakibdshy/signet-auth-client";
 
 export const auth = createSignetClient({
   baseURL: "https://api.example.com/auth", // must include Config.PathPrefix
@@ -86,8 +86,8 @@ available method and the `baseURL` rules.
 
 ```tsx
 // main.tsx
-import { SignetProvider } from "@shakibdshy/signet-react";
-import { auth } from "./signet-client";
+import { SignetProvider } from "@shakibdshy/signet-auth-react";
+import { auth } from "./signet-auth-client";
 import { App } from "./App";
 
 export function Root() {
@@ -106,7 +106,7 @@ The provider performs one `GET /me` request on mount and shares `status`, `user`
 
 ```tsx
 // Profile.tsx
-import { useSession } from "@shakibdshy/signet-react";
+import { useSession } from "@shakibdshy/signet-auth-react";
 
 export function Profile() {
   const { status, user, error, signIn, signOut, refresh } = useSession();
@@ -132,7 +132,7 @@ re-renders. Errors are the generated `SignetApiError` from the typed client.
 
 ```ts
 // middleware.ts (Next.js example)
-import { sessionGuard } from "@shakibdshy/signet-react";
+import { sessionGuard } from "@shakibdshy/signet-auth-react";
 
 export async function middleware(request: Request) {
   const ok = await sessionGuard(

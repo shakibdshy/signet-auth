@@ -1,11 +1,11 @@
-# @shakibdshy/signet-client
+# @shakibdshy/signet-auth-client
 
 A framework-neutral, generated TypeScript client for Signet's HTTP API. Types come from
 `api/signet.openapi.json`, which is generated from the Go contract in
 `internal/httpapi/contract.go`, so method signatures and error codes match the server.
 
 Current version: **`1.0.0-beta`**. The optional
-[`@shakibdshy/signet-react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react) hooks package is released at the same version and
+[`@shakibdshy/signet-auth-react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react) hooks package is released at the same version and
 depends on this client.
 
 Full guides: [Frontend client](https://shakibdshy.github.io/signet/docs/frontend-client)
@@ -24,8 +24,8 @@ Go application
   └─ signet.Client.Handler() under Config.PathPrefix
        └─ HTTP contract (internal/httpapi/contract.go)
             └─ api/signet.openapi.json
-                 └─ @shakibdshy/signet-client  ← this package
-                      └─ @shakibdshy/signet-react (optional React binding)
+                 └─ @shakibdshy/signet-auth-client  ← this package
+                      └─ @shakibdshy/signet-auth-react (optional React binding)
 ```
 
 The client and its error codes are generated from Signet's OpenAPI spec, which is
@@ -40,7 +40,7 @@ frontend counterparts of that same release.
 
 **Which package do you need?** Use this one for any TypeScript or JavaScript frontend,
 including Vue, Svelte, TanStack Start and Next.js. Use
-[`@shakibdshy/signet-react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react)
+[`@shakibdshy/signet-auth-react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react)
 only if you also want reactive session state in React; it depends on this client.
 
 Because Signet uses `__Host-` cookies and same-origin CSRF, the frontend must reach the Go
@@ -52,7 +52,7 @@ use cookie Sessions.
 Published package:
 
 ```sh
-npm install @shakibdshy/signet-client@1.0.0-beta
+npm install @shakibdshy/signet-auth-client@1.0.0-beta
 ```
 
 From a local checkout of this repository:
@@ -71,7 +71,7 @@ Requires Node.js 20 or newer.
 ## Use
 
 ```ts
-import { createSignetClient, SignetApiError } from "@shakibdshy/signet-client";
+import { createSignetClient, SignetApiError } from "@shakibdshy/signet-auth-client";
 
 export const auth = createSignetClient({
   // Origin + your backend's Config.PathPrefix. If the Go server mounts
