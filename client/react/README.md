@@ -1,6 +1,9 @@
-# @shakibdshy/signet-auth-react
+# Signet React hooks
 
-Optional React session hooks for Signet: `SignetProvider`, `useSession()` and
+Optional React session hooks for
+[Signet](https://github.com/shakibdshy/signet-auth), a secure-by-default, embeddable,
+router- and storage-agnostic authentication library for Go: `SignetProvider`,
+`useSession()` and
 `sessionGuard`. They wrap the framework-neutral
 [`@shakibdshy/signet-auth-client`](https://github.com/shakibdshy/signet-auth/tree/main/client/ts) typed client, so components share one live Session
 state instead of calling the API themselves.
@@ -13,7 +16,7 @@ version.
 | `@shakibdshy/signet-auth-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
 | `@shakibdshy/signet-auth-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
 
-Full guide: [React session hooks](https://shakibdshy.github.io/signet/docs/react-hooks).
+Full guide: [React session hooks](https://shakibdshy.github.io/signet-auth/docs/react-hooks).
 
 ## Why this package exists
 
@@ -79,7 +82,7 @@ export const auth = createSignetClient({
 ```
 
 See the [client README](https://github.com/shakibdshy/signet-auth/blob/main/client/ts/README.md) and the
-[frontend guide](https://shakibdshy.github.io/signet/docs/frontend-client) for every
+[frontend guide](https://shakibdshy.github.io/signet-auth/docs/frontend-client) for every
 available method and the `baseURL` rules.
 
 ## Wrap your app

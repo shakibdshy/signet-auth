@@ -8,7 +8,7 @@
 A secure-by-default, embeddable authentication library for Go.
 
 > **Status:** `v1.0.0-beta` (pre-1.0). The planned feature set is implemented; the API-stability
-> commitment arrives with `v1.0.0`. See [status](https://shakibdshy.github.io/signet/docs/status).
+> commitment arrives with `v1.0.0`. See [status](https://shakibdshy.github.io/signet-auth/docs/status).
 
 Signet is imported into your application — it is not a separate auth server. It is built on
 `net/http`, works with any router, and never owns your database schema.
@@ -120,16 +120,16 @@ Full step-by-step guides, code examples and the generated API reference live in 
 
 | Start here | Covers |
 | --- | --- |
-| [Quickstart](https://shakibdshy.github.io/signet/docs/quickstart) | First running app |
-| [Sessions](https://shakibdshy.github.io/signet/docs/sessions) | Cookies, freshness, revocation |
-| [OAuth and OIDC](https://shakibdshy.github.io/signet/docs/oauth) | Providers and account linking |
-| [Authorization](https://shakibdshy.github.io/signet/docs/authorization) | Roles and permissions |
-| [Passkeys](https://shakibdshy.github.io/signet/docs/passkeys) | WebAuthn first factor |
-| [Authorization server](https://shakibdshy.github.io/signet/docs/authorization-server) | OAuth tokens and device flow |
-| [Organization SSO](https://shakibdshy.github.io/signet/docs/organization-sso) · [SAML](https://shakibdshy.github.io/signet/docs/saml) · [SCIM](https://shakibdshy.github.io/signet/docs/scim) | Enterprise identity |
-| [Frontend client](https://shakibdshy.github.io/signet/docs/frontend-client) | Framework-neutral typed client |
-| [React session hooks](https://shakibdshy.github.io/signet/docs/react-hooks) | Provider, `useSession()` and route guard |
-| [HTTP API reference](https://shakibdshy.github.io/signet/docs/openapi) | Every endpoint |
+| [Quickstart](https://shakibdshy.github.io/signet-auth/docs/quickstart) | First running app |
+| [Sessions](https://shakibdshy.github.io/signet-auth/docs/sessions) | Cookies, freshness, revocation |
+| [OAuth and OIDC](https://shakibdshy.github.io/signet-auth/docs/oauth) | Providers and account linking |
+| [Authorization](https://shakibdshy.github.io/signet-auth/docs/authorization) | Roles and permissions |
+| [Passkeys](https://shakibdshy.github.io/signet-auth/docs/passkeys) | WebAuthn first factor |
+| [Authorization server](https://shakibdshy.github.io/signet-auth/docs/authorization-server) | OAuth tokens and device flow |
+| [Organization SSO](https://shakibdshy.github.io/signet-auth/docs/organization-sso) · [SAML](https://shakibdshy.github.io/signet-auth/docs/saml) · [SCIM](https://shakibdshy.github.io/signet-auth/docs/scim) | Enterprise identity |
+| [Frontend client](https://shakibdshy.github.io/signet-auth/docs/frontend-client) | Framework-neutral typed client |
+| [React session hooks](https://shakibdshy.github.io/signet-auth/docs/react-hooks) | Provider, `useSession()` and route guard |
+| [HTTP API reference](https://shakibdshy.github.io/signet-auth/docs/openapi) | Every endpoint |
 
 The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md). Runnable examples are in
 [`examples/`](examples/). Security reporting is in [`SECURITY.md`](SECURITY.md).
