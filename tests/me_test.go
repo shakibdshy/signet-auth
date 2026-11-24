@@ -43,6 +43,11 @@ func TestMeEndpoint(t *testing.T) {
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "me@example.com") {
 		t.Fatalf("status = %d body = %s", rr.Code, rr.Body.String())
 	}
+	for _, secretField := range []string{"password_hash", "token_hash", "\"hash\""} {
+		if strings.Contains(rr.Body.String(), secretField) {
+			t.Fatalf("response leaked %s: %s", secretField, rr.Body.String())
+		}
+	}
 }
 
 func TestMeEndpointRequiresSession(t *testing.T) {

@@ -1468,7 +1468,9 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeJSON(w, http.StatusOK, user)
+	writeJSON(w, http.StatusOK, &core.UserInfo{
+		ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled,
+	})
 }
 
 func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {

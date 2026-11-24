@@ -111,9 +111,9 @@ export function Login() {
 }
 ```
 
-`signUp` works the same way. To render the signed-in User on page load, call the `/session`
-endpoint or expose the User from your own server-rendered route; the client does not keep a
-reactive session store.
+`signUp` works the same way. To render the signed-in User on page load, call `GET /me` or expose
+the User from your own server-rendered route. The plain client keeps no reactive session state;
+the optional React package adds one.
 
 ## Passwordless sign-in
 

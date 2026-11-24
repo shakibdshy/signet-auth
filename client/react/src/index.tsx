@@ -24,7 +24,15 @@ export interface SessionState {
   signOut: () => Promise<void>;
 }
 
-const SignetContext = createContext<SignetClient | null>(null);
+interface ContextValue {
+  client: SignetClient;
+  state: Omit<SessionState, "refresh" | "signIn" | "signOut">;
+  setState: React.Dispatch<
+    React.SetStateAction<Omit<SessionState, "refresh" | "signIn" | "signOut">>
+  >;
+}
+
+const SignetContext = createContext<ContextValue | null>(null);
 
 export function SignetProvider({
   client,
@@ -33,35 +41,67 @@ export function SignetProvider({
   client: SignetClient;
   children: ReactNode;
 }) {
-  return <SignetContext.Provider value={client}>{children}</SignetContext.Provider>;
+  const [state, setState] = useState<ContextValue["state"]>({
+    status: "loading",
+    user: null,
+    error: null,
+  });
+
+  useEffect(() => {
+    let active = true;
+    client
+      .me()
+      .then((user) => {
+        if (!active) return;
+        setState({
+          status: user ? "authenticated" : "anonymous",
+          user: user ?? null,
+          error: null,
+        });
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setState({
+          status: "anonymous",
+          user: null,
+          error: error instanceof SignetApiError ? error : new SignetApiError("internal_error", "session check failed", 0),
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [client]);
+
+  const value = useMemo(() => ({ client, state, setState }), [client, state]);
+  return <SignetContext.Provider value={value}>{children}</SignetContext.Provider>;
 }
 
 export function useSession(): SessionState {
-  const client = useContext(SignetContext);
-  if (!client) {
+  const context = useContext(SignetContext);
+  if (!context) {
     throw new Error("useSession requires <SignetProvider client={...}>");
   }
-
-  const [status, setStatus] = useState<SessionStatus>("loading");
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [error, setError] = useState<SignetApiError | null>(null);
+  const { client, state, setState } = context;
 
   const refresh = useCallback(async () => {
     try {
-      const current = await client.me();
-      setUser(current ?? null);
-      setStatus(current ? "authenticated" : "anonymous");
-      setError(null);
-    } catch (err) {
-      setUser(null);
-      setStatus("anonymous");
-      setError(err instanceof SignetApiError ? err : null);
+      const user = await client.me();
+      setState({
+        status: user ? "authenticated" : "anonymous",
+        user: user ?? null,
+        error: null,
+      });
+    } catch (error) {
+      setState({
+        status: "anonymous",
+        user: null,
+        error:
+          error instanceof SignetApiError
+            ? error
+            : new SignetApiError("internal_error", "session check failed", 0),
+      });
     }
-  }, [client]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  }, [client, setState]);
 
   const signIn = useCallback(
     async (input: Parameters<SignetClient["signIn"]>[0]) => {
@@ -72,14 +112,14 @@ export function useSession(): SessionState {
   );
 
   const signOut = useCallback(async () => {
-    await client.signOut({});
-    setUser(null);
-    setStatus("anonymous");
-  }, [client]);
+    await client.signOut({ session_token: "" });
+    client.clearCsrfToken();
+    setState({ status: "anonymous", user: null, error: null });
+  }, [client, setState]);
 
   return useMemo(
-    () => ({ status, user, error, refresh, signIn, signOut }),
-    [status, user, error, refresh, signIn, signOut],
+    () => ({ ...state, refresh, signIn, signOut }),
+    [state, refresh, signIn, signOut],
   );
 }
 
@@ -88,8 +128,8 @@ export async function sessionGuard(
   authURL: string,
   cookieHeader: string,
 ): Promise<boolean> {
-  const response = await fetch(new URL("/me", authURL), {
-    headers: { cookie: cookieHeader },
-  });
+  const url = new URL(authURL);
+  url.pathname = url.pathname.replace(/\/$/, "") + "/me";
+  const response = await fetch(url, { headers: { cookie: cookieHeader } });
   return response.ok;
 }
