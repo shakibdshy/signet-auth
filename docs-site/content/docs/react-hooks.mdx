@@ -1,0 +1,147 @@
+---
+title: React session hooks
+description: Reactive session state in React apps using Signet's typed client.
+---
+
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+`@shakibdshy/signet-react` is an optional React binding over the framework-neutral
+[typed client](/docs/frontend-client). It provides `SignetProvider`, `useSession()` and
+`sessionGuard`, so components can read one shared session state instead of calling the
+client themselves.
+
+<Callout title="Version alignment">
+Both packages are released together at `1.0.0-beta`. `signet-react@1.0.0-beta` depends on
+`signet-client@1.0.0-beta`, so a published install pulls in the typed client automatically.
+Before publication, install both packages from a local checkout as shown below.
+</Callout>
+
+| Package | Version | Role |
+| --- | --- | --- |
+| `@shakibdshy/signet-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
+| `@shakibdshy/signet-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
+
+## 1. Install
+
+<Tabs items={['Published package', 'Local checkout']}>
+  <Tab>
+
+```bash
+npm install @shakibdshy/signet-react
+```
+
+This also installs `@shakibdshy/signet-client@1.0.0-beta`; do not install the client separately.
+
+  </Tab>
+  <Tab>
+
+```bash
+cd /path/to/signet/client/ts
+npm install
+npm run build
+
+cd /path/to/your-frontend
+npm install /path/to/signet/client/ts
+npm install /path/to/signet/client/react
+```
+
+A local install keeps both packages at the version in your checkout.
+
+  </Tab>
+</Tabs>
+
+## 2. Create the typed client
+
+```ts
+// signet-client.ts
+import { createSignetClient } from '@shakibdshy/signet-client';
+
+export const auth = createSignetClient({
+  baseURL: 'https://api.example.com/auth', // must include Config.PathPrefix
+});
+```
+
+See [Frontend client](/docs/frontend-client) for every available method, error handling and
+the `baseURL` rules.
+
+## 3. Wrap your app in the provider
+
+```tsx
+// main.tsx
+import { SignetProvider } from '@shakibdshy/signet-react';
+import { auth } from './signet-client';
+import { App } from './App';
+
+export function Root() {
+  return (
+    <SignetProvider client={auth}>
+      <App />
+    </SignetProvider>
+  );
+}
+```
+
+The provider performs one `GET /me` request on mount and shares `status`, `user` and `error`
+with every consumer.
+
+## 4. Use the session in a component
+
+```tsx
+// Profile.tsx
+import { useState } from 'react';
+import { useSession } from '@shakibdshy/signet-react';
+
+export function Profile() {
+  const { status, user, error, signIn, signOut, refresh } = useSession();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  if (status === 'loading') return <p>Loading…</p>;
+  if (error) return <p role="alert">{error.message}</p>;
+
+  if (status === 'anonymous') {
+    return (
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        await signIn({ email, password });
+      }}>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <button type="submit">Sign in</button>
+      </form>
+    );
+  }
+
+  return (
+    <>
+      <p>Signed in as {user?.email}</p>
+      <button onClick={() => signOut()}>Sign out</button>
+      <button onClick={() => refresh()}>Refresh</button>
+    </>
+  );
+}
+```
+
+`signIn` and `signOut` update the shared state, so every `useSession()` consumer re-renders.
+Errors are the generated `SignetApiError` from the typed client, unchanged.
+
+## 5. Protect a server-rendered route
+
+```ts
+// middleware.ts (Next.js example)
+import { sessionGuard } from '@shakibdshy/signet-react';
+
+export async function middleware(request: Request) {
+  const ok = await sessionGuard(
+    'https://api.example.com/auth',
+    request.headers.get('cookie') ?? '',
+  );
+  if (!ok) return Response.redirect(new URL('/signin', request.url));
+  return Response.next();
+}
+
+export const config = { matcher: ['/private/:path*'] };
+```
+
+`sessionGuard` appends `/me` to the configured base URL, preserving a `PathPrefix`. It checks
+the incoming cookies and never creates a Session itself.
