@@ -29,7 +29,7 @@ func NewMemoryAuthorizer(statements RoleStatements, roles func(context.Context, 
 
 // Version is the current Signet version. It remains a development placeholder
 // until the first release is tagged.
-const Version = "0.0.0-dev"
+const Version = "1.0.0-beta"
 
 // Clock supplies the current time so time-dependent behaviour can be tested
 // without waiting.

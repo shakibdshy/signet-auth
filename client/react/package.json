@@ -1,6 +1,6 @@
 {
   "name": "@shakibdshy/signet-react",
-  "version": "0.1.0",
+  "version": "1.0.0-beta",
   "description": "Optional React session hooks for Signet",
   "license": "MIT",
   "type": "module",
