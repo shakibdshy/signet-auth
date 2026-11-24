@@ -239,3 +239,11 @@ _Avoid_: directory sync, identity provisioning
 **Directory group**:
 A Group in an external directory whose members are projected to application roles or Organization memberships.
 _Avoid_: SCIM group, external group
+
+**Rate-limit window**:
+A bounded interval over which requests are counted for a rate-limit rule. A sliding window moves with each request; a fixed window resets at a boundary.
+_Avoid_: rate-limit period, quota interval
+
+**Audit query**:
+A filtered read of recorded Audit events. Querying is separate from emitting an event and is an application-owned capability.
+_Avoid_: audit log search, event lookup
