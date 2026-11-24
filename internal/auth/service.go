@@ -28,6 +28,7 @@ type Dependencies struct {
 	Store                    core.Store
 	Hasher                   core.PasswordHasher
 	Limiter                  core.RateLimiter
+	WindowLimiter            core.WindowLimiter
 	Clock                    core.Clock
 	Logger                   *slog.Logger
 	Password                 core.PasswordConfig
@@ -84,6 +85,18 @@ func allow(ctx context.Context, limiter core.RateLimiter, endpoint, key string) 
 }
 
 func (s *Service) allow(ctx context.Context, endpoint, key string) error {
+	if s.deps.WindowLimiter != nil {
+		if key == "" {
+			key = "local"
+		}
+		allowed, err := s.deps.WindowLimiter.Allow(ctx, endpoint+"|"+key, 5, time.Minute)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return core.ErrRateLimited
+		}
+	}
 	return allow(ctx, s.deps.Limiter, endpoint, key)
 }
 

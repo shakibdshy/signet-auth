@@ -1,0 +1,50 @@
+---
+title: Account controls and operations
+description: Profile updates, server-side password checks, window-aware rate limits and queryable audit events.
+---
+
+These capabilities are opt-in and build on Signet's existing optional-adapter model.
+
+## Update a profile
+
+```go
+updated, err := auth.UpdateUser(ctx, signet.UpdateUserInput{
+    UserID: userID, SessionToken: sessionToken, Name: "Ada",
+})
+```
+
+`UpdateUser` requires a fresh Session belonging to that User. It changes safe profile fields only — email changes stay in the verified two-phase flow.
+
+## Set and verify passwords
+
+```go
+// Only for Users without a credential Account (passkey, OAuth or passwordless).
+err := auth.SetPassword(ctx, signet.SetPasswordInput{
+    UserID: userID, SessionToken: sessionToken, NewPassword: "correct horse",
+})
+
+// Server-only check; creates no Session.
+ok, err := auth.VerifyPassword(ctx, signet.VerifyPasswordInput{
+    UserID: userID, Password: "correct horse",
+})
+```
+
+`SetPassword` is denied when a credential Account already exists — use `ChangePassword` in that case. `VerifyPassword` returns false for unknown Users and never issues a Session.
+
+## Window-aware rate limiting
+
+```go
+cfg.WindowLimiter = myWindowLimiter
+```
+
+The optional adapter receives an endpoint key, a limit and a window. Without it, the boolean `RateLimiter` remains authoritative.
+
+## Query Audit events
+
+```go
+events, err := auth.QueryAudit(ctx, sessionToken, signet.AuditQueryInput{
+    Name: "user_updated", Outcome: "success", Limit: 50,
+})
+```
+
+`QueryAudit` requires a fresh Session and uses an optional `AuditQueryStore` adapter. Results are bounded to 100 events and never include secrets.
