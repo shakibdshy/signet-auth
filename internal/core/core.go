@@ -806,10 +806,10 @@ type AdminListUsersResult struct{ Users []*UserInfo }
 
 // UserInfo is a safe representation of a User.
 type UserInfo struct {
-	ID       string
-	Email    string
-	Name     string
-	Disabled bool
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Disabled bool   `json:"disabled"`
 }
 
 // BanUserInput describes an administrative ban.

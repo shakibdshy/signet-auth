@@ -171,6 +171,7 @@ var Endpoints = []Endpoint{
 	{Name: "saml/acs", Anonymous: true},
 	{Name: "sso/connections"},
 
+	{Name: "me"},
 	{Name: "accounts"},
 	{Name: "unlink-account"},
 	{Name: "sessions"},
@@ -301,6 +302,8 @@ func (h *Handler) Handler() http.Handler {
 			h.handleSetActiveOrganization(w, r)
 		case "active-organization":
 			h.handleActiveOrganization(w, r)
+		case "me":
+			h.handleMe(w, r)
 		case "accounts":
 			h.handleAccounts(w, r)
 		case "unlink-account":
@@ -1454,6 +1457,20 @@ func (h *Handler) handleActiveOrganization(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusOK, h.api.ActiveOrganizationFromRequest(r))
+}
+
+func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	user, ok := h.api.Authenticate(w, r, true)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, &core.UserInfo{
+		ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled,
+	})
 }
 
 func (h *Handler) handleAccounts(w http.ResponseWriter, r *http.Request) {

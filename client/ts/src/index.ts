@@ -112,6 +112,10 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.POST("/signout", { body, headers: await csrfHeaders() }));
 		},
 
+		async me(): Promise<SuccessBody<"/me", "get", 200>> {
+			return unwrap(await api.GET("/me"));
+		},
+
 		async listSessions(): Promise<SuccessBody<"/sessions", "get", 200>> {
 			return unwrap(await api.GET("/sessions"));
 		},

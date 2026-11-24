@@ -229,6 +229,9 @@ func ContractFor() Contract {
 			{Name: "active-organization", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("id")}}, Status: http.StatusOK,
 			}}},
+			{Name: "me", Methods: []Method{{
+				Verb: "GET", Response: ResponseSpec{Ref: "UserInfo"}, Status: http.StatusOK,
+			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
 					typeField("accounts", []core.AccountInfo{}),
