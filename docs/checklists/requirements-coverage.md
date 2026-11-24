@@ -51,4 +51,13 @@ Each shipped phase has a filled copy of this template, named for the phase rathe
 - `session-hardening.md`
 - `phase3-sign-in-2fa.md`
 - `phase4-oidc-provider.md`
+- `phase5-authorization.md`
 - `phase6-defensive-controls.md`
+- `phase-7.md`
+- `phase-8.md`
+- `phase-8b.md`
+- `phase-8c.md`
+- `phase-9.md`
+- `phase-10.md`
+- `phase-11.md`
+- `phase-12.md`

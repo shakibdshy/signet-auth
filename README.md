@@ -7,8 +7,8 @@
 
 A secure-by-default, embeddable authentication library for Go.
 
-> **Status:** pre-1.0. The planned feature set is implemented; release tagging and the
-> 1.0 API-stability commitment are still pending. See [status](https://shakibdshy.github.io/signet/docs/status).
+> **Status:** pre-1.0. The planned feature set is implemented; the **v1.0.0** tag and the API-stability
+> commitment are still pending (v0.1.0 is tagged). See [status](https://shakibdshy.github.io/signet/docs/status).
 
 Signet is imported into your application — it is not a separate auth server. It is built on
 `net/http`, works with any router, and never owns your database schema.
