@@ -3,13 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["client-v*"]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  go:
     name: Go ${{ matrix.go }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -23,8 +24,7 @@ jobs:
           - os: macos-latest
             go: "1.27"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -64,3 +64,94 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
+
+  js:
+    name: Generated artifacts, TypeScript and docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: js-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            client/ts/package-lock.json
+            client/react/package-lock.json
+            docs-site/package-lock.json
+
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client/ts
+
+      - name: Install React package dependencies
+        run: npm ci
+        working-directory: client/react
+
+      - name: Install docs dependencies
+        run: npm ci
+        working-directory: docs-site
+
+      - name: Check generated artifacts are current
+        run: make generate-check
+
+      - name: Typecheck the TypeScript client
+        run: npm run typecheck
+        working-directory: client/ts
+
+      - name: Typecheck the React package
+        run: npm run typecheck
+        working-directory: client/react
+
+      - name: Check documentation coverage
+        run: npm run docs:check
+        working-directory: docs-site
+
+      - name: Typecheck docs
+        run: npm run types:check
+        working-directory: docs-site
+
+      - name: Build docs
+        run: npm run build
+        working-directory: docs-site
+
+  publish:
+    name: Publish TypeScript client
+    if: startsWith(github.ref, 'refs/tags/client-v')
+    needs: [go, js]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+          cache-dependency-path: client/ts/package-lock.json
+
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client/ts
+
+      - name: Verify the client compiles
+        run: npm run typecheck
+        working-directory: client/ts
+
+      - name: Publish
+        run: npm publish --access public
+        working-directory: client/ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
