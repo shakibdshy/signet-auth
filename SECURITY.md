@@ -2,27 +2,31 @@
 
 ## Supported versions
 
+Signet is pre-1.0. Security fixes target the latest commit on `main`.
+
 | Version | Supported |
 | --- | --- |
-| 0.1.x | Yes |
-| < 0.1 | No |
+| `main` | Yes |
+| `v0.1.0` | Critical fixes only |
+| older tags | No |
 
-Signet is pre-1.0. Security fixes target the latest 0.1.x patch release. This
-policy will be updated when 1.0 is released.
-
-The contact address below is still a placeholder. Replace it with a monitored
-security mailbox before treating this release as publicly supported.
+There is no patched 0.1.x series; upgrade to the latest `main` to receive fixes.
 
 ## Reporting a vulnerability
 
 Please **do not** open a public GitHub issue for security problems.
 
-Report vulnerabilities privately to **shakibdshy** (placeholder — replace with a
-monitored security contact address before publishing). Include:
+Report vulnerabilities privately through
+[GitHub's private vulnerability reporting](https://github.com/shakibdshy/signet/security/advisories/new).
+Include:
 
 - the affected version or commit
 - steps to reproduce
 - the potential impact and a suggested fix, if you have one
 
-You should receive an acknowledgement within a few days. Please allow a
-reasonable window for investigation and a fix before public disclosure.
+You should receive an acknowledgement within three business days and an update at
+least every seven days while the report is investigated. Please allow up to 30 days
+for a coordinated fix and disclosure before publishing details.
+
+Security controls in Signet are opt-in; see the [security guide](https://shakibdshy.github.io/signet/docs/security)
+for the threat model and configuration.

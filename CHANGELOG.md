@@ -7,8 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Added (Phases 5–12)
 
+- Application-managed authorization: roles, permissions, API keys,
+  organizations and guarded admin management with impersonation.
+- Digest-only API keys with atomic verification and an opt-in per-route
+  middleware; organizations with memberships and an active-organization cookie;
+  guarded admin actions with fresh Sessions, audits and self-action blocks.
+- Passkeys (WebAuthn) as a first factor with an application-owned credential
+  store and single-use ceremony proofs.
+- Automatic sign-in after sign-up or verification, with source-compatible Go
+  methods and a new verify-and-sign-in method.
+- Optional Authorization server: authorization code with PKCE, refresh rotation,
+  exact Scopes, audiences, consent callback and device authorization.
+- Per-organization OIDC SSO, SAML 2.0 Web SSO and SCIM 2.0 User/Group
+  provisioning with group-to-role projection.
+- Account controls: `UpdateUser`, `SetPassword`, `VerifyPassword`, an optional
+  window-aware rate limiter and a queryable Audit store.
+- Optional local React package with `SignetProvider` and `useSession()`, plus a
+  framework-neutral `GET /me` endpoint.
 - Optional `signet.DocsHandler()` serves the generated OpenAPI document and a
   Scalar reference page. Mount it deliberately; the authentication handler is
   unchanged.
@@ -46,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adapter, transparent rehash, anti-enumeration timing, rate limiting,
   Sessions with hashed tokens, redacted hooks and structured events.
   `golang.org/x/crypto` is the only third-party dependency, used for Argon2id
-  and bcrypt.
+  and bcrypt. Other dependencies appear in later phases.
 - Phase 2 session and token support: secure session cookies with derived
   __Host- prefix, RequireAuth and OptionalAuth with idle and absolute timeout
   enforcement, a same-origin CSRF guard, session listing and revocation,
@@ -60,9 +77,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adapters, PKCE with encrypted expiring state, redirect allowlist,
   verified-only auto-linking, one-time explicit link tokens and session
   creation on callback.
-- Phase 5 storage: PostgreSQL and SQLite Store adapters with embedded explicit
+- Original Phase 5 (pre-message-numbering) storage: PostgreSQL and SQLite Store adapters with embedded explicit
   migrations, a public shared Store conformance suite, a custom-schema guide,
   and ADR 0003.
-- Phase 6 release hardening: signed double-submit CSRF tokens, four runnable
+- Original Phase 6 (pre-message-numbering) release hardening: signed double-submit CSRF tokens, four runnable
   router examples in separate modules, a rewritten README with a five-minute
   quickstart and comparison, ADR 0004, and the v0.1.0 tag.

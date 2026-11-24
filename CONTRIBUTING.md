@@ -6,8 +6,9 @@ and code.
 
 ## Development setup
 
-You will need a supported Go release (see the `go` directive in `go.mod`) and the
-following developer tools:
+You will need a supported Go release (see the `go` directive in `go.mod`) and
+Node.js with npm for the TypeScript client, React package and docs site. Install
+the Go developer tools:
 
 ```sh
 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -26,10 +27,12 @@ make vet     # go vet ./...
 make lint    # golangci-lint run ./...
 make vuln    # govulncheck ./...
 make cover   # race-enabled tests plus a coverage report
-make check   # formatting, vet, lint, tests, and vulnerability scan
+make check       # fmt, vet, lint, race tests, vuln, TS typechecks, docs guard + build
 ```
 
-Please run `make check` before opening a pull request.
+Other useful targets: `make generate-check` verifies generated OpenAPI/TS artifacts,
+`make docs-site` runs the docs guard and build, and `make ts-check` typechecks both
+TypeScript packages. Please run `make check` before opening a pull request.
 
 When changing an HTTP request or response shape, update the declarative
 contract in `internal/httpapi/contract.go` and run `make generate`. CI runs
@@ -68,7 +71,8 @@ Common types are `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, and
   fixes need a regression test that fails before the fix.
 - Complete the requirements coverage checklist for the phase before review.
   Every Testing Decisions line and security requirement must name a test or an
-  explained limitation; see `docs/checklists/requirements-coverage.md`.
+  explained limitation; see `docs/checklists/requirements-coverage.md` and the
+  phase files it indexes (`phase5-authorization.md`, `phase-7.md` … `phase-12.md`).
 - Keep changes focused and explain the motivation in the description.
 - Update documentation when behaviour or the public API changes.
 - Make sure CI is green and `make check` passes locally.
