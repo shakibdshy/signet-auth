@@ -127,7 +127,8 @@ Full step-by-step guides, code examples and the generated API reference live in 
 | [Passkeys](https://shakibdshy.github.io/signet/docs/passkeys) | WebAuthn first factor |
 | [Authorization server](https://shakibdshy.github.io/signet/docs/authorization-server) | OAuth tokens and device flow |
 | [Organization SSO](https://shakibdshy.github.io/signet/docs/organization-sso) · [SAML](https://shakibdshy.github.io/signet/docs/saml) · [SCIM](https://shakibdshy.github.io/signet/docs/scim) | Enterprise identity |
-| [Frontend client](https://shakibdshy.github.io/signet/docs/frontend-client) | Typed client and React hooks |
+| [Frontend client](https://shakibdshy.github.io/signet/docs/frontend-client) | Framework-neutral typed client |
+| [React session hooks](https://shakibdshy.github.io/signet/docs/react-hooks) | Provider, `useSession()` and route guard |
 | [HTTP API reference](https://shakibdshy.github.io/signet/docs/openapi) | Every endpoint |
 
 The domain vocabulary lives in [`GLOSSARY.md`](GLOSSARY.md). Runnable examples are in

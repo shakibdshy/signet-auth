@@ -44,6 +44,7 @@
     "tooling",
     "---Clients---",
     "frontend-client",
+    "react-hooks",
     "---API---",
     "openapi",
     "http-api",
