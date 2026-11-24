@@ -284,7 +284,7 @@ except where they implement a security control (Sentinel, audit logs, managed OT
 | JWT access/refresh tokens with rotation | [JWT plugin](https://better-auth.com/docs/plugins/jwt) | already | Access/Refresh tokens, rotation, replay containment, key rings, opt-in JWKS with `kid`, and a Second-factor challenge gate on `/token`. |
 | Bearer authentication from a session token | [Bearer](https://better-auth.com/docs/plugins/bearer) | partial | `VerifyAccessToken` + JWT mode serve API clients; no opaque-session bearer plugin. |
 | `auth.api` server function surface | [API](https://better-auth.com/docs/concepts/api) | already | Typed `Client` methods are the Go equivalent (no HTTP round trip). |
-| Client methods/hooks, framework adapters | [Client](https://better-auth.com/docs/concepts/client) | partial | Generated TS client + typed Go API; no framework hooks or reactive stores. |
+| Client methods/hooks, framework adapters | [Client](https://better-auth.com/docs/concepts/client) | already | Typed Go API, generated TS client and an optional React hooks package with `useSession()`; other frameworks are not bundled. |
 | Plugin architecture (endpoints/schema/hooks) | [Plugins](https://better-auth.com/docs/concepts/plugins) | partial | Narrow interfaces (Store, Mailer, Hasher, RateLimiter, OAuthProvider) but no plugin system. |
 | Database adapters and schema tooling | [Database](https://better-auth.com/docs/concepts/database) | partial | PostgreSQL/SQLite with explicit embedded migrations; no schema generator or ORM adapters. |
 | Global and database hooks/middleware | [Hooks](https://better-auth.com/docs/concepts/hooks) | partial | Redacted `OnSignUp`/`OnSignIn` hooks + `RequireAuth`/`OptionalAuth`; no before/after pipeline. |
