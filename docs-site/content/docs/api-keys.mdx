@@ -57,3 +57,5 @@ principal, ok := signet.PrincipalFromContext(r.Context())
 
 A missing or invalid key returns 401 before the endpoint runs. Endpoints not in the list keep their
 normal Session-based behaviour.
+
+The published OAuth scopes are OAuthScopeOpenID, OAuthScopeProfile, OAuthScopeEmail and OAuthScopeOffline.

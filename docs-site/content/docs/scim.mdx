@@ -151,5 +151,3 @@ curl -H "Authorization: Bearer $SCIM_BEARER_TOKEN" \
 ```
 
 Every mutation emits an Audit event (`scim_user_created`, `scim_user_updated`, `scim_group_created`, and so on) through the configured sink. Schema-discovery endpoints are intentionally disabled.
-EOF
-echo scim-rewritten

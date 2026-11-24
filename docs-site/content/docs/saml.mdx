@@ -74,5 +74,3 @@ The handler sets the Session and active-organization cookies and records `saml` 
 ## Verify
 
 A signed assertion creates a User with a namespaced Account, adds the User to the Organization with the configured default role, and emits Audit events. Unsigned assertions, wrong `InResponseTo`, wrong audience and replayed assertions are rejected. SLO, artifact binding and IdP-initiated SSO are not included.
-EOF
-echo saml-rewritten; export PATH="$(go env GOPATH)/bin:$PATH"; (cd docs-site && npm run docs:check 2>&1 | tail -1 && npm run build >/tmp/docs-step2.log 2>&1 && echo "docs build PASS" || { echo FAIL; tail -8 /tmp/docs-step2.log; })

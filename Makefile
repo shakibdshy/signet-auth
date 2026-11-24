@@ -27,6 +27,9 @@ cover:
 	$(GO) test -race -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out
 
+docs-check:
+	cd docs-site && npm run docs:check && npm run build
+
 ts-check:
 	cd client/ts && npm run typecheck
 	cd client/react && npm run typecheck
@@ -51,7 +54,7 @@ fmt-check:
 tidy:
 	$(GO) mod tidy
 
-check: fmt-check vet lint test vuln ts-check
+check: fmt-check vet lint test vuln ts-check docs-check
 
 generate-spec:
 	@mkdir -p api openapi
