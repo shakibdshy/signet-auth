@@ -3,57 +3,83 @@ title: Organization SSO
 description: Let each Organization sign in its members with its own OIDC provider.
 ---
 
-Organization SSO is opt-in. Each Organization can configure one **SSO connection** to an external identity provider, scoped to verified email domains. Signet reuses its existing OIDC verification and stores the external Subject as an Account — no User column or schema migration.
+Follow these steps to let an Organization use its own OIDC provider. All state lives behind an optional store; no User column is added.
 
-## Configure
+## 1. Implement the connection store and domain verification
+
+```go
+type ssoConnectionStore struct {
+    mu          sync.Mutex
+    byOrg       map[string]*signet.SSOConnection
+    byDomain    map[string]*signet.SSOConnection
+    byID        map[string]*signet.SSOConnection
+}
+
+func (s *ssoConnectionStore) Create(_ context.Context, c *signet.SSOConnection) error { /* persist */ }
+func (s *ssoConnectionStore) ByOrganization(_ context.Context, orgID string) (*signet.SSOConnection, error) { /* lookup */ }
+func (s *ssoConnectionStore) ByDomain(_ context.Context, domain string) (*signet.SSOConnection, error) { /* lookup */ }
+func (s *ssoConnectionStore) ByID(_ context.Context, id string) (*signet.SSOConnection, error) { /* lookup */ }
+func (s *ssoConnectionStore) List(context.Context) ([]*signet.SSOConnection, error) { /* all */ }
+func (s *ssoConnectionStore) Delete(_ context.Context, id string) error { /* remove */ }
+```
+
+## 2. Configure SSO
 
 ```go
 cfg.SSO = &signet.SSOConfig{
     Connections: myConnectionStore,
-    // Fail closed: only verified domains may be bound.
     VerifyDomain: func(ctx context.Context, orgID, domain string) bool {
-        return myDNS.Check(ctx, orgID, domain)
+        return myDNS.Verified(ctx, orgID, domain)
     },
     DefaultRole: "member",
-    // Optional: override normalized claims before provisioning.
-    MapClaims: func(ctx context.Context, claims *signet.SSOClaims) *signet.SSOClaims { return claims },
+}
+auth, err := signet.New(cfg)
+if err != nil {
+    panic(err)
 }
 ```
 
-`Connections` is required when `SSO` is configured. `New` returns `ErrInvalidSSOConfig` when it is missing.
+A domain can only be bound after `VerifyDomain` returns true. The callback is the sole authority — fail closed.
 
-## Create a connection
+## 3. Create an OIDC connection
 
 ```go
 connection, err := auth.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
     OrganizationID: orgID,
+    Protocol:       "oidc",
     Issuer:         "https://idp.acme.com",
-    ClientID:       "client-id",
-    ClientSecret:   "client-secret",
+    ClientID:       os.Getenv("SSO_CLIENT_ID"),
+    ClientSecret:   os.Getenv("SSO_CLIENT_SECRET"),
     Domains:        []string{"acme.com"},
-    SessionToken:   sessionToken,
+    SessionToken:   adminSessionToken,
 })
+if err != nil {
+    return err
+}
 ```
 
-Domains are verified through the callback before the connection is stored. Unknown, unbound and unverified domains all produce the same generic failure during sign-in, so SSO cannot be used to enumerate connections.
+Connection management is owner-scoped and requires a fresh Session.
 
-## Sign in
+## 4. Start and complete sign-in
 
 ```go
-start, err := auth.StartSSOSignIn(ctx, signet.SSOStartInput{Email: "member@acme.com"})
-// Redirect the browser to start.URL and keep start.State for the callback.
+start, err := auth.StartSSOSignIn(ctx, signet.SSOStartInput{
+    Email: "alice@acme.com", // or OrganizationID
+})
+// Redirect the browser to start.URL, retaining start.State.
 
 result, err := auth.CompleteSSOSignIn(ctx, signet.SSOCallbackInput{
     State: stateFromBrowser, Code: codeFromBrowser,
 })
-// result.SessionToken is a normal Session; result.OrganizationID is the active org.
+if err != nil {
+    return err
+}
+// result.SessionToken is a normal Session.
 ```
 
-A successful assertion with a verified email just-in-time creates a User and an Account whose provider is `sso:<connectionID>` and whose provider user ID is the IdP Subject. An existing User is matched only by verified email; unverified or disabled Users are rejected. The User joins the Organization with `DefaultRole`, and existing memberships are never downgraded.
+The callback verifies the ID token with discovery, JWKS, issuer, audience, nonce and PKCE checks. A verified email just-in-time creates a User and a namespaced Account keyed by the IdP Subject, adds the User to the Organization with `DefaultRole`, sets the active-organization cookie and records `sso` as the Last sign-in method.
 
-The callback sets the Session and active-organization cookies and records `sso` as the Last sign-in method. A replayed state Token is rejected.
-
-## HTTP endpoints
+## 5. Use the HTTP endpoints
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
@@ -63,8 +89,8 @@ The callback sets the Session and active-organization cookies and records `sso` 
 | `GET` | `/sso/connections` | Session | List connections |
 | `DELETE` | `/sso/connections` | Session | Delete a connection |
 
-Browser examples are in [Frontend client](/docs/frontend-client). SAML and SCIM are not included in this phase.
+An unknown organization, unbound domain and unverified domain all return the same generic failure, so sign-in cannot enumerate connections.
 
-## Go API and types
-
-`CreateSSOConnection` uses `CreateSSOConnectionInput` and returns `SSOConnectionInfo`. `ListSSOConnections` and `DeleteSSOConnection` (with `DeleteSSOConnectionInput`) manage connections. `StartSSOSignIn` returns `SSOStartResult`; `CompleteSSOSignIn` returns `SSOCallbackResult`. Connections are stored through the optional `SSOConnectionStore`; `SSOClaims` can be mapped before provisioning with `MapClaims`. Missing connections, unverified domains and invalid assertions return `ErrSSOConnectionNotFound`, `ErrSSODomainNotVerified` and `ErrSSOInvalidAssertion`.
+For XML-based providers, see [SAML SSO](/docs/saml).
+EOF
+echo orgsso-rewritten

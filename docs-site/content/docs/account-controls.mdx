@@ -3,48 +3,205 @@ title: Account controls and operations
 description: Profile updates, server-side password checks, window-aware rate limits and queryable audit events.
 ---
 
-These capabilities are opt-in and build on Signet's existing optional-adapter model.
+This guide walks through all four capabilities in order. Start with a configured `Client`; each step builds on the previous one.
 
-## Update a profile
+## 1. Start with a configured client
+
+```go
+package main
+
+import (
+    "context"
+
+    "github.com/shakibdshy/signet"
+)
+
+func main() {
+    cfg := signet.DefaultConfig()
+    cfg.Store = myStore            // implements signet.Store
+    cfg.Mailer = myMailer          // implements signet.Mailer
+    cfg.RateLimiter = myLimiter    // implements signet.RateLimiter
+
+    auth, err := signet.New(cfg)
+    if err != nil {
+        panic(err)
+    }
+
+    ctx := context.Background()
+    _ = auth
+    _ = ctx
+}
+```
+
+## 2. Update a profile
+
+Sign in first and keep the Session token returned by `SignIn`:
+
+```go
+signIn, err := auth.SignIn(ctx, signet.SignInInput{
+    Email: "ada@example.com", Password: "correct horse",
+})
+if err != nil {
+    return err
+}
+sessionToken := signIn.SessionToken
+```
+
+Then change safe profile fields:
 
 ```go
 updated, err := auth.UpdateUser(ctx, signet.UpdateUserInput{
-    UserID: userID, SessionToken: sessionToken, Name: "Ada",
+    UserID:       signIn.User.ID,
+    SessionToken: sessionToken,
+    Name:         "Ada Lovelace",
 })
+if err != nil {
+    return err
+}
+fmt.Println(updated.Email, updated.Name)
 ```
 
-`UpdateUser` requires a fresh Session belonging to that User. It changes safe profile fields only — email changes stay in the verified two-phase flow.
+`UpdateUser` requires a fresh Session belonging to that User. Email is not accepted here — use the verified two-phase change flow.
 
-## Set and verify passwords
+## 3. Set and verify a password
+
+For a User created through passkey, OAuth or a magic link, there is no credential Account yet:
 
 ```go
-// Only for Users without a credential Account (passkey, OAuth or passwordless).
 err := auth.SetPassword(ctx, signet.SetPasswordInput{
-    UserID: userID, SessionToken: sessionToken, NewPassword: "correct horse",
+    UserID:       userID,
+    SessionToken: sessionToken,
+    NewPassword:  "a-long-random-password",
 })
-
-// Server-only check; creates no Session.
-ok, err := auth.VerifyPassword(ctx, signet.VerifyPasswordInput{
-    UserID: userID, Password: "correct horse",
-})
+if err != nil {
+    return err
+}
 ```
 
-`SetPassword` is denied when a credential Account already exists — use `ChangePassword` in that case. `VerifyPassword` returns false for unknown Users and never issues a Session.
+A User who already has a password is rejected; use `ChangePassword` with the current password instead. `SetPassword` revokes existing Sessions and Tokens, so sign in again afterwards.
 
-## Window-aware rate limiting
+To verify a password without creating a Session, for example before a sensitive server-side action:
 
 ```go
-cfg.WindowLimiter = myWindowLimiter
+ok, err := auth.VerifyPassword(ctx, signet.VerifyPasswordInput{
+    UserID:   userID,
+    Password: providedPassword,
+})
+if err != nil {
+    return err
+}
+if !ok {
+    return errors.New("wrong password")
+}
 ```
 
-The optional adapter receives an endpoint key, a limit and a window. Without it, the boolean `RateLimiter` remains authoritative.
+Unknown Users and wrong passwords both return `false`. The call is rate-limited with the `verify_password` key.
 
-## Query Audit events
+## 4. Add a window-aware rate limiter
+
+Implement the optional adapter:
+
+```go
+type windowLimiter struct {
+    mu      sync.Mutex
+    counts  map[string][]time.Time
+}
+
+func (l *windowLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, error) {
+    l.mu.Lock()
+    defer l.mu.Unlock()
+
+    now := time.Now()
+    recent := l.counts[key][:0]
+    for _, at := range l.counts[key] {
+        if now.Sub(at) < window {
+            recent = append(recent, at)
+        }
+    }
+    if len(recent) >= limit {
+        l.counts[key] = recent
+        return false, nil
+    }
+    l.counts[key] = append(recent, now)
+    return true, nil
+}
+```
+
+Attach it before creating the Client and set per-endpoint rules:
+
+```go
+cfg.WindowLimiter = &windowLimiter{counts: make(map[string][]time.Time)}
+cfg.RateLimitRules = map[string]signet.RateLimitRule{
+    "signup": {Limit: 7, Window: 2 * time.Minute},
+}
+auth, err := signet.New(cfg)
+```
+
+Without `WindowLimiter`, the boolean `RateLimiter` remains authoritative and existing behaviour is unchanged.
+
+## 5. Query Audit events
+
+Implement a store that both records and queries events:
+
+```go
+type auditStore struct {
+    mu     sync.Mutex
+    events []signet.AuditEvent
+}
+
+func (s *auditStore) Record(_ context.Context, event signet.AuditEvent) error {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    s.events = append(s.events, event)
+    return nil
+}
+
+func (s *auditStore) Query(_ context.Context, in signet.AuditQueryInput) ([]*signet.AuditEvent, error) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+
+    out := make([]*signet.AuditEvent, 0, len(s.events))
+    for _, event := range s.events {
+        if in.Name != "" && event.Name != in.Name {
+            continue
+        }
+        if in.Outcome != "" && event.Outcome != in.Outcome {
+            continue
+        }
+        clone := event
+        out = append(out, &clone)
+        if len(out) >= in.Limit {
+            break
+        }
+    }
+    return out, nil
+}
+```
+
+Attach it to the config:
+
+```go
+audits := &auditStore{}
+cfg.AuditQueryStore = audits
+cfg.AuditSink = audits // optional: New wires this automatically when only AuditQueryStore is set
+auth, err := signet.New(cfg)
+```
+
+Then read events after an action:
 
 ```go
 events, err := auth.QueryAudit(ctx, sessionToken, signet.AuditQueryInput{
-    Name: "user_updated", Outcome: "success", Limit: 50,
+    Name:   "user_updated",
+    Limit:  50,
 })
+if err != nil {
+    return err
+}
+for _, event := range events {
+    fmt.Println(event.Name, event.Outcome, event.UserID)
+}
 ```
 
-`QueryAudit` requires a fresh Session and uses an optional `AuditQueryStore` adapter. Results are bounded to 100 events; known secret metadata fields are omitted.
+A fresh Session is required, results are capped at 100, and known secret metadata fields are omitted.
+EOF
+echo rewritten

@@ -3,40 +3,153 @@ title: SCIM provisioning
 description: Provision Users and Groups from a corporate directory, with group-to-role projection.
 ---
 
-SCIM 2.0 is opt-in and handles **provisioning**, not sign-in. It lets a directory create, update, deactivate and delete Users and Groups in Signet. All new state stays behind optional application-owned adapters, so no User column or schema migration is required.
+Follow these steps to connect a directory to Signet. SCIM handles provisioning only — sign-in is covered by [Organization SSO](/docs/organization-sso) or [SAML SSO](/docs/saml).
 
-## Configure
+## 1. Implement the optional store
 
 ```go
+type directoryStore struct {
+    mu       sync.Mutex
+    users    map[string]*signet.User
+    external map[string]string
+    groups   map[string]*signet.SCIMGroup
+}
+
+func (s *directoryStore) UserByExternalID(ctx context.Context, externalID string) (*signet.User, error) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    user := s.users[s.external[externalID]]
+    if user == nil {
+        return nil, signet.ErrNotFound
+    }
+    return user, nil
+}
+
+func (s *directoryStore) SetUserExternalID(_ context.Context, userID, externalID string) error {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    s.external[externalID] = userID
+    return nil
+}
+
+func (s *directoryStore) ExternalIDByUser(_ context.Context, userID string) (string, error) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    for external, id := range s.external {
+        if id == userID {
+            return external, nil
+        }
+    }
+    return "", signet.ErrNotFound
+}
+
+func (s *directoryStore) ListUsers(context.Context) ([]*signet.User, error) { /* return all Users */ }
+func (s *directoryStore) GroupByExternalID(_ context.Context, externalID string) (*signet.SCIMGroup, error) {
+    /* find by ExternalID */
+}
+func (s *directoryStore) GroupByID(_ context.Context, id string) (*signet.SCIMGroup, error) {
+    /* find by ID */
+}
+func (s *directoryStore) CreateGroup(_ context.Context, group *signet.SCIMGroup) error {
+    /* persist group */
+}
+func (s *directoryStore) UpdateGroup(_ context.Context, group *signet.SCIMGroup) error {
+    /* replace group */
+}
+func (s *directoryStore) DeleteGroup(_ context.Context, id string) error {
+    /* remove group */
+}
+func (s *directoryStore) ListGroups(context.Context) ([]*signet.SCIMGroup, error) { /* return all Groups */ }
+```
+
+## 2. Configure SCIM
+
+```go
+cfg := signet.DefaultConfig()
+cfg.Store = myStore
+cfg.Mailer = myMailer
+cfg.RateLimiter = myLimiter
+
 cfg.SCIM = &signet.SCIMConfig{
-    Store: mySCIMStore,          // external IDs and directory groups
-    Token: myProvisioningToken,  // bearer token for the /scim/* endpoints
+    Store: myDirectoryStore,
+    Token: os.Getenv("SCIM_BEARER_TOKEN"),
     Projector: func(ctx context.Context, group *signet.SCIMGroup) error {
-        return myRoles.Project(ctx, group)
+        // Your application decides which Organization and role the group maps to.
+        return myRoles.Project(ctx, group.ID, group.DisplayName, group.Members)
     },
+}
+
+auth, err := signet.New(cfg)
+if err != nil {
+    panic(err) // ErrInvalidSCIMConfig when Store or Token is missing
 }
 ```
 
-Both `Store` and `Token` are required; `New` returns `ErrInvalidSCIMConfig` otherwise. The token is compared in constant time. A missing or wrong bearer token returns 401 with an Audit event.
+The token is compared in constant time. Both `Store` and `Token` are required.
 
-## Endpoints
+## 3. Mount the SCIM handler
 
-The SCIM server is mounted under your configured `PathPrefix`, for example `/auth/scim/Users` and `/auth/scim/Groups`. It follows the SCIM 2.0 resource shape:
+Signet's main `Handler()` serves SCIM under your configured `PathPrefix`:
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/scim/Users` | List Users |
-| `POST` | `/scim/Users` | Create a User |
-| `GET` | `/scim/Users/{id}` | Read a User |
-| `PATCH` | `/scim/Users/{id}` | Update fields including `active` |
-| `DELETE` | `/scim/Users/{id}` | Delete a User |
-| `GET` | `/scim/Groups` | List Groups |
-| `POST` | `/scim/Groups` | Create a Group |
-| `PATCH` | `/scim/Groups/{id}` | Update members |
-| `DELETE` | `/scim/Groups/{id}` | Delete a Group |
+```go
+// With PathPrefix "/auth" the SCIM endpoints live at /auth/scim/Users and /auth/scim/Groups.
+http.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
+```
 
-Directory groups are passed to `Projector`, where your application maps them to roles or Organization memberships. Signet owns no group-to-role policy.
+## 4. Provision a User from the directory
 
-Provisioning events (`scim_user_created`, `scim_user_updated`, `scim_user_deleted`, `scim_group_created`, `scim_group_updated`, `scim_group_deleted`) are emitted through the configured Audit sink. Bulk operations and schema-discovery endpoints are not included in this phase.
+The directory sends a standard SCIM request:
 
-See [Organization SSO](/docs/organization-sso) for the authentication side of enterprise identity.
+```bash
+curl -X POST https://api.example.com/auth/scim/Users \
+  -H "Authorization: Bearer $SCIM_BEARER_TOKEN" \
+  -H 'Content-Type: application/scim+json' \
+  -d '{
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    "userName": "alice@acme.com",
+    "externalId": "directory-user-42"
+  }'
+```
+
+The response contains the Signet User ID. Signet records the external ID mapping in your `SCIMStore`.
+
+## 5. Deactivate a User
+
+```bash
+curl -X PATCH https://api.example.com/auth/scim/Users/USER_ID \
+  -H "Authorization: Bearer $SCIM_BEARER_TOKEN" \
+  -H 'Content-Type: application/scim+json' \
+  -d '{
+    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+    "Operations": [{"op": "replace", "path": "active", "value": false}]
+  }'
+```
+
+This sets `User.Disabled = true`. Deleting the User through `DELETE` also revokes Sessions, Tokens and Accounts.
+
+## 6. Sync a Group and project roles
+
+```bash
+curl -X POST https://api.example.com/auth/scim/Groups \
+  -H "Authorization: Bearer $SCIM_BEARER_TOKEN" \
+  -H 'Content-Type: application/scim+json' \
+  -d '{
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+    "displayName": "acme-admins",
+    "externalId": "directory-group-7",
+    "members": [{"value": "USER_ID"}]
+  }'
+```
+
+`Projector` runs before the group is stored, so a projection failure never leaves a partially provisioned group. The same projection runs on `PATCH` and `REPLACE`.
+
+## 7. Verify
+
+```bash
+curl -H "Authorization: Bearer $SCIM_BEARER_TOKEN" \
+  https://api.example.com/auth/scim/Users
+```
+
+Every mutation emits an Audit event (`scim_user_created`, `scim_user_updated`, `scim_group_created`, and so on) through the configured sink. Schema-discovery endpoints are intentionally disabled.
+EOF
+echo scim-rewritten
