@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shakibdshy/signet/internal/accountcontrol"
 	"github.com/shakibdshy/signet/internal/authorization"
 	"github.com/shakibdshy/signet/internal/core"
 	"github.com/shakibdshy/signet/internal/csrf"
@@ -45,6 +46,7 @@ func DocsHandler() http.Handler {
 type Client struct {
 	cfg                   Config
 	authorization         *authorization.Service
+	accountControls       *accountcontrol.Service
 	orgadmin              *orgadmin.Service
 	passkeys              *passkey.Service
 	oauthserver           *oauthserver.Service
@@ -259,6 +261,12 @@ func New(cfg Config) (*Client, error) {
 	if cfg.SSO != nil {
 		samlService, _ = samlsp.New()
 	}
+	c.accountControls = accountcontrol.New(accountcontrol.Deps{
+		Config: &cfg, Store: cfg.Store, Sessions: sessions, Resolve: sessions.Resolve, Logger: cfg.Logger, Limiter: limiter,
+	})
+	if cfg.AuditQueryStore != nil && cfg.AuditSink == nil {
+		cfg.AuditSink = cfg.AuditQueryStore
+	}
 	if cfg.SCIM != nil {
 		c.scim, _ = scim.New(&cfg, cfg.Logger, c.deleteUserAndChildren)
 	}
@@ -297,7 +305,7 @@ func New(cfg Config) (*Client, error) {
 		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	c.auth = auth.New(auth.Dependencies{
-		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter,
+		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter, WindowLimiter: cfg.WindowLimiter, RateLimitRules: cfg.RateLimitRules,
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password, Username: cfg.Username,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,
@@ -879,6 +887,26 @@ func (c *Client) ValidateSCIMToken(token string) error {
 		return ErrSCIMUnauthorized
 	}
 	return c.scim.ValidateToken(token)
+}
+
+// UpdateUser changes safe profile fields for a signed-in User.
+func (c *Client) UpdateUser(ctx context.Context, in UpdateUserInput) (*UserInfo, error) {
+	return c.accountControls.UpdateUser(ctx, in)
+}
+
+// SetPassword creates a credential Account for a User without one.
+func (c *Client) SetPassword(ctx context.Context, in SetPasswordInput) error {
+	return c.accountControls.SetPassword(ctx, in)
+}
+
+// VerifyPassword checks a password without creating a Session.
+func (c *Client) VerifyPassword(ctx context.Context, in VerifyPasswordInput) (bool, error) {
+	return c.accountControls.VerifyPassword(ctx, in)
+}
+
+// QueryAudit returns filtered Audit events.
+func (c *Client) QueryAudit(ctx context.Context, sessionToken string, in AuditQueryInput) ([]*AuditEvent, error) {
+	return c.accountControls.QueryAudit(ctx, sessionToken, in)
 }
 
 // Authorize reports whether a User holds a permission.

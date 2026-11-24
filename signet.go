@@ -410,6 +410,24 @@ type SCIMGroup = core.SCIMGroup
 // SCIMGroupProjector projects a directory group to application roles.
 type SCIMGroupProjector = core.SCIMGroupProjector
 
+// WindowLimiter is an optional window-aware rate-limit backend.
+type WindowLimiter = core.WindowLimiter
+
+// AuditQueryInput filters a query over Audit events.
+type AuditQueryInput = core.AuditQueryInput
+
+// AuditQueryStore records and queries Audit events.
+type AuditQueryStore = core.AuditQueryStore
+
+// UpdateUserInput carries safe profile changes.
+type UpdateUserInput = core.UpdateUserInput
+
+// SetPasswordInput sets an initial password for a User without one.
+type SetPasswordInput = core.SetPasswordInput
+
+// VerifyPasswordInput checks a password without creating a Session.
+type VerifyPasswordInput = core.VerifyPasswordInput
+
 // AccountInfo is the safe representation of an Account.
 type AccountInfo = core.AccountInfo
 

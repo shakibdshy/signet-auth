@@ -194,3 +194,14 @@ Types: `AuthorizationServerConfig`, `OAuthClient`, `OAuthClientStore`, `DeviceAu
 ## SCIM provisioning
 
 `SCIMHandler() http.Handler` exposes the mounted SCIM server; `ValidateSCIMToken(token) error` checks a bearer token with `ErrSCIMUnauthorized` on failure. Types: `SCIMConfig`, `SCIMStore`, `SCIMGroup`, `SCIMGroupProjector`.
+
+## Account controls and operations
+
+| Method | Purpose |
+| --- | --- |
+| `UpdateUser(ctx, UpdateUserInput) (*UserInfo, error)` | Change safe profile fields. |
+| `SetPassword(ctx, SetPasswordInput) error` | Add a credential Account for a User without one. |
+| `VerifyPassword(ctx, VerifyPasswordInput) (bool, error)` | Server-only password check. |
+| `QueryAudit(ctx, string, AuditQueryInput) ([]*AuditEvent, error)` | Query recorded events. |
+
+Types: `WindowLimiter`, `AuditQueryStore`, `AuditQueryInput`, `UpdateUserInput`, `SetPasswordInput`, `VerifyPasswordInput`.

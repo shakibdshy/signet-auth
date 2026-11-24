@@ -570,6 +570,46 @@ type SCIMConfig struct {
 	Projector SCIMGroupProjector
 }
 
+// WindowLimiter is an optional window-aware rate-limit backend.
+type WindowLimiter interface {
+	Allow(context.Context, string, int, time.Duration) (bool, error)
+}
+
+// AuditQueryInput filters a query over Audit events.
+type AuditQueryInput struct {
+	Name    string
+	UserID  string
+	Outcome string
+	Since   time.Time
+	Limit   int
+}
+
+// AuditQueryStore records and queries Audit events. It is optional.
+type AuditQueryStore interface {
+	AuditSink
+	Query(context.Context, AuditQueryInput) ([]*AuditEvent, error)
+}
+
+// UpdateUserInput carries safe profile changes.
+type UpdateUserInput struct {
+	UserID       string `json:"user_id"`
+	SessionToken string `json:"-"`
+	Name         string `json:"name"`
+}
+
+// SetPasswordInput sets an initial password for a User without one.
+type SetPasswordInput struct {
+	UserID       string `json:"user_id"`
+	SessionToken string `json:"-"`
+	NewPassword  string `json:"new_password"`
+}
+
+// VerifyPasswordInput checks a password without creating a Session.
+type VerifyPasswordInput struct {
+	UserID   string `json:"user_id"`
+	Password string `json:"password"`
+}
+
 // AuditSink receives Audit events. Implementations own persistence and retention.
 type AuditSink interface {
 	Record(context.Context, AuditEvent) error
@@ -831,6 +871,8 @@ type RateLimiter interface {
 type RateLimitRule struct {
 	Limiter   RateLimiter
 	KeyPrefix string
+	Limit     int
+	Window    time.Duration
 }
 
 // Clock supplies the current time.
@@ -993,6 +1035,8 @@ type Config struct {
 	Mailer                   Mailer
 	PasswordHasher           PasswordHasher
 	RateLimiter              RateLimiter
+	WindowLimiter            WindowLimiter
+	AuditQueryStore          AuditQueryStore
 	RateLimitRules           map[string]RateLimitRule
 	TrustedProxies           []netip.Prefix
 	Clock                    Clock
