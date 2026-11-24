@@ -436,7 +436,7 @@ await auth.deleteSSOConnection(connections[0].id);
 
 ## React session hooks
 
-Follow these steps to add reactive session state to a React app. The optional package is installed from your local checkout; it is not published in this release.
+Follow these steps to add reactive session state to a React app. `@shakibdshy/signet-react` depends on `@shakibdshy/signet-client`, so a published install pulls in the typed client automatically. Before publication, install both packages from a local checkout, as shown below.
 
 ### 1. Install the typed client and hooks package
 

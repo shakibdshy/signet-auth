@@ -124,7 +124,7 @@ jobs:
         run: npm run build
         working-directory: docs-site
 
-  publish:
+  publish-client:
     name: Publish TypeScript client
     if: startsWith(github.ref, 'refs/tags/client-v')
     needs: [go, js]
@@ -150,8 +150,40 @@ jobs:
         run: npm run typecheck
         working-directory: client/ts
 
-      - name: Publish
+      - name: Publish client
         run: npm publish --access public
         working-directory: client/ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-react:
+    name: Publish React hooks
+    if: startsWith(github.ref, 'refs/tags/client-v')
+    needs: publish-client
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+          cache-dependency-path: client/react/package-lock.json
+
+      - name: Install React package dependencies
+        run: npm ci
+        working-directory: client/react
+
+      - name: Verify the React package compiles
+        run: npm run typecheck
+        working-directory: client/react
+
+      - name: Publish React hooks
+        run: npm publish --access public
+        working-directory: client/react
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
