@@ -27,6 +27,10 @@ cover:
 	$(GO) test -race -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out
 
+ts-check:
+	cd client/ts && npm run typecheck
+	cd client/react && npm run typecheck
+
 lint:
 	golangci-lint run ./...
 
@@ -47,7 +51,7 @@ fmt-check:
 tidy:
 	$(GO) mod tidy
 
-check: fmt-check vet lint test vuln
+check: fmt-check vet lint test vuln ts-check
 
 generate-spec:
 	@mkdir -p api openapi

@@ -433,3 +433,34 @@ await auth.createSSOConnection({
 });
 await auth.deleteSSOConnection(connections[0].id);
 ```
+
+## React session hooks
+
+An optional `@shakibdshy/signet-react` package provides reactive session state around the generated client. Install it from a checkout alongside the typed client:
+
+```bash
+npm install /path/to/signet/client/ts
+npm install /path/to/signet/client/react
+```
+
+```tsx
+import { SignetProvider, useSession } from '@shakibdshy/signet-react';
+import { auth } from './signet-client';
+
+function Root() {
+  return (
+    <SignetProvider client={auth}>
+      <Profile />
+    </SignetProvider>
+  );
+}
+
+function Profile() {
+  const { status, user, error, signIn, signOut } = useSession();
+  if (status === 'loading') return <p>Loading…</p>;
+  if (status === 'anonymous') return <button onClick={() => signIn({ email, password })}>Sign in</button>;
+  return <button onClick={() => signOut()}>Sign out {user?.email}</button>;
+}
+```
+
+`useSession()` reads `GET /me` on mount and after sign-in, so a page reload does not need a second login. It exposes the generated client's `SignetApiError` unchanged. For server middleware, call `sessionGuard(authURL, cookieHeader)`; it checks `/me` with the incoming cookies. The hooks package is optional React glue — the Go API and HTTP contract are unchanged apart from the `/me` endpoint.
