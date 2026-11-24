@@ -3,46 +3,76 @@ title: SAML SSO
 description: Per-organization SAML 2.0 Web SSO with signed assertions.
 ---
 
-SAML 2.0 Web SSO is a protocol variant of an existing SSO connection. Signet acts as a Service provider, supports SP-initiated HTTP-POST binding with signed AuthnRequests, and provisions Users through the same just-in-time path as OIDC SSO.
+SAML is a protocol variant of an [SSO connection](/docs/organization-sso). Follow these steps to add it to an Organization.
 
-## Configure a SAML connection
+## 1. Configure SSO
 
 ```go
 cfg.SSO = &signet.SSOConfig{
     Connections: myConnectionStore,
     VerifyDomain: func(ctx context.Context, orgID, domain string) bool {
-        return myDNS.Check(ctx, orgID, domain)
+        return myDNS.Verified(ctx, orgID, domain)
     },
 }
+auth, err := signet.New(cfg)
+if err != nil {
+    panic(err)
+}
+```
+
+The connection store is the same one used for OIDC SSO. XML signature handling is isolated inside Signet behind a pinned protocol library.
+
+## 2. Pin the IdP metadata
+
+```go
+metadataXML := []byte(`<!-- IdP metadata XML with a signing certificate -->`)
+
 connection, err := auth.CreateSSOConnection(ctx, signet.CreateSSOConnectionInput{
     OrganizationID: orgID,
     Protocol:       "saml",
     Issuer:         "https://idp.acme.com",
     Domains:        []string{"acme.com"},
-    SessionToken:   sessionToken,
-    Metadata:       pinnedIdPMetadataXML,
+    Metadata:       string(metadataXML),
+    SessionToken:   adminSessionToken,
 })
+if err != nil {
+    return err
+}
 ```
 
-IdP metadata is pinned in the connection; SSO URLs must be HTTPS and changes require an explicit connection update. XML signature handling is isolated in an internal package using a pinned protocol library.
+The SSO URL in the metadata must be HTTPS. Metadata is pinned — a certificate change requires an explicit connection update.
 
-## Sign in
+## 3. Start the ceremony
 
 ```go
-start, err := auth.StartSAMLSignIn(ctx, signet.SAMLStartInput{OrganizationID: orgID})
-// start.URL is the IdP destination; start.State is the single-use ceremony Token.
-
-result, err := auth.CompleteSAMLSignIn(ctx, stateFromBrowser, r)
-// result.SessionToken is a normal Session; result.OrganizationID is the active org.
+start, err := auth.StartSAMLSignIn(ctx, signet.SAMLStartInput{
+    OrganizationID: orgID, // or Email: "alice@acme.com"
+})
+if err != nil {
+    return err
+}
+// start.URL is the IdP destination.
+// start.State is the single-use ceremony Token.
+// start.RequestID identifies the signed AuthnRequest.
 ```
 
-Assertions must be signed and carry the configured issuer, SP audience, a valid validity window and a matching `InResponseTo`. `NameID` becomes the external Subject; email and `email_verified` attributes are normalized from the assertion, then `SSOConfig.MapClaims` may override the resulting claims. Missing or unverified email is rejected. A successful assertion creates a User with a namespaced Account, adds the User to the Organization with the configured default role, sets the active-organization cookie and records `saml` as the Last sign-in method.
+## 4. Complete the assertion at the ACS endpoint
 
-## HTTP endpoints
+The IdP posts a SAML response to `POST /saml/acs`. Signet validates signature, issuer, audience, validity window, `InResponseTo` and replay before provisioning:
 
-| Method | Path | Auth | Description |
-| --- | --- | --- | --- |
-| `POST` | `/saml/start` | none | Start an SP-initiated ceremony |
-| `POST` | `/saml/acs` | none | Assertion consumer service |
+```go
+result, err := auth.CompleteSAMLSignIn(ctx, stateFromBrowser, request)
+if err != nil {
+    return err
+}
+// result.SessionToken is a normal Session.
+// result.OrganizationID is the selected Active organization.
+```
 
-`SAMLStartResult` carries the IdP URL, state Token and AuthnRequest ID; `SAMLACSResult` carries the Session and Organization. Connection management continues through `/sso/connections` with `protocol: "saml"`. SLO, artifact binding and IdP-initiated SSO are not included.
+The handler sets the Session and active-organization cookies and records `saml` as the Last sign-in method. `NameID` becomes the external Subject; `email` and `email_verified` attributes are normalized before `SSOConfig.MapClaims` may override them. Missing or unverified email is rejected.
+
+## Verify
+
+A signed assertion creates a User with a namespaced Account, adds the User to the Organization with the configured default role, and emits Audit events. Unsigned assertions, wrong `InResponseTo`, wrong audience and replayed assertions are rejected. SLO, artifact binding and IdP-initiated SSO are not included.
+EOF
+echo saml-rewritten; export PATH="$(go env GOPATH)/bin:$PATH"; (cd docs-site && npm run docs:check 2>&1 | tail -1 && npm run build >/tmp/docs-step2.log 2>&1 && echo "docs build PASS" || { echo FAIL; tail -8 /tmp/docs-step2.log; })
