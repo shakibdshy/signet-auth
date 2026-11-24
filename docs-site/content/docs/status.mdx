@@ -30,6 +30,7 @@ version. Missing documentation is never the reason — every shipped feature has
 - **SAML SSO** — opt-in [SAML 2.0 Web SSO](/docs/saml) with signed assertions and the shared provisioning path.
 - **SCIM provisioning** — opt-in [directory provisioning](/docs/scim) for Users and Groups with role projection.
 - **Account controls** — profile updates, server-side password checks, window-aware rate limits and [queryable audit events](/docs/account-controls).
+- **React session hooks** — optional `useSession()` package in [`client/react`](https://github.com/shakibdshy/signet/tree/main/client/react).
 
 ## Not implemented yet
 
@@ -42,7 +43,7 @@ All six roadmap phases are shipped. The items below are known limitations and ca
 - Rate limits use a boolean `RateLimiter` interface with per-endpoint rules and opt-in
   trusted-proxy keys; the library does not ship a window-aware limiter.
   JWKS publication is opt-in and asymmetric-only; key rings and redirect patterns are opt-in.
-- There is no framework-specific reactive client, no CLI and no built-in audit dashboard.
+- There is no CLI and no built-in audit dashboard; React session hooks are available as an optional local package.
 
 ### Researched but not planned
 
