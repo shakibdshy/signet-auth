@@ -871,6 +871,8 @@ type RateLimiter interface {
 type RateLimitRule struct {
 	Limiter   RateLimiter
 	KeyPrefix string
+	Limit     int
+	Window    time.Duration
 }
 
 // Clock supplies the current time.

@@ -63,6 +63,8 @@ const (
 	SCIMGroupCreated     = "scim_group_created"
 	SCIMGroupUpdated     = "scim_group_updated"
 	SCIMGroupDeleted     = "scim_group_deleted"
+	UserUpdated          = "user_updated"
+	PasswordSet          = "password_set"
 )
 
 // Emit records an event when a sink is configured. A sink failure is logged

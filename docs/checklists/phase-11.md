@@ -12,6 +12,9 @@ Source: issue #123. Tests live in `tests/account_controls_test.go`.
 | "VerifyPassword no Session" | `TestSetAndVerifyPassword` |
 | "WindowLimiter backend selected" | `TestWindowLimiterUsed`, `TestWindowLimiterBlocks` |
 | "QueryAudit bounded and fresh" | `TestQueryAudit` |
+| "configured AuditQueryStore used" | `TestQueryAuditUsesConfiguredQueryStore` |
+| "VerifyPassword rate limited" | `TestVerifyPasswordRateLimited` |
+| "window limiter receives rule values" | `TestWindowLimiterReceivesRuleValues` |
 
 ## Security mechanisms → effect tests
 

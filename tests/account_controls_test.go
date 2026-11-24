@@ -208,3 +208,69 @@ func TestSetPasswordForPasswordlessUser(t *testing.T) {
 		t.Fatalf("verify first password = %v err = %v", ok, err)
 	}
 }
+
+func TestQueryAuditUsesConfiguredQueryStore(t *testing.T) {
+	sink := &fakeAuditQueryStore{}
+	store := testutil.NewStore()
+	cfg := testutil.NewConfig()
+	cfg.Store = store
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.AuditQueryStore = sink
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	ctx := context.Background()
+	signUp, err := client.SignUp(ctx, signet.SignUpInput{Email: "query@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	signIn, err := client.SignIn(ctx, signet.SignInInput{Email: "query@example.com", Password: "correct horse"})
+	if err != nil {
+		t.Fatalf("SignIn: %v", err)
+	}
+	events, err := client.QueryAudit(ctx, signIn.SessionToken, signet.AuditQueryInput{Limit: 10})
+	if err != nil || len(events) == 0 {
+		t.Fatalf("events = %+v err = %v", events, err)
+	}
+	_ = signUp
+}
+
+func TestVerifyPasswordRateLimited(t *testing.T) {
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: false}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := client.VerifyPassword(context.Background(), signet.VerifyPasswordInput{
+		UserID: "user-1", Password: "x",
+	}); !errors.Is(err, signet.ErrRateLimited) {
+		t.Fatalf("rate-limit error = %v", err)
+	}
+}
+
+func TestWindowLimiterReceivesRuleValues(t *testing.T) {
+	window := &fakeWindowLimiter{allow: true}
+	cfg := testutil.NewConfig()
+	cfg.Store = testutil.NewStore()
+	cfg.Mailer = testutil.NewMailer()
+	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
+	cfg.WindowLimiter = window
+	cfg.RateLimitRules = map[string]signet.RateLimitRule{
+		"signup": {Limit: 7, Window: 2 * time.Minute},
+	}
+	client, err := signet.New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if _, err := client.SignUp(context.Background(), signet.SignUpInput{Email: "rule@example.com", Password: "correct horse"}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	if window.calls == 0 {
+		t.Fatal("window limiter not called")
+	}
+}

@@ -262,8 +262,11 @@ func New(cfg Config) (*Client, error) {
 		samlService, _ = samlsp.New()
 	}
 	c.accountControls = accountcontrol.New(accountcontrol.Deps{
-		Config: &cfg, Store: cfg.Store, Sessions: sessions, Resolve: sessions.Resolve, Logger: cfg.Logger,
+		Config: &cfg, Store: cfg.Store, Sessions: sessions, Resolve: sessions.Resolve, Logger: cfg.Logger, Limiter: limiter,
 	})
+	if cfg.AuditQueryStore != nil && cfg.AuditSink == nil {
+		cfg.AuditSink = cfg.AuditQueryStore
+	}
 	if cfg.SCIM != nil {
 		c.scim, _ = scim.New(&cfg, cfg.Logger, c.deleteUserAndChildren)
 	}
@@ -302,7 +305,7 @@ func New(cfg Config) (*Client, error) {
 		CaptchaEndpoints: cfg.CaptchaEndpoints,
 	})
 	c.auth = auth.New(auth.Dependencies{
-		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter, WindowLimiter: cfg.WindowLimiter,
+		Store: cfg.Store, Hasher: cfg.PasswordHasher, Limiter: limiter, WindowLimiter: cfg.WindowLimiter, RateLimitRules: cfg.RateLimitRules,
 		Clock: cfg.Clock, Logger: cfg.Logger, Password: cfg.Password, Username: cfg.Username,
 		RequireVerifiedEmail: requireVerified, SendVerificationOnSignUp: sendVerification,
 		OnSignUp: cfg.OnSignUp, OnSignIn: cfg.OnSignIn,

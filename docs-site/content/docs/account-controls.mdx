@@ -47,4 +47,4 @@ events, err := auth.QueryAudit(ctx, sessionToken, signet.AuditQueryInput{
 })
 ```
 
-`QueryAudit` requires a fresh Session and uses an optional `AuditQueryStore` adapter. Results are bounded to 100 events and never include secrets.
+`QueryAudit` requires a fresh Session and uses an optional `AuditQueryStore` adapter. Results are bounded to 100 events; known secret metadata fields are omitted.

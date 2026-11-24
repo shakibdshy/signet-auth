@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/shakibdshy/signet/internal/audit"
 	"github.com/shakibdshy/signet/internal/core"
@@ -21,6 +22,7 @@ type Deps struct {
 	Sessions *session.Service
 	Resolve  func(context.Context, string) (*core.User, error)
 	Logger   *slog.Logger
+	Limiter  core.RateLimiter
 }
 
 // Service implements the public account control operations.
@@ -56,28 +58,15 @@ func (s *Service) UpdateUser(ctx context.Context, in core.UpdateUserInput) (*cor
 	if err != nil {
 		return nil, err
 	}
-	if stringsTrimmed(in.Name) != "" {
+	if strings.TrimSpace(in.Name) != "" {
 		user.Name = in.Name
 	}
 	user.UpdatedAt = s.deps.Config.Clock.Now()
 	if err := s.deps.Store.UpdateUser(ctx, user); err != nil {
 		return nil, err
 	}
-	s.emit(ctx, "user_updated", user.ID)
+	s.emit(ctx, audit.UserUpdated, user.ID)
 	return &core.UserInfo{ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled}, nil
-}
-
-func stringsTrimmed(value string) string {
-	out := []rune(value)
-	start := 0
-	for start < len(out) && (out[start] == ' ' || out[start] == '\t' || out[start] == '\n') {
-		start++
-	}
-	end := len(out)
-	for end > start && (out[end-1] == ' ' || out[end-1] == '\t' || out[end-1] == '\n') {
-		end--
-	}
-	return string(out[start:end])
 }
 
 // SetPassword creates a credential Account for a User who does not have one.
@@ -116,7 +105,7 @@ func (s *Service) SetPassword(ctx context.Context, in core.SetPasswordInput) err
 			return err
 		}
 	}
-	s.emit(ctx, "password_set", user.ID)
+	s.emit(ctx, audit.PasswordSet, user.ID)
 	return nil
 }
 
@@ -124,6 +113,15 @@ func (s *Service) SetPassword(ctx context.Context, in core.SetPasswordInput) err
 func (s *Service) VerifyPassword(ctx context.Context, in core.VerifyPasswordInput) (bool, error) {
 	if in.UserID == "" || in.Password == "" {
 		return false, nil
+	}
+	if s.deps.Limiter != nil {
+		allowed, err := s.deps.Limiter.Allow(ctx, "verify_password|"+in.UserID)
+		if err != nil {
+			return false, err
+		}
+		if !allowed {
+			return false, core.ErrRateLimited
+		}
 	}
 	account, err := s.deps.Store.AccountByProvider(ctx, credentialProvider, in.UserID)
 	if err != nil {
@@ -138,8 +136,11 @@ func (s *Service) VerifyPassword(ctx context.Context, in core.VerifyPasswordInpu
 
 // QueryAudit returns filtered Audit events through an optional query store.
 func (s *Service) QueryAudit(ctx context.Context, sessionToken string, in core.AuditQueryInput) ([]*core.AuditEvent, error) {
-	store, ok := s.deps.Config.AuditSink.(core.AuditQueryStore)
-	if !ok || s.deps.Resolve == nil {
+	store := s.deps.Config.AuditQueryStore
+	if store == nil {
+		store, _ = s.deps.Config.AuditSink.(core.AuditQueryStore)
+	}
+	if store == nil || s.deps.Resolve == nil {
 		return nil, core.ErrForbidden
 	}
 	user, err := s.deps.Resolve(ctx, sessionToken)
@@ -157,30 +158,23 @@ func (s *Service) QueryAudit(ctx context.Context, sessionToken string, in core.A
 	if err != nil {
 		return nil, err
 	}
+	out := make([]*core.AuditEvent, 0, len(events))
 	for _, event := range events {
-		if stringsContainsSecret(event.Metadata) {
-			return nil, core.ErrForbidden
-		}
+		clone := *event
+		clone.Metadata = redactMetadata(event.Metadata)
+		out = append(out, &clone)
 	}
-	return events, nil
+	return out, nil
 }
 
-func stringsContainsSecret(metadata map[string]string) bool {
-	for key := range metadata {
-		lower := stringsToLower(key)
-		if lower == "password" || lower == "token" || lower == "secret" {
-			return true
+func redactMetadata(metadata map[string]string) map[string]string {
+	out := make(map[string]string, len(metadata))
+	for key, value := range metadata {
+		lower := strings.ToLower(key)
+		if lower == "password" || lower == "token" || lower == "secret" || lower == "authorization" {
+			continue
 		}
+		out[key] = value
 	}
-	return false
-}
-
-func stringsToLower(value string) string {
-	runes := []rune(value)
-	for i, r := range runes {
-		if r >= 'A' && r <= 'Z' {
-			runes[i] = r + ('a' - 'A')
-		}
-	}
-	return string(runes)
+	return out
 }
