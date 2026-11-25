@@ -93,7 +93,7 @@ Signet's main `Handler()` serves SCIM under your configured `PathPrefix`:
 
 ```go
 // With PathPrefix "/auth" the SCIM endpoints live at /auth/scim/Users and /auth/scim/Groups.
-http.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
+http.Handle("/auth/", auth.Handler()) // the handler serves /auth/... itself; no StripPrefix
 ```
 
 ## 4. Provision a User from the directory

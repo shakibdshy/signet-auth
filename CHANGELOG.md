@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The root README quickstart and four docs pages (`http-api`, `passwordless`,
+  `scim`, `deployment`) wrapped `Client.Handler()` in `http.StripPrefix`,
+  which makes every auth call return 404. The handler serves the prefixed
+  `/auth/...` paths itself and must be mounted without stripping. All five
+  example READMEs now walk the full sign-up, sign-in, protected-route and
+  sign-out flow with curl, including the CSRF token rotation at sign-in,
+  and the chi, echo, gin and fiber examples skip email verification for
+  development like the stdlib example.
 - `go mod tidy`: the SCIM, WebAuthn and SAML dependencies are no longer marked
   indirect, unused modules are removed and missing checksums are restored.
 - The publish workflow now refuses a `client-v*` tag whose version does not
