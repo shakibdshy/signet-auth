@@ -23,6 +23,15 @@ go run .
 
 Migrations are applied at startup with `store.Migrate(ctx)`.
 
+### Environment
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `SIGNET_DATABASE_URL` | PostgreSQL connection string | local DSN on `localhost:5432` |
+| `PORT` | listen port (hosts like Render inject it) | `8080` |
+| `APP_URL` | public origin used in verification and reset links | `http://localhost:PORT` |
+| `CSRF_KEY` | persistent base64 CSRF key, `openssl rand -base64 32` | random per boot (development only) |
+
 ## Walk the full flow
 
 With the app running, follow along with curl (needs [jq](https://jqlang.github.io/jq/)).
@@ -69,9 +78,13 @@ Sign-up again after step 2 with the same email? Use a new address, or expect `em
 ## How Signet is wired in
 
 ```go
+mux.HandleFunc("GET /{$}", landingHandler)
 mux.Handle("/auth/", auth.Handler())
 mux.Handle("/private", auth.RequireAuth(http.HandlerFunc(...)))
 ```
+
+The root path serves a small landing page describing the service and its
+endpoints, and `GET /healthz` is the uptime probe for platform health checks.
 
 `auth.Handler()` serves the full `/auth/...` paths itself — **do not** wrap it in
 `http.StripPrefix`; a stripped prefix makes every auth call return 404.
