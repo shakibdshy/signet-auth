@@ -151,10 +151,11 @@ are not implemented. i18n and anomaly detection are out of scope.
 ## Typed clients
 
 `api/signet.openapi.json` is generated from the declarative contract in
-`internal/httpapi/contract.go`; `make generate-check` prevents drift. The TypeScript client in
-[`client/ts/`](client/ts/) and React hooks in [`client/react/`](client/react/) are **local packages**,
-installed from a checkout — they are not published to npm yet. See
-[`client/ts/README.md`](client/ts/README.md) and the frontend guide for setup.
+`internal/httpapi/contract.go`; `make generate-check` prevents drift. The typed frontend
+clients are published to npm at the same version as the Go module:
+[`@shakibdshy/signet-auth-client`](https://www.npmjs.com/package/@shakibdshy/signet-auth-client)
+and [`@shakibdshy/signet-auth-react`](https://www.npmjs.com/package/@shakibdshy/signet-auth-react).
+See [`client/ts/README.md`](client/ts/README.md) and the frontend guide for setup.
 
 ## License
 
