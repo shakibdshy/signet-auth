@@ -5,40 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- The TypeScript client now covers every frontend-reachable endpoint of the HTTP
-  contract: Second factor management (`enableTwoFactor`, `verifyTwoFactor`,
-  `disableTwoFactor`, `regenerateBackupCodes`), verified email change
-  (`changeEmail`, `verifyChangeEmail`), linked account listing and unlinking
-  (`listAccounts`, `unlinkAccount`) and account deletion
-  (`requestAccountDeletion`, `confirmAccountDeletion`).
-
-### Changed
-
-- npm package metadata: real descriptions, keywords, repository, homepage,
-  bugs links and a Node.js 20 `engines` floor. Published tarballs include the
-  license and no longer ship the compile-time `type-contracts` files.
-
-### Fixed
-
-- The root README quickstart and four docs pages (`http-api`, `passwordless`,
-  `scim`, `deployment`) wrapped `Client.Handler()` in `http.StripPrefix`,
-  which makes every auth call return 404. The handler serves the prefixed
-  `/auth/...` paths itself and must be mounted without stripping. All five
-  example READMEs now walk the full sign-up, sign-in, protected-route and
-  sign-out flow with curl, including the CSRF token rotation at sign-in,
-  and the chi, echo, gin and fiber examples skip email verification for
-  development like the stdlib example.
-- `go mod tidy`: the SCIM, WebAuthn and SAML dependencies are no longer marked
-  indirect, unused modules are removed and missing checksums are restored.
-- The publish workflow now refuses a `client-v*` tag whose version does not
-  match `package.json`, and CI fails when the two npm packages drift apart in
-  version.
-
-## [1.0.0-beta] - 2026-11-24
+## [1.0.0-beta] - 2026-11-25
 
 ### Added (Phases 5–12)
 
@@ -63,8 +30,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Scalar reference page. Mount it deliberately; the authentication handler is
   unchanged.
 
+### Added (TypeScript client)
+
+- The TypeScript client now covers every frontend-reachable endpoint of the HTTP
+  contract: Second factor management (`enableTwoFactor`, `verifyTwoFactor`,
+  `disableTwoFactor`, `regenerateBackupCodes`), verified email change
+  (`changeEmail`, `verifyChangeEmail`), linked account listing and unlinking
+  (`listAccounts`, `unlinkAccount`) and account deletion
+  (`requestAccountDeletion`, `confirmAccountDeletion`).
+
 ### Changed
 
+- First npm release: [`@shakibdshy/signet-auth-client`](https://www.npmjs.com/package/@shakibdshy/signet-auth-client)
+  and [`@shakibdshy/signet-auth-react`](https://www.npmjs.com/package/@shakibdshy/signet-auth-react)
+  are published at `1.0.0-beta`, released together with the Go module.
+- npm package metadata: real descriptions, keywords, repository, homepage,
+  bugs links and a Node.js 20 `engines` floor. Published tarballs include the
+  license and no longer ship the compile-time `type-contracts` files.
 - `@shakibdshy/signet-auth-react` now declares a registry dependency on
   `@shakibdshy/signet-auth-client` (`1.0.0-beta`), so installing the hooks package
   from npm installs the typed client automatically. Both packages publish on
@@ -83,6 +65,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored CSRF into one private module: signing, validation, cookie policy,
   same-origin checks and exemptions now sit behind a single internal seam.
   No public interface changed.
+
+### Fixed
+
+- The root README quickstart and four docs pages (`http-api`, `passwordless`,
+  `scim`, `deployment`) wrapped `Client.Handler()` in `http.StripPrefix`,
+  which makes every auth call return 404. The handler serves the prefixed
+  `/auth/...` paths itself and must be mounted without stripping. All five
+  example READMEs now walk the full sign-up, sign-in, protected-route and
+  sign-out flow with curl, including the CSRF token rotation at sign-in,
+  and the chi, echo, gin and fiber examples skip email verification for
+  development like the stdlib example.
+- `go mod tidy`: the SCIM, WebAuthn and SAML dependencies are no longer marked
+  indirect, unused modules are removed and missing checksums are restored.
+- The publish workflow now refuses a `client-v*` tag whose version does not
+  match `package.json`, and CI fails when the two npm packages drift apart in
+  version.
 
 ## [0.1.0] - 2026-11-20
 
