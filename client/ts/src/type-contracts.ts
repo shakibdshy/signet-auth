@@ -39,3 +39,20 @@ void client.changePassword({ current_password: "old", new_password: "new" });
 
 // @ts-expect-error new_password is required by the published contract
 void client.changePassword({ current_password: "old" });
+
+void client.changeEmail({ new_email: "ada@example.com", current_password: "correct horse" });
+void client.verifyChangeEmail({ token: "proof" });
+void client.listAccounts();
+void client.unlinkAccount({ account_id: "acc_1" });
+void client.enableTwoFactor({ password: "correct horse" });
+void client.verifyTwoFactor({ challenge: "proof", code: "123456" });
+void client.disableTwoFactor({ password: "correct horse" });
+void client.regenerateBackupCodes({ password: "correct horse" });
+void client.requestAccountDeletion();
+void client.confirmAccountDeletion({ token: "proof" });
+
+// @ts-expect-error code is required by the published contract
+void client.verifyTwoFactor({ challenge: "proof" });
+
+// @ts-expect-error current_password is required by the published contract
+void client.changeEmail({ new_email: "ada@example.com" });

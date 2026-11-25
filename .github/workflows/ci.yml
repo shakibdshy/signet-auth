@@ -89,6 +89,16 @@ jobs:
             client/react/package-lock.json
             docs-site/package-lock.json
 
+      - name: Check both npm packages share one version
+        run: |
+          client="$(node -p "require('./client/ts/package.json').version")"
+          react="$(node -p "require('./client/react/package.json').version")"
+          dep="$(node -p "require('./client/react/package.json').dependencies['@shakibdshy/signet-auth-client']")"
+          if [ "$client" != "$react" ] || [ "$client" != "$dep" ]; then
+            echo "client/ts ($client), client/react ($react) and its dependency pin ($dep) are released together at one version"
+            exit 1
+          fi
+
       - name: Install client dependencies
         run: npm ci
         working-directory: client/ts
@@ -150,6 +160,15 @@ jobs:
         run: npm run typecheck
         working-directory: client/ts
 
+      - name: Check the tag version matches package.json
+        run: |
+          tag="${GITHUB_REF_NAME#client-v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "tag client-v$tag does not match package version $version"
+            exit 1
+          fi
+
       - name: Publish client
         run: npm publish --access public
         working-directory: client/ts
@@ -181,6 +200,15 @@ jobs:
       - name: Verify the React package compiles
         run: npm run typecheck
         working-directory: client/react
+
+      - name: Check the tag version matches package.json
+        run: |
+          tag="${GITHUB_REF_NAME#client-v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "tag client-v$tag does not match package version $version"
+            exit 1
+          fi
 
       - name: Publish React hooks
         run: npm publish --access public

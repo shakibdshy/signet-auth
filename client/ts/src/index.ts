@@ -160,6 +160,69 @@ export function createSignetClient(options: SignetClientOptions) {
 			return unwrap(await api.POST("/change-password", { body, headers: await csrfHeaders() }));
 		},
 
+		async changeEmail(
+			body: RequestBody<"/change-email", "post">,
+		): Promise<SuccessBody<"/change-email", "post", 200>> {
+			return unwrap(await api.POST("/change-email", { body, headers: await csrfHeaders() }));
+		},
+
+		async verifyChangeEmail(
+			body: RequestBody<"/verify-change-email", "post">,
+		): Promise<SuccessBody<"/verify-change-email", "post", 200>> {
+			return unwrap(await api.POST("/verify-change-email", { body, headers: await csrfHeaders() }));
+		},
+
+		// --- Linked accounts ---
+
+		async listAccounts(): Promise<SuccessBody<"/accounts", "get", 200>> {
+			return unwrap(await api.GET("/accounts"));
+		},
+
+		async unlinkAccount(
+			body: RequestBody<"/unlink-account", "post">,
+		): Promise<SuccessBody<"/unlink-account", "post", 200>> {
+			return unwrap(await api.POST("/unlink-account", { body, headers: await csrfHeaders() }));
+		},
+
+		// --- Second factor ---
+
+		async enableTwoFactor(
+			body: RequestBody<"/enable-two-factor", "post">,
+		): Promise<SuccessBody<"/enable-two-factor", "post", 200>> {
+			return unwrap(await api.POST("/enable-two-factor", { body, headers: await csrfHeaders() }));
+		},
+
+		async verifyTwoFactor(
+			body: RequestBody<"/verify-two-factor", "post">,
+		): Promise<SuccessBody<"/verify-two-factor", "post", 200>> {
+			// No CSRF header: this completes a sign-in, so the contract marks it anonymous and exempt.
+			return unwrap(await api.POST("/verify-two-factor", { body }));
+		},
+
+		async disableTwoFactor(
+			body: RequestBody<"/disable-two-factor", "post">,
+		): Promise<SuccessBody<"/disable-two-factor", "post", 200>> {
+			return unwrap(await api.POST("/disable-two-factor", { body, headers: await csrfHeaders() }));
+		},
+
+		async regenerateBackupCodes(
+			body: RequestBody<"/regenerate-backup-codes", "post">,
+		): Promise<SuccessBody<"/regenerate-backup-codes", "post", 200>> {
+			return unwrap(await api.POST("/regenerate-backup-codes", { body, headers: await csrfHeaders() }));
+		},
+
+		// --- Account deletion ---
+
+		async requestAccountDeletion(): Promise<SuccessBody<"/request-account-deletion", "post", 200>> {
+			return unwrap(await api.POST("/request-account-deletion", { headers: await csrfHeaders() }));
+		},
+
+		async confirmAccountDeletion(
+			body: RequestBody<"/confirm-account-deletion", "post">,
+		): Promise<SuccessBody<"/confirm-account-deletion", "post", 200>> {
+			return unwrap(await api.POST("/confirm-account-deletion", { body, headers: await csrfHeaders() }));
+		},
+
 		async oauthStart(body: RequestBody<"/oauth/start", "post">): Promise<SuccessBody<"/oauth/start", "post", 200>> {
 			return unwrap(await api.POST("/oauth/start", { body, headers: await csrfHeaders() }));
 		},

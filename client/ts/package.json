@@ -1,17 +1,41 @@
 {
   "name": "@shakibdshy/signet-auth-client",
   "version": "1.0.0-beta",
-  "description": "Generated TypeScript client for the Signet HTTP API",
+  "description": "Typed TypeScript client for Signet's HTTP API — the frontend half of Signet, an embeddable authentication library for Go",
+  "keywords": [
+    "auth",
+    "authentication",
+    "go",
+    "signet",
+    "sessions",
+    "csrf",
+    "oauth",
+    "passkeys",
+    "sso",
+    "openapi",
+    "typescript",
+    "http-client"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "!dist/type-contracts.js", "!dist/type-contracts.d.ts"],
   "scripts": {
     "generate": "openapi-typescript ../../api/signet.openapi.json -o src/schema.d.ts",
     "build": "tsc -p tsconfig.json && cp src/schema.d.ts dist/schema.d.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shakibdshy/signet-auth.git",
+    "directory": "client/ts"
+  },
+  "homepage": "https://shakibdshy.github.io/signet-auth/docs/frontend-client",
+  "bugs": "https://github.com/shakibdshy/signet-auth/issues",
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "openapi-fetch": "0.17.0"

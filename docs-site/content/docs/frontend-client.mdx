@@ -191,6 +191,27 @@ await auth.disableTwoFactor({ password });
 Enable, regenerate and disable are authenticated. Enrollment stays pending until the first
 successful TOTP code; only then will `signIn` return a challenge.
 
+## Account controls
+
+The client also covers verified email change, linked provider Accounts and account deletion.
+Every call needs a Session, except the proof steps that complete a flow.
+
+```ts
+// Change the email: a proof is sent to the new address.
+await auth.changeEmail({ new_email: 'ada@new.example.com', current_password: 'correct horse' });
+// Opened on the new address's confirmation page, commit the change with the link's token:
+await auth.verifyChangeEmail({ token });
+
+// List linked provider Accounts (OAuth, SSO) and unlink one. Unlinking the last
+// credential Account is rejected with last_account.
+const { accounts } = await auth.listAccounts();
+await auth.unlinkAccount({ account_id: accounts[0].id });
+
+// Delete the account: a confirmation proof is emailed first, then confirm it.
+await auth.requestAccountDeletion();
+await auth.confirmAccountDeletion({ token });
+```
+
 ## Handling errors
 
 ```ts
