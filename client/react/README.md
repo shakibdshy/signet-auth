@@ -1,91 +1,85 @@
 # Signet React hooks
 
-Optional React session hooks for
-[Signet](https://github.com/shakibdshy/signet-auth), a secure-by-default, embeddable,
-router- and storage-agnostic authentication library for Go: `SignetProvider`,
-`useSession()` and
-`sessionGuard`. They wrap the framework-neutral
-[`@shakibdshy/signet-auth-client`](https://github.com/shakibdshy/signet-auth/tree/main/client/ts) typed client, so components share one live Session
-state instead of calling the API themselves.
+**React session hooks for [Signet](https://github.com/shakibdshy/signet-auth), an authentication library written in Go.**
 
-Current version: **`1.0.0-beta`**. Both packages are released together at the same
-version.
+Signet's auth logic runs in your Go backend. The typed client `@shakibdshy/signet-auth-client`
+calls its HTTP API from a frontend, and this package is the React layer on top of that client:
+`SignetProvider`, `useSession()` and `sessionGuard`. Your components read one shared Session
+state instead of each one calling the Go API on its own.
 
-| Package | Version | Role |
-| --- | --- | --- |
-| `@shakibdshy/signet-auth-client` | `1.0.0-beta` | Typed HTTP client, framework-neutral |
-| `@shakibdshy/signet-auth-react` | `1.0.0-beta` | Provider, hooks and route guard; depends on the client |
+| Part of Signet | Runs in | Written in | Package |
+| --- | --- | --- | --- |
+| The auth logic: passwords, Sessions, OAuth, mail, security checks | Your backend | Go | `github.com/shakibdshy/signet-auth` |
+| Calls that backend from a frontend | Browser, Node.js | TypeScript, JavaScript | `@shakibdshy/signet-auth-client` |
+| **Shares that Session with React components and guards routes** | Browser | TypeScript, React | **`@shakibdshy/signet-auth-react`** (this package) |
 
-Full guide: [React session hooks](https://shakibdshy.github.io/signet-auth/docs/react-hooks).
+Current version: **`1.0.0-beta`**, a pre-1.0 release, so the API may still change before
+`v1.0.0`. The Go module (`v1.0.0-beta`) and both npm packages (`1.0.0-beta`) are released
+together at the same version.
 
-## Why this package exists
+> **This package does not implement authentication.** It is a thin layer over the typed
+> client, and every request still goes to the Signet handler in your Go backend. To set that
+> backend up, start with the [Signet README for Go](https://github.com/shakibdshy/signet-auth).
 
-Signet is an **embeddable Go library**. A Go application mounts `signet.Client.Handler()`
-under a path prefix such as `/auth`, and the TypeScript client calls that handler using
-types generated from the Go HTTP contract. This React package is a thin optional layer on
-top of that client:
+## Which package do you need?
 
-```text
-Go application (signet.Handler under Config.PathPrefix)
-  └─ api/signet.openapi.json  (generated from the Go contract)
-       └─ @shakibdshy/signet-auth-client  (typed HTTP client)
-            └─ @shakibdshy/signet-auth-react  ← this package
-```
+- **Any frontend other than React**, or a React app that manages Session state itself:
+  install only
+  [`@shakibdshy/signet-auth-client`](https://github.com/shakibdshy/signet-auth/tree/main/client/ts).
+- **React, when you want your components to share one Session state and to guard routes:**
+  install this package. It depends on the client at the same version, so npm installs both.
 
-It does not implement authentication and never reimplements the client. `SignetProvider`
-calls the client's `GET /me`, `useSession()` shares that result with components, and
-`sessionGuard` checks cookies from a server-rendered route. Every request still goes to
-the same Go handler, with the client's cookies and CSRF handling intact.
+## Requirements
 
-Use **only** `@shakibdshy/signet-auth-client` if you have a non-React frontend or manage session
-state yourself. Add this package when you want `SignetProvider`, `useSession()` and
-`sessionGuard`. It depends on the client at the same version, so npm installs both.
-
-The Go module (`v1.0.0-beta`), the client (`1.0.0-beta`) and this package (`1.0.0-beta`)
-are released together. Go is distributed through a git tag and the Go module proxy; these
-npm packages are the frontend counterparts of the same release.
-
-Because Signet uses `__Host-` cookies and same-origin CSRF, the React app must reach the Go
-handler on the same origin or through a same-origin proxy.
+- **React 18 or newer.** The client needs Node.js 20 or newer.
+- **A backend that runs Signet.**
+- **Same origin.** Signet keeps Sessions in cookies and requires same-origin requests for
+  CSRF protection, so a cross-origin fetch cannot use a cookie Session. Serve your app and
+  the Go handler from one origin, or route requests through a same-origin proxy.
 
 ## Install
-
-Published package — the typed client is installed automatically:
 
 ```sh
 npm install @shakibdshy/signet-auth-react@1.0.0-beta
 ```
 
-From a local checkout of this repository, install both packages:
+This also installs `@shakibdshy/signet-auth-client`. Do not install the client separately.
+
+To use a change that is not published yet, install both packages from a checkout of the
+repository:
 
 ```sh
-cd /path/to/signet/client/ts
+cd /path/to/signet-auth/client/ts
+npm install
+npm run build
+
+cd /path/to/signet-auth/client/react
 npm install
 npm run build
 
 cd /path/to/your-frontend
-npm install /path/to/signet/client/ts
-npm install /path/to/signet/client/react
+npm install /path/to/signet-auth/client/ts
+npm install /path/to/signet-auth/client/react
 ```
 
-Requires React 18 or newer.
+## Quick start
 
-## Create the typed client
+### 1. Create the typed client
 
 ```ts
 // signet-auth-client.ts
 import { createSignetClient } from "@shakibdshy/signet-auth-client";
 
 export const auth = createSignetClient({
-  baseURL: "https://api.example.com/auth", // must include Config.PathPrefix
+  // Your backend's origin, plus the prefix where it mounts Signet.
+  baseURL: "https://api.example.com/auth",
 });
 ```
 
-See the [client README](https://github.com/shakibdshy/signet-auth/blob/main/client/ts/README.md) and the
-[frontend guide](https://shakibdshy.github.io/signet-auth/docs/frontend-client) for every
-available method and the `baseURL` rules.
+Every method of the client is described in the
+[client README](https://github.com/shakibdshy/signet-auth/blob/main/client/ts/README.md).
 
-## Wrap your app
+### 2. Wrap your app in the provider
 
 ```tsx
 // main.tsx
@@ -102,36 +96,55 @@ export function Root() {
 }
 ```
 
-The provider performs one `GET /me` request on mount and shares `status`, `user` and
-`error` with every consumer.
+On mount, the provider makes one `GET /me` request to the Go backend and shares the result
+with every `useSession()` call under it.
 
-## Use the session
+### 3. Use the Session in a component
 
 ```tsx
 // Profile.tsx
+import { useState } from "react";
 import { useSession } from "@shakibdshy/signet-auth-react";
 
 export function Profile() {
-  const { status, user, error, signIn, signOut, refresh } = useSession();
+  const { status, user, signIn, signOut } = useSession();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState("");
 
   if (status === "loading") return <p>Loading…</p>;
-  if (error) return <p role="alert">{error.message}</p>;
-  if (status === "anonymous") return <button onClick={() => signIn({ email: "a@b.com", password: "secret" })}>Sign in</button>;
+
+  if (status === "anonymous") {
+    return (
+      <form onSubmit={async (event) => {
+        event.preventDefault();
+        setFormError("");
+        try {
+          await signIn({ email, password });
+        } catch {
+          setFormError("Invalid email or password.");
+        }
+      }}>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <button type="submit">Sign in</button>
+        {formError && <p role="alert">{formError}</p>}
+      </form>
+    );
+  }
 
   return (
     <>
       <p>Signed in as {user?.email}</p>
-      <button onClick={() => refresh()}>Refresh</button>
       <button onClick={() => signOut()}>Sign out</button>
     </>
   );
 }
 ```
 
-`signIn` and `signOut` update the shared state, so every `useSession()` consumer
-re-renders. Errors are the generated `SignetApiError` from the typed client.
+`signIn` and `signOut` update the shared state, so every `useSession()` call re-renders.
 
-## Protect a server-rendered route
+### 4. Protect a server-rendered route
 
 ```ts
 // middleware.ts (Next.js example)
@@ -149,10 +162,45 @@ export async function middleware(request: Request) {
 export const config = { matcher: ["/private/:path*"] };
 ```
 
-`sessionGuard` appends `/me` to the configured base URL, preserving a `PathPrefix`. It
-checks the incoming cookies and never creates a Session itself.
+`sessionGuard` appends `/me` to the URL you pass, so that URL must include the prefix where
+the backend mounts Signet. It forwards the request's cookies and never creates a Session.
+
+## What useSession() returns
+
+| Field | What it is |
+| --- | --- |
+| `status` | `"loading"`, `"authenticated"` or `"anonymous"`. It starts as `"loading"` and changes when the first `GET /me` finishes. |
+| `user` | The signed-in User returned by `GET /me`, or `null`. |
+| `error` | The `SignetApiError` from the last failed `GET /me`, or `null`. |
+| `signIn(input)` | Calls the client's `signIn`, then reads the Session again. It throws the client's error if sign-in fails. |
+| `signOut()` | Calls the client's `signOut`, then sets `status` to `"anonymous"`. |
+| `refresh()` | Calls `GET /me` again and updates `status`, `user` and `error`. |
+
+Branch on `status`, not on `error`. The backend answers `GET /me` with 401 for a visitor who
+is not signed in, so for that visitor `status` is `"anonymous"` and `error` holds that 401.
+
+Two limits to know about:
+
+- `SignetProvider` makes its request after mount, so server-rendered HTML shows the
+  `"loading"` state.
+- `signIn` does not handle a Second factor yet. If the backend asks for one, no Session is
+  created and `status` stays `"anonymous"`.
+
+## Learn more
+
+- [React session hooks guide](https://shakibdshy.github.io/signet-auth/docs/react-hooks): the
+  full walkthrough.
+- [Client README](https://github.com/shakibdshy/signet-auth/blob/main/client/ts/README.md) and
+  [frontend client guide](https://shakibdshy.github.io/signet-auth/docs/frontend-client): every
+  client method and the `baseURL` rules.
+- [Signet README for Go](https://github.com/shakibdshy/signet-auth): features, quickstart and
+  backend setup.
 
 ## Development
+
+The package lives in
+[`client/react`](https://github.com/shakibdshy/signet-auth/tree/main/client/react) in the
+Signet repository.
 
 ```sh
 npm install
@@ -160,5 +208,10 @@ npm run typecheck
 npm run build
 ```
 
-The dependency is declared as a registry version in `package.json`; the lockfile keeps
-a local `../ts` link so development in this checkout uses the current client source.
+The dependency on the client is declared as a registry version in `package.json`; the
+lockfile keeps a local `../ts` link so development in this checkout uses the current client
+source.
+
+## License
+
+[MIT](https://github.com/shakibdshy/signet-auth/blob/main/LICENSE)

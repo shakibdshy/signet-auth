@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The TypeScript client now covers every frontend-reachable endpoint of the HTTP
+  contract: Second factor management (`enableTwoFactor`, `verifyTwoFactor`,
+  `disableTwoFactor`, `regenerateBackupCodes`), verified email change
+  (`changeEmail`, `verifyChangeEmail`), linked account listing and unlinking
+  (`listAccounts`, `unlinkAccount`) and account deletion
+  (`requestAccountDeletion`, `confirmAccountDeletion`).
+
+### Changed
+
+- npm package metadata: real descriptions, keywords, repository, homepage,
+  bugs links and a Node.js 20 `engines` floor. Published tarballs include the
+  license and no longer ship the compile-time `type-contracts` files.
+
+### Fixed
+
+- `go mod tidy`: the SCIM, WebAuthn and SAML dependencies are no longer marked
+  indirect, unused modules are removed and missing checksums are restored.
+- The publish workflow now refuses a `client-v*` tag whose version does not
+  match `package.json`, and CI fails when the two npm packages drift apart in
+  version.
+
 ## [1.0.0-beta] - 2026-11-24
 
 ### Added (Phases 5–12)

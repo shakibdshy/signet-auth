@@ -125,6 +125,11 @@ export function Profile() {
 `signIn` and `signOut` update the shared state, so every `useSession()` consumer re-renders.
 Errors are the generated `SignetApiError` from the typed client, unchanged.
 
+If the backend requires a Second factor, `signIn` resolves without creating a Session: the
+challenge response is a success, the following Session check fails, and `status` stays
+`"anonymous"`. Run the Second factor step with the typed client directly (see
+[Frontend client](/docs/frontend-client)) and then call `refresh()`.
+
 ## 5. Protect a server-rendered route
 
 ```ts

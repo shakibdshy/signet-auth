@@ -1,16 +1,35 @@
 {
   "name": "@shakibdshy/signet-auth-react",
   "version": "1.0.0-beta",
-  "description": "Optional React session hooks for Signet",
+  "description": "React session hooks (SignetProvider, useSession, sessionGuard) for Signet, an embeddable authentication library for Go",
+  "keywords": [
+    "react",
+    "hooks",
+    "auth",
+    "authentication",
+    "sessions",
+    "signet",
+    "go"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "!dist/type-contracts.js", "!dist/type-contracts.d.ts"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shakibdshy/signet-auth.git",
+    "directory": "client/react"
+  },
+  "homepage": "https://shakibdshy.github.io/signet-auth/docs/react-hooks",
+  "bugs": "https://github.com/shakibdshy/signet-auth/issues",
+  "engines": {
+    "node": ">=20"
   },
   "peerDependencies": {
     "react": ">=18"
