@@ -7,80 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0-beta] - 2026-11-25
 
-### Added (Phases 5–12)
+The first public release of Signet: a secure-by-default, embeddable
+authentication library for Go. Signet is imported into your application, not
+deployed beside it. It is built on `net/http`, works with any router, and never
+owns your database schema. The Go module ships together with the first
+publication of the typed TypeScript and React clients.
 
-- Application-managed authorization: roles, permissions, API keys,
-  organizations and guarded admin management with impersonation.
-- Digest-only API keys with atomic verification and an opt-in per-route
-  middleware; organizations with memberships and an active-organization cookie;
-  guarded admin actions with fresh Sessions, audits and self-action blocks.
-- Passkeys (WebAuthn) as a first factor with an application-owned credential
+- Go: `go get github.com/shakibdshy/signet-auth@v1.0.0-beta`
+- npm: [`@shakibdshy/signet-auth-client`](https://www.npmjs.com/package/@shakibdshy/signet-auth-client)
+  and [`@shakibdshy/signet-auth-react`](https://www.npmjs.com/package/@shakibdshy/signet-auth-react)
+  at `1.0.0-beta`; installing the React package installs the typed client
+  automatically.
+
+### Added
+
+#### Authentication
+
+- Email/password auth with Argon2id hashing, transparent rehash and an optional
+  bcrypt adapter.
+- Passwordless first factors: magic links, email OTP and usernames.
+- Passkeys (WebAuthn) as a first factor, with an application-owned credential
   store and single-use ceremony proofs.
-- Automatic sign-in after sign-up or verification, with source-compatible Go
-  methods and a new verify-and-sign-in method.
-- Optional Authorization server: authorization code with PKCE, refresh rotation,
-  exact Scopes, audiences, consent callback and device authorization.
-- Per-organization OIDC SSO, SAML 2.0 Web SSO and SCIM 2.0 User/Group
-  provisioning with group-to-role projection.
-- Account controls: `UpdateUser`, `SetPassword`, `VerifyPassword`, an optional
-  window-aware rate limiter and a queryable Audit store.
-- Optional local React package with `SignetProvider` and `useSession()`, plus a
-  framework-neutral `GET /me` endpoint.
-- Optional `signet.DocsHandler()` serves the generated OpenAPI document and a
-  Scalar reference page. Mount it deliberately; the authentication handler is
-  unchanged.
+- TOTP second factor with backup codes.
+- OAuth sign-in with Google, GitHub and generic OIDC: PKCE with encrypted
+  expiring state, a redirect allowlist and verified-only account linking.
+- Automatic sign-in after sign-up or verification, with a combined
+  verify-and-sign-in method.
+- Email verification, verified email change, password reset and verified
+  account deletion, all via single-use hashed proofs.
 
-### Added (TypeScript client)
+#### Sessions, tokens and request security
 
-- The TypeScript client now covers every frontend-reachable endpoint of the HTTP
-  contract: Second factor management (`enableTwoFactor`, `verifyTwoFactor`,
+- Cookie sessions with idle and absolute timeouts, auth middleware, session
+  listing and revocation.
+- Optional JWT access tokens with rotating hashed refresh tokens, replay
+  containment, key rings and JWKS.
+- Signed double-submit CSRF with same-origin checks.
+- Trusted proxies, a window-aware rate limiter, breach checks and captcha
+  checks.
+
+#### Authorization
+
+- Application-managed roles and permissions.
+- Digest-only API keys with atomic verification and an opt-in per-route
+  middleware.
+- Organizations with memberships and an active-organization cookie.
+- Guarded admin management with impersonation: fresh-session confirmation,
+  queryable audits and self-action blocks.
+- Account controls: `UpdateUser`, `SetPassword`, `VerifyPassword`.
+
+#### Federation and provisioning (opt-in)
+
+- Authorization server: authorization code with PKCE, refresh token rotation,
+  exact scopes, audiences, consent callback and device authorization.
+- Per-organization OIDC SSO and SAML 2.0 web SSO.
+- SCIM 2.0 user and group provisioning with group-to-role projection.
+
+#### TypeScript and React clients
+
+- The typed client covers every frontend-reachable endpoint of the HTTP
+  contract: second factor management (`enableTwoFactor`, `verifyTwoFactor`,
   `disableTwoFactor`, `regenerateBackupCodes`), verified email change
   (`changeEmail`, `verifyChangeEmail`), linked account listing and unlinking
   (`listAccounts`, `unlinkAccount`) and account deletion
   (`requestAccountDeletion`, `confirmAccountDeletion`).
+- React package with `SignetProvider`, `useSession()` and `sessionGuard`.
+- Framework-neutral `GET /me` endpoint for non-React frontends.
 
-### Changed
+#### Storage, tooling and examples
 
-- First npm release: [`@shakibdshy/signet-auth-client`](https://www.npmjs.com/package/@shakibdshy/signet-auth-client)
-  and [`@shakibdshy/signet-auth-react`](https://www.npmjs.com/package/@shakibdshy/signet-auth-react)
-  are published at `1.0.0-beta`, released together with the Go module.
-- npm package metadata: real descriptions, keywords, repository, homepage,
-  bugs links and a Node.js 20 `engines` floor. Published tarballs include the
-  license and no longer ship the compile-time `type-contracts` files.
-- `@shakibdshy/signet-auth-react` now declares a registry dependency on
-  `@shakibdshy/signet-auth-client` (`1.0.0-beta`), so installing the hooks package
-  from npm installs the typed client automatically. Both packages publish on
-  `client-v*` tags, client first.
-- Reorganized the repository into real folders. The root `signet` package is now
-  a façade over private modules in `internal/` (`core`, `auth`, `session`,
-  `token`, `oauth`, `csrf`, `mail`, `secret`, `httpapi`). The public import path
-  and every exported name are unchanged.
-- Examples now use the PostgreSQL adapter against a local Docker/OrbStack
-  database, configurable with `SIGNET_DATABASE_URL`.
-- Added a Fiber example module that bridges Signet's `net/http` handlers and
-  middleware with Fiber's `middleware/adaptor`.
-- Added fuzz targets for Argon2 verifier parsing, Session tokens, JSON request
-  bodies, OAuth state and CSRF tokens, with a `make fuzz` target and a bounded
-  CI run.
-- Refactored CSRF into one private module: signing, validation, cookie policy,
-  same-origin checks and exemptions now sit behind a single internal seam.
-  No public interface changed.
+- Bring-your-own-schema storage with PostgreSQL and SQLite adapters and
+  explicit migrations.
+- Optional `signet.DocsHandler()` serving the generated OpenAPI document and a
+  Scalar reference page.
+- Examples for the standard library, chi, echo, gin and Fiber, backed by the
+  PostgreSQL adapter against a local database configured with
+  `SIGNET_DATABASE_URL`.
+- Fuzz targets for Argon2 verifier parsing, session tokens, JSON request
+  bodies, OAuth state and CSRF tokens, with a `make fuzz` target.
 
-### Fixed
-
-- The root README quickstart and four docs pages (`http-api`, `passwordless`,
-  `scim`, `deployment`) wrapped `Client.Handler()` in `http.StripPrefix`,
-  which makes every auth call return 404. The handler serves the prefixed
-  `/auth/...` paths itself and must be mounted without stripping. All five
-  example READMEs now walk the full sign-up, sign-in, protected-route and
-  sign-out flow with curl, including the CSRF token rotation at sign-in,
-  and the chi, echo, gin and fiber examples skip email verification for
-  development like the stdlib example.
-- `go mod tidy`: the SCIM, WebAuthn and SAML dependencies are no longer marked
-  indirect, unused modules are removed and missing checksums are restored.
-- The publish workflow now refuses a `client-v*` tag whose version does not
-  match `package.json`, and CI fails when the two npm packages drift apart in
-  version.
+> **Status:** pre-1.0 beta. The planned feature set is implemented; the
+> API-stability commitment arrives with `v1.0.0`.
 
 ## [0.1.0] - 2026-11-20
 
