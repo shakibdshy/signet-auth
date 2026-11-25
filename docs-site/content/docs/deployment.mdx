@@ -23,8 +23,9 @@ This page covers the settings that matter in production.
    console mailer is development only.
 6. **Connect and migrate your Store.** Call `Migrate(ctx)` from a deployment step or at
    startup, and own the schema as described in [Storage](/docs/storage).
-7. **Mount `Client.Handler()` under `PathPrefix`** with `http.StripPrefix` and protect
-   private routes with `RequireAuth`.
+7. **Mount `Client.Handler()` under `PathPrefix`.** The handler serves the prefixed
+   paths itself, so do not wrap it in `http.StripPrefix`. Protect private routes with
+   `RequireAuth`.
 8. **Use a durable RateLimiter.** The interface is a boolean gate; your implementation
    decides the window, counter store and key policy. The key format is
    `endpoint+"|"+clientIP`.

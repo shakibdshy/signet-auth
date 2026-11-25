@@ -103,7 +103,8 @@ func main() {
         log.Fatal(err)
     }
 
-    http.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
+    // The handler serves the /auth/... paths itself: do not strip the prefix.
+    http.Handle("/auth/", auth.Handler())
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```

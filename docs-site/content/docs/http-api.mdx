@@ -4,10 +4,11 @@ description: Every endpoint, its authentication and CSRF requirements, and when 
 ---
 
 `Client.Handler()` returns a standard `http.Handler`. Mount it under `Config.PathPrefix`
-(default `/`) — the example apps mount it at `/auth`:
+(default `/`) — the example apps mount it at `/auth`. The handler serves the full
+`/auth/...` paths itself, so do **not** strip the prefix:
 
 ```go
-mux.Handle("/auth/", http.StripPrefix("/auth", auth.Handler()))
+mux.Handle("/auth/", auth.Handler())
 ```
 
 Every path below is relative to that prefix, so with the example it becomes
