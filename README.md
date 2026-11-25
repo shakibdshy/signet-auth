@@ -1,11 +1,9 @@
-# Signet
+# Signet — a secure-by-default, embeddable authentication library for Go
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/shakibdshy/signet-auth.svg)](https://pkg.go.dev/github.com/shakibdshy/signet-auth)
 [![CI](https://github.com/shakibdshy/signet-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/shakibdshy/signet-auth/actions/workflows/ci.yml)
 [![Go 1.26+](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
-A secure-by-default, embeddable authentication library for Go.
 
 > **Status:** `v1.0.0-beta` (pre-1.0). The planned feature set is implemented; the API-stability
 > commitment arrives with `v1.0.0`. See [status](https://shakibdshy.github.io/signet-auth/docs/status).
