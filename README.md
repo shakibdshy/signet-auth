@@ -5,7 +5,7 @@
 [![Go 1.26+](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** `v1.0.0-beta` (pre-1.0). The planned feature set is implemented; the API-stability
+> **Status:** `v1.0.0-beta.2` (pre-1.0). The planned feature set is implemented; the API-stability
 > commitment arrives with `v1.0.0`. See [status](https://shakibdshy.github.io/signet-auth/docs/status).
 
 Signet is imported into your application — it is not a separate auth server. It is built on
