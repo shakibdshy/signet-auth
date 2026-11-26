@@ -230,7 +230,7 @@ func ContractFor() Contract {
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{strField("id")}}, Status: http.StatusOK,
 			}}},
 			{Name: "me", Methods: []Method{{
-				Verb: "GET", Response: ResponseSpec{Ref: "UserInfo"}, Status: http.StatusOK,
+				Verb: "GET", Response: ResponseSpec{Ref: "SessionUser"}, Status: http.StatusOK,
 			}}},
 			{Name: "accounts", Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{

@@ -1469,8 +1469,21 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeJSON(w, http.StatusOK, &core.UserInfo{
-		ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled,
+	accounts, err := h.api.ListAccounts(r.Context(), core.ListAccountsInput{UserID: user.ID})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	username := ""
+	for _, account := range accounts.Accounts {
+		if account.Provider == core.UsernameProvider {
+			username = account.ProviderUserID
+			break
+		}
+	}
+	writeJSON(w, http.StatusOK, &core.SessionUser{
+		ID: user.ID, Email: user.Email, EmailVerified: user.EmailVerified, Name: user.Name,
+		Disabled: user.Disabled, Username: username, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt,
 	})
 }
 

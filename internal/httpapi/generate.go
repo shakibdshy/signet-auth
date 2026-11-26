@@ -31,6 +31,7 @@ var namedTypes = map[string]reflect.Type{
 	"PasskeyListResult":             reflect.TypeOf(core.PasskeyListResult{}),
 	"SignInResult":                  reflect.TypeOf(core.SignInResult{}),
 	"SignUpResult":                  reflect.TypeOf(core.SignUpResult{}),
+	"SessionUser":                   reflect.TypeOf(core.SessionUser{}),
 	"UserInfo":                      reflect.TypeOf(core.UserInfo{}),
 	"VerifyEmailAndSignInResult":    reflect.TypeOf(core.VerifyEmailAndSignInResult{}),
 	"OAuthAuthorizeResult":          reflect.TypeOf(core.OAuthAuthorizeResult{}),

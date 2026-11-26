@@ -1403,6 +1403,18 @@ export interface components {
             revoked_at?: string | null;
             user_agent: string;
         };
+        SessionUser: {
+            /** Format: date-time */
+            created_at: string;
+            disabled: boolean;
+            email: string;
+            email_verified: boolean;
+            id: string;
+            name: string;
+            /** Format: date-time */
+            updated_at: string;
+            username: string;
+        };
         SetActiveOrganizationInput: {
             org_id: string;
         };
@@ -3326,7 +3338,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserInfo"];
+                    "application/json": components["schemas"]["SessionUser"];
                 };
             };
             /** @description Bad Request */

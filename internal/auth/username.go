@@ -9,7 +9,7 @@ import (
 	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
-const usernameProvider = "username"
+const usernameProvider = core.UsernameProvider
 
 var usernamePattern = regexp.MustCompile(`^[a-z0-9_.]+$`)
 

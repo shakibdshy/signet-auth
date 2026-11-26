@@ -831,6 +831,23 @@ type UserInfo struct {
 	Disabled bool   `json:"disabled"`
 }
 
+// SessionUser is the safe representation of the User behind the current
+// Session, as returned by GET /me. It adds the verification state, the
+// Username credential handle and the profile timestamps to UserInfo.
+type SessionUser struct {
+	ID            string    `json:"id"`
+	Email         string    `json:"email"`
+	EmailVerified bool      `json:"email_verified"`
+	Name          string    `json:"name"`
+	Disabled      bool      `json:"disabled"`
+	Username      string    `json:"username"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// UsernameProvider is the Account provider name of a Username credential.
+const UsernameProvider = "username"
+
 // BanUserInput describes an administrative ban.
 type BanUserInput struct {
 	ActorID      string
