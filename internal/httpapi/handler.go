@@ -671,6 +671,7 @@ func (h *Handler) handleVerifyTwoFactor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.VerifyTwoFactor(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -992,6 +993,7 @@ func (h *Handler) handleImpersonate(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.api.ImpersonateUser(r.Context(), core.ImpersonateUserInput{
 		ActorID: actor, SessionToken: sessionToken, UserID: in.UserID,
+		UserAgent: clientUserAgent(r),
 	})
 	if err != nil {
 		writeAuthError(w, err)
@@ -1096,6 +1098,7 @@ func (h *Handler) handlePasskeySignInFinish(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.FinishPasskeySignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1375,6 +1378,7 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.api.CompleteSSOSignIn(r.Context(), core.SSOCallbackInput{
 		State: r.URL.Query().Get("state"), Code: r.URL.Query().Get("code"),
+		UserAgent: clientUserAgent(r),
 	})
 	if err != nil {
 		writeAuthError(w, err)
@@ -1602,6 +1606,7 @@ func (h *Handler) handleToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	pair, err := h.api.ExchangeToken(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1804,6 +1809,7 @@ func (h *Handler) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		Code:         r.URL.Query().Get("code"),
 		State:        r.URL.Query().Get("state"),
 		RateLimitKey: h.clientIP(r),
+		UserAgent:    clientUserAgent(r),
 	}
 	result, err := h.api.OAuthCallback(r.Context(), in)
 	if err != nil {

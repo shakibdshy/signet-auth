@@ -187,7 +187,7 @@ func (s *Service) FinishLogin(ctx context.Context, in core.PasskeyFinishSignInIn
 	if err := s.deps.Config.Passkeys.Store.UpdateCredential(ctx, credential); err != nil {
 		return nil, err
 	}
-	token, err := s.deps.Session.Create(ctx, userID, "")
+	token, err := s.deps.Session.Create(ctx, userID, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

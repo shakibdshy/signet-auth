@@ -298,7 +298,7 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 	if err != nil {
 		return nil, err
 	}
-	sessionToken, err := s.deps.CreateSession(ctx, user.ID, "")
+	sessionToken, err := s.deps.CreateSession(ctx, user.ID, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

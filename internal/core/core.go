@@ -299,6 +299,9 @@ type PasskeySignInInput struct{}
 type PasskeyFinishSignInInput struct {
 	Token    string          `json:"token"`
 	Response json.RawMessage `json:"response"`
+	// UserAgent is the raw User-Agent header of the ceremony request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // PasskeyListInput selects a User's passkeys.
@@ -516,6 +519,9 @@ type SSOStartResult struct {
 type SSOCallbackInput struct {
 	State string `json:"state"`
 	Code  string `json:"code"`
+	// UserAgent is the raw User-Agent header of the callback request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // SSOCallbackResult carries the Session and selected organization.
@@ -897,6 +903,10 @@ type ImpersonateUserInput struct {
 	ActorID      string
 	SessionToken string
 	UserID       string
+	// UserAgent is the raw User-Agent header of the admin request that
+	// started the Impersonation. It is derived by the HTTP handler and never
+	// decoded from a body.
+	UserAgent string `json:"-"`
 }
 
 // ImpersonationResult carries the temporary credentials.
@@ -1295,6 +1305,9 @@ type VerifyTwoFactorInput struct {
 	Challenge    string `json:"challenge"`
 	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // DisableTwoFactorInput removes a User's Second factor enrollment.
@@ -1457,6 +1470,9 @@ type TokenInput struct {
 	Challenge    string `json:"challenge"`
 	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the exchange request,
+	// derived by the HTTP handler for the Session the grant may create.
+	UserAgent string `json:"-"`
 }
 
 // TokenPair is the result of a token exchange.
@@ -1485,6 +1501,9 @@ type OAuthCallbackInput struct {
 	Code         string `json:"code"`
 	State        string `json:"state"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the callback request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // OAuthCallbackResult carries a signed-in User or an explicit link token.

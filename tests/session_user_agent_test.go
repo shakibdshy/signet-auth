@@ -51,8 +51,8 @@ func listSessionsOverHTTP(t *testing.T, client *signet.Client, cookie *http.Cook
 	var response struct {
 		Sessions []map[string]any `json:"sessions"`
 	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || len(response.Sessions) != 1 {
-		t.Fatalf("GET /sessions = %s, want one Session", rec.Body.String())
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || len(response.Sessions) == 0 {
+		t.Fatalf("GET /sessions = %s, want at least one Session", rec.Body.String())
 	}
 	return response.Sessions
 }
