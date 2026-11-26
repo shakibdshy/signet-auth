@@ -192,7 +192,7 @@ func (s *Service) FinishLogin(ctx context.Context, in core.PasskeyFinishSignInIn
 		return nil, err
 	}
 	user, _ := s.deps.Store.UserByID(ctx, userID)
-	result := &core.SignInResult{SessionToken: token, LastSignInMethod: "passkey", User: user}
+	result := &core.SignInResult{SessionToken: token, LastSignInMethod: core.SignInMethodPasskey, User: user}
 	s.emit(ctx, audit.PasskeySignIn, userID, map[string]string{"credential_id": credential.ID})
 	return result, nil
 }

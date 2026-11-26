@@ -7509,6 +7509,9 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7518,7 +7521,8 @@
                   },
                   "required": [
                     "user",
-                    "session_token"
+                    "session_token",
+                    "last_sign_in_method"
                   ],
                   "type": "object"
                 }
@@ -8644,6 +8648,9 @@
       },
       "SAMLACSResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "organization_id": {
             "type": "string"
           },
@@ -8653,7 +8660,8 @@
         },
         "required": [
           "session_token",
-          "organization_id"
+          "organization_id",
+          "last_sign_in_method"
         ],
         "type": "object"
       },
@@ -8689,6 +8697,9 @@
       },
       "SSOCallbackResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "organization_id": {
             "type": "string"
           },
@@ -8698,7 +8709,8 @@
         },
         "required": [
           "session_token",
-          "organization_id"
+          "organization_id",
+          "last_sign_in_method"
         ],
         "type": "object"
       },
@@ -8982,6 +8994,9 @@
       },
       "SignUpResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "session_token": {
             "type": "string"
           },
@@ -9143,6 +9158,9 @@
       },
       "VerifyEmailAndSignInResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "session_token": {
             "type": "string"
           },

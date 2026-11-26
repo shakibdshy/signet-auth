@@ -222,6 +222,7 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 			return nil, err
 		}
 		result.SessionToken = token
+		result.LastSignInMethod = core.SignInMethodPassword
 		s.deps.OnSignIn(ctx, redacted(user))
 		audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{
 			Name: audit.SignInSuccess, UserID: user.ID, Outcome: "success",

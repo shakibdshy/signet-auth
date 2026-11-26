@@ -280,7 +280,7 @@ func ContractFor() Contract {
 			{Name: "verify-otp", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.VerifyEmailOTPInput{}),
 				Response: ResponseSpec{Fields: []Field{
-					user, strField("session_token"),
+					user, strField("session_token"), strField("last_sign_in_method"),
 				}}, Status: http.StatusOK,
 			}}},
 			{Name: "signout", Methods: []Method{{

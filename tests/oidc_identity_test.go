@@ -185,7 +185,9 @@ func TestOIDCIdentityVerifiedIDToken(t *testing.T) {
 	if result.User.Email != "user@example.com" || result.User.EmailVerified != true {
 		t.Fatalf("user = %+v", result.User)
 	}
-	if result.LastSignInMethod != "acme" {
+	// The generic OIDC provider is named acme, but the sign-in method is the
+	// canonical generic oauth value, not the provider name.
+	if result.LastSignInMethod != "oauth" {
 		t.Fatalf("method = %q", result.LastSignInMethod)
 	}
 }

@@ -157,6 +157,7 @@ func (s *VerificationService) verify(ctx context.Context, in core.VerifyEmailInp
 			return nil, err
 		}
 		result.SessionToken = token
+		result.LastSignInMethod = core.SignInMethodMagicLink
 	}
 	return result, nil
 }

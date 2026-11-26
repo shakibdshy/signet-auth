@@ -1343,6 +1343,7 @@ export interface components {
             SessionID: string;
         };
         SAMLACSResult: {
+            last_sign_in_method: string;
             organization_id: string;
             session_token: string;
         };
@@ -1355,6 +1356,7 @@ export interface components {
             url: string;
         };
         SSOCallbackResult: {
+            last_sign_in_method: string;
             organization_id: string;
             session_token: string;
         };
@@ -1439,6 +1441,7 @@ export interface components {
             username?: string;
         };
         SignUpResult: {
+            last_sign_in_method?: string;
             session_token?: string;
             user: components["schemas"]["User"];
         };
@@ -1485,6 +1488,7 @@ export interface components {
             name: string;
         };
         VerifyEmailAndSignInResult: {
+            last_sign_in_method?: string;
             session_token?: string;
             user: components["schemas"]["User"];
         };
@@ -8018,6 +8022,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        last_sign_in_method: string;
                         session_token: string;
                         user: components["schemas"]["User"];
                     };

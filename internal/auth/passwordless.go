@@ -161,7 +161,7 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenMagicLink, in.Token); err != nil {
 		return nil, translateMagicLinkError(err)
 	}
-	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name, "magic-link", in.UserAgent)
+	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name, core.SignInMethodMagicLink, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.Verify
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenEmailOTP, proof); err != nil {
 		return nil, translateProofError(err, core.ErrInvalidOTP, core.ErrOTPAlreadyUsed)
 	}
-	result, err := s.finishPasswordlessSignIn(ctx, email, "", "email-otp", in.UserAgent)
+	result, err := s.finishPasswordlessSignIn(ctx, email, "", core.SignInMethodOTP, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

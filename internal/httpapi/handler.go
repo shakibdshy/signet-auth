@@ -468,8 +468,8 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 			writeAuthError(w, err)
 			return
 		}
-		h.api.SetLastMethodCookie(w, "email")
 		body["session_token"] = result.SessionToken
+		h.writeSignInMethod(w, body, result.LastSignInMethod)
 	}
 	writeJSON(w, http.StatusCreated, body)
 }
@@ -561,7 +561,6 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	callback := in.CallbackURL
 	if callback == "" {
 		// The emailed link carries the callback inside its proof; the query
@@ -569,12 +568,15 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		callback = result.CallbackURL
 	}
 	if callback != "" {
+		h.writeSignInMethod(w, nil, result.LastSignInMethod)
 		http.Redirect(w, r, callback, http.StatusFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"user": result.User, "session_token": result.SessionToken,
-	})
+	}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSendOTP(w http.ResponseWriter, r *http.Request) {
@@ -616,10 +618,11 @@ func (h *Handler) handleVerifyOTP(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"user": result.User, "session_token": result.SessionToken,
-	})
+	}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSignOut(w http.ResponseWriter, r *http.Request) {
@@ -1349,8 +1352,11 @@ func (h *Handler) handleSAMLACS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.api.SetActiveOrganizationCookie(w, result.OrganizationID)
-	h.api.SetLastMethodCookie(w, "saml")
-	writeJSON(w, http.StatusOK, result)
+	body := map[string]any{
+		"session_token": result.SessionToken, "organization_id": result.OrganizationID,
+	}
+	h.writeSignInMethod(w, body, core.SignInMethodSAML)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSSOStart(w http.ResponseWriter, r *http.Request) {
@@ -1389,8 +1395,11 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.api.SetActiveOrganizationCookie(w, result.OrganizationID)
-	h.api.SetLastMethodCookie(w, "sso")
-	writeJSON(w, http.StatusOK, result)
+	body := map[string]any{
+		"session_token": result.SessionToken, "organization_id": result.OrganizationID,
+	}
+	h.writeSignInMethod(w, body, core.SignInMethodSSO)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSSOConnections(w http.ResponseWriter, r *http.Request) {
@@ -1654,8 +1663,8 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 			writeAuthError(w, err)
 			return
 		}
-		h.api.SetLastMethodCookie(w, "email")
 		body["session_token"] = result.SessionToken
+		h.writeSignInMethod(w, body, result.LastSignInMethod)
 	}
 	writeJSON(w, http.StatusOK, body)
 }

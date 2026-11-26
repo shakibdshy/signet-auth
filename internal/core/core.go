@@ -526,8 +526,9 @@ type SSOCallbackInput struct {
 
 // SSOCallbackResult carries the Session and selected organization.
 type SSOCallbackResult struct {
-	SessionToken   string `json:"session_token"`
-	OrganizationID string `json:"organization_id"`
+	SessionToken     string `json:"session_token"`
+	OrganizationID   string `json:"organization_id"`
+	LastSignInMethod string `json:"last_sign_in_method"`
 }
 
 // CreateSSOConnectionInput describes a new SSO connection.
@@ -559,8 +560,9 @@ type SAMLStartResult struct {
 
 // SAMLACSResult carries the Session and Organization after assertion validation.
 type SAMLACSResult struct {
-	SessionToken   string `json:"session_token"`
-	OrganizationID string `json:"organization_id"`
+	SessionToken     string `json:"session_token"`
+	OrganizationID   string `json:"organization_id"`
+	LastSignInMethod string `json:"last_sign_in_method"`
 }
 
 // SCIMGroup is a directory group mapped to a local identifier.
@@ -1234,6 +1236,9 @@ type SignUpInput struct {
 type SignUpResult struct {
 	User         *User  `json:"user"`
 	SessionToken string `json:"session_token,omitempty"`
+	// LastSignInMethod names the backing factor when automatic sign-in
+	// issued a Session; it is absent otherwise.
+	LastSignInMethod string `json:"last_sign_in_method,omitempty"`
 }
 
 // SignInInput is the input to a sign-in.
@@ -1387,6 +1392,9 @@ type AutoSignInConfig struct {
 type VerifyEmailAndSignInResult struct {
 	User         *User  `json:"user"`
 	SessionToken string `json:"session_token"`
+	// LastSignInMethod names the backing factor when automatic sign-in
+	// issued a Session; it is absent otherwise.
+	LastSignInMethod string `json:"last_sign_in_method,omitempty"`
 }
 
 // VerifyEmailInput carries a verification Token.
