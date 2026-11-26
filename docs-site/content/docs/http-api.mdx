@@ -38,6 +38,7 @@ from the declarative contract into the [API reference](/docs/openapi).
 | POST `/verify-change-email` | no | required | 200 | `invalid_token` 401, `email_exists` 400, `rate_limited` 429 | Commit a verified email change. | [verify-change-email](/docs/openapi/email-and-verification/verify-change-email_post) |
 | POST `/change-password` | yes | required | 200 | `invalid_credentials` 401, `invalid_input` 400, `rate_limited` 429 | Replace an authenticated User's password; revokes all Sessions and Tokens. | [change-password](/docs/openapi/email-and-verification/change-password_post) |
 | POST `/signout` | no | required | 204 | `csrf` 403, `invalid_input` 400 | Ending the current Session and clearing its cookie. | [signout](/docs/openapi/authentication/signout_post) |
+| GET `/me` | yes | n/a | 200 `SessionUser` | none | Safe profile of the Session's User: verification state, Username and timestamps. |
 | GET `/sessions` | yes | n/a | 200 `{"sessions":[SessionInfo]}` | `unauthorized` 401, `csrf` 403 | Listing the authenticated User's Sessions. | [sessions](/docs/openapi/sessions/sessions_get) |
 | DELETE `/sessions` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking all Sessions of the authenticated User. | [sessions](/docs/openapi/sessions/sessions_delete) |
 | DELETE `/session` | yes | required | 204 | `unauthorized` 401, `csrf` 403 | Revoking just the current Session. | [session](/docs/openapi/sessions/session_delete) |

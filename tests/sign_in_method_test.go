@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shakibdshy/signet-auth"
-	"github.com/shakibdshy/signet-auth/internal/testutil"
 	samlidp "github.com/russellhaering/gosaml2/v2/idp"
 	"github.com/russellhaering/gosaml2/v2/types"
+	"github.com/shakibdshy/signet-auth"
+	"github.com/shakibdshy/signet-auth/internal/testutil"
 )
 
 // lastMethodClientAndMailer builds a client with the Last sign-in method
@@ -226,7 +226,7 @@ func TestMagicLinkSignInReportsCanonicalMethod(t *testing.T) {
 		t.Fatalf("SendMagicLink: %v", err)
 	}
 	token := magicLinkTokenFromMail(t, mailer)
-	rec := getWithUserAgent(t, client, "/verify-magic-link?token="+token, testUserAgent)
+	rec := getWithTestUserAgent(t, client, "/verify-magic-link?token="+token)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /verify-magic-link status = %d; body = %s", rec.Code, rec.Body.String())
 	}
@@ -345,7 +345,7 @@ func TestSSOCallbackReportsMethod(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &start); err != nil || start.State == "" {
 		t.Fatalf("decode = %v body = %s", err, rr.Body.String())
 	}
-	rec := getWithUserAgent(t, client, "/sso/callback?state="+start.State+"&code=code", testUserAgent)
+	rec := getWithTestUserAgent(t, client, "/sso/callback?state="+start.State+"&code=code")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("callback status = %d body = %s", rec.Code, rec.Body.String())
 	}
@@ -408,7 +408,7 @@ func TestOAuthCallbackRecordsGenericMethod(t *testing.T) {
 		}
 	})
 	state := startOAuth(t, client)
-	rec := getWithUserAgent(t, client, "/oauth/callback?code=code&state="+url.QueryEscape(state), testUserAgent)
+	rec := getWithTestUserAgent(t, client, "/oauth/callback?code=code&state="+url.QueryEscape(state))
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status = %d, want 302", rec.Code)
 	}

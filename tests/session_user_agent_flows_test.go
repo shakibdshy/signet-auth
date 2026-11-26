@@ -41,12 +41,10 @@ func userAgentOfFirstSession(t *testing.T, client *signet.Client, cookie *http.C
 	return got
 }
 
-func getWithUserAgent(t *testing.T, client *signet.Client, path, userAgent string) *httptest.ResponseRecorder {
+func getWithTestUserAgent(t *testing.T, client *signet.Client, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, path, nil)
-	if userAgent != "" {
-		req.Header.Set("User-Agent", userAgent)
-	}
+	req.Header.Set("User-Agent", testUserAgent)
 	rec := httptest.NewRecorder()
 	client.Handler().ServeHTTP(rec, req)
 	return rec
@@ -61,7 +59,7 @@ func TestMagicLinkVerificationRecordsUserAgent(t *testing.T) {
 	if err := client.SendMagicLink(ctx, signet.SendMagicLinkInput{Email: "user@example.com"}); err != nil {
 		t.Fatalf("SendMagicLink: %v", err)
 	}
-	rec := getWithUserAgent(t, client, "/verify-magic-link?token="+magicLinkTokenFromMail(t, mailer), testUserAgent)
+	rec := getWithTestUserAgent(t, client, "/verify-magic-link?token="+magicLinkTokenFromMail(t, mailer))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /verify-magic-link status = %d; body = %s", rec.Code, rec.Body.String())
 	}
