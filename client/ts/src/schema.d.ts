@@ -1343,6 +1343,7 @@ export interface components {
             SessionID: string;
         };
         SAMLACSResult: {
+            last_sign_in_method: string;
             organization_id: string;
             session_token: string;
         };
@@ -1355,6 +1356,7 @@ export interface components {
             url: string;
         };
         SSOCallbackResult: {
+            last_sign_in_method: string;
             organization_id: string;
             session_token: string;
         };
@@ -1401,12 +1403,25 @@ export interface components {
             last_seen_at: string;
             /** Format: date-time */
             revoked_at?: string | null;
+            user_agent: string;
+        };
+        SessionUser: {
+            /** Format: date-time */
+            created_at: string;
+            disabled: boolean;
+            email: string;
+            email_verified: boolean;
+            id: string;
+            name: string;
+            /** Format: date-time */
+            updated_at: string;
+            username: string;
         };
         SetActiveOrganizationInput: {
             org_id: string;
         };
         SignInInput: {
-            email: string;
+            email?: string;
             password: string;
             username?: string;
         };
@@ -1426,8 +1441,9 @@ export interface components {
             username?: string;
         };
         SignUpResult: {
-            User: components["schemas"]["User"];
+            last_sign_in_method?: string;
             session_token?: string;
+            user: components["schemas"]["User"];
         };
         StopImpersonatingInput: {
             token: string;
@@ -1472,6 +1488,7 @@ export interface components {
             name: string;
         };
         VerifyEmailAndSignInResult: {
+            last_sign_in_method?: string;
             session_token?: string;
             user: components["schemas"]["User"];
         };
@@ -3325,7 +3342,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserInfo"];
+                    "application/json": components["schemas"]["SessionUser"];
                 };
             };
             /** @description Bad Request */
@@ -6559,6 +6576,7 @@ export interface operations {
                     "application/json": {
                         csrf_token?: string;
                         error?: string;
+                        last_sign_in_method?: string;
                         session_token?: string;
                         two_factor_challenge?: string;
                         user: components["schemas"]["User"];
@@ -7905,6 +7923,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        last_sign_in_method: string;
                         session_token: string;
                         user: components["schemas"]["User"];
                     };
@@ -8004,6 +8023,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        last_sign_in_method: string;
                         session_token: string;
                         user: components["schemas"]["User"];
                     };
@@ -8103,6 +8123,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        last_sign_in_method: string;
                         session_token: string;
                         user: components["schemas"]["User"];
                     };

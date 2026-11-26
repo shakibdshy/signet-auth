@@ -108,12 +108,15 @@ sign-in.
 ### 2. Let the HTTP adapter write it
 
 When `auth.Handler()` is mounted at `PathPrefix`, the adapter writes the cookie automatically on
-every successful sign-in response: password, username, magic link, email OTP, OAuth, and after a
-Two-factor challenge. Completing a challenge preserves the first factor rather than replacing it
-with a TOTP method.
+every response that creates a Session: password sign-in, magic link, Email OTP, OAuth, SSO, SAML,
+passkey, and automatic sign-in. The Two-factor challenge response is not a sign-in — the cookie
+is written when the second factor completes, preserving the first factor rather than replacing
+it with a TOTP method.
 
-The method is also returned in `SignInResult.LastSignInMethod`: `password`, `username`,
-`magic-link`, `email-otp`, or the OAuth provider name.
+The method is also returned in `SignInResult.LastSignInMethod`. The canonical values are
+exactly: `password`, `magic_link`, `otp`, `passkey`, `oauth`, `sso`, `saml`. Automatic sign-in
+after sign-up reports `password`; after email verification it reports `magic_link` — the backing
+factor, not a separate method.
 
 ### 3. Read it over HTTP
 

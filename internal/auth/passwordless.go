@@ -161,7 +161,7 @@ func (s *VerificationService) VerifyMagicLink(ctx context.Context, in core.Verif
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenMagicLink, in.Token); err != nil {
 		return nil, translateMagicLinkError(err)
 	}
-	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name, "magic-link")
+	result, err := s.finishPasswordlessSignIn(ctx, data.Email, data.Name, core.SignInMethodMagicLink, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -189,8 +189,9 @@ func translateMagicLinkError(err error) error {
 }
 
 // finishPasswordlessSignIn resolves or creates the User after a proof has been
-// consumed, marks the email verified and creates a Session.
-func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, email, name, method string) (*core.SignInResult, error) {
+// consumed, marks the email verified and creates a Session. The user agent of
+// the request that presented the proof is recorded on the Session.
+func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, email, name, method, userAgent string) (*core.SignInResult, error) {
 	user, err := s.deps.Store.UserByEmail(ctx, email)
 	if err != nil && !errors.Is(err, core.ErrNotFound) {
 		return nil, err
@@ -219,7 +220,7 @@ func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, emai
 			}
 		}
 	}
-	sessionToken, err := s.deps.CreateSession(ctx, user.ID)
+	sessionToken, err := s.deps.CreateSession(ctx, user.ID, userAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +328,7 @@ func (s *VerificationService) VerifyEmailOTP(ctx context.Context, in core.Verify
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenEmailOTP, proof); err != nil {
 		return nil, translateProofError(err, core.ErrInvalidOTP, core.ErrOTPAlreadyUsed)
 	}
-	result, err := s.finishPasswordlessSignIn(ctx, email, "", "email-otp")
+	result, err := s.finishPasswordlessSignIn(ctx, email, "", core.SignInMethodOTP, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,9 @@ When changing an HTTP request or response shape, update the declarative
 contract in `internal/httpapi/contract.go` and run `make generate`. CI runs
 `make generate-check`, which fails if the committed OpenAPI spec or generated
 TypeScript types are stale. Shape changes are breaking changes for the
-published client and require a major version bump.
+published client and require a major version bump; adding a response field is
+the additive case and needs only a minor-level bump, while renaming or
+removing a field is the breaking case.
 
 ## Code review with OCR
 

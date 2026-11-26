@@ -106,6 +106,9 @@ func main() {
 	cfg.CSRFKey = csrfKey()
 	cfg.AppURL = appURL(port)
 	cfg.PathPrefix = "/auth"
+	// Expose GET /auth/last-sign-in-method so frontends can show how the
+	// current browser last signed in. Consent-gated via BeforeStore if needed.
+	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
 	auth, err := signet.New(cfg)
 	if err != nil {
 		log.Fatal(err)

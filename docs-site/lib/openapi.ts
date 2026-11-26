@@ -29,7 +29,7 @@ export function referenceGroup(route: string): string {
   if (path.includes('two-factor') || path === 'regenerate-backup-codes') return 'Second factor';
   if (path === 'send-magic-link' || path === 'verify-magic-link' || path === 'send-otp' || path === 'verify-otp') return 'Passwordless';
   if (path === 'signup' || path === 'signin' || path === 'signout' || path === 'token') return 'Authentication';
-  if (path === 'sessions' || path === 'session' || path === 'last-sign-in-method') return 'Sessions';
+  if (path === 'me' || path === 'sessions' || path === 'session' || path === 'last-sign-in-method') return 'Sessions';
   if (path === 'accounts' || path === 'unlink-account') return 'Accounts';
   if (path === 'csrf-token') return 'Utilities';
   if (

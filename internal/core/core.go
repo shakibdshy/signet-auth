@@ -64,6 +64,25 @@ type Session struct {
 	IdleExpiresAt     time.Time  `json:"idle_expires_at"`
 	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at"`
 	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
+	// UserAgent is the raw User-Agent header of the request that created the
+	// Session, truncated to MaxUserAgentRunes. It is frozen at creation and
+	// empty when the client sent no header.
+	UserAgent string `json:"user_agent,omitempty"`
+}
+
+// MaxUserAgentRunes caps the User-Agent stored on a Session.
+const MaxUserAgentRunes = 512
+
+// TruncateUserAgent limits a raw User-Agent header to MaxUserAgentRunes runes,
+// cutting on a rune boundary and replacing invalid UTF-8 so the stored value
+// stays valid text in every store backend.
+func TruncateUserAgent(value string) string {
+	value = strings.ToValidUTF8(value, "\uFFFD")
+	runes := []rune(value)
+	if len(runes) <= MaxUserAgentRunes {
+		return value
+	}
+	return string(runes[:MaxUserAgentRunes])
 }
 
 // AllTokenKinds is the canonical list of single-use proof kinds. Security
@@ -280,6 +299,9 @@ type PasskeySignInInput struct{}
 type PasskeyFinishSignInInput struct {
 	Token    string          `json:"token"`
 	Response json.RawMessage `json:"response"`
+	// UserAgent is the raw User-Agent header of the ceremony request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // PasskeyListInput selects a User's passkeys.
@@ -497,12 +519,16 @@ type SSOStartResult struct {
 type SSOCallbackInput struct {
 	State string `json:"state"`
 	Code  string `json:"code"`
+	// UserAgent is the raw User-Agent header of the callback request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // SSOCallbackResult carries the Session and selected organization.
 type SSOCallbackResult struct {
-	SessionToken   string `json:"session_token"`
-	OrganizationID string `json:"organization_id"`
+	SessionToken     string `json:"session_token"`
+	OrganizationID   string `json:"organization_id"`
+	LastSignInMethod string `json:"last_sign_in_method"`
 }
 
 // CreateSSOConnectionInput describes a new SSO connection.
@@ -534,8 +560,9 @@ type SAMLStartResult struct {
 
 // SAMLACSResult carries the Session and Organization after assertion validation.
 type SAMLACSResult struct {
-	SessionToken   string `json:"session_token"`
-	OrganizationID string `json:"organization_id"`
+	SessionToken     string `json:"session_token"`
+	OrganizationID   string `json:"organization_id"`
+	LastSignInMethod string `json:"last_sign_in_method"`
 }
 
 // SCIMGroup is a directory group mapped to a local identifier.
@@ -812,6 +839,44 @@ type UserInfo struct {
 	Disabled bool   `json:"disabled"`
 }
 
+// SessionUser is the safe representation of the User behind the current
+// Session, as returned by GET /me. It adds the verification state, the
+// Username credential and the profile timestamps to UserInfo.
+type SessionUser struct {
+	ID            string    `json:"id"`
+	Email         string    `json:"email"`
+	EmailVerified bool      `json:"email_verified"`
+	Name          string    `json:"name"`
+	Disabled      bool      `json:"disabled"`
+	Username      string    `json:"username"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// UsernameProvider is the Account provider name of a Username credential.
+const UsernameProvider = "username"
+
+// Canonical Sign-in method values. Sign-in responses carry the method of the
+// Session they establish in last_sign_in_method, and the optional Last
+// sign-in method cookie stores the same value; downstream UIs key off these
+// exact strings.
+const (
+	// SignInMethodPassword is an email or Username credential sign-in.
+	SignInMethodPassword = "password"
+	// SignInMethodMagicLink is a sign-in completed by opening a Magic link.
+	SignInMethodMagicLink = "magic_link"
+	// SignInMethodOTP is a sign-in completed with an Email OTP.
+	SignInMethodOTP = "otp"
+	// SignInMethodPasskey is a sign-in completed with a Passkey assertion.
+	SignInMethodPasskey = "passkey"
+	// SignInMethodOAuth is a sign-in completed through an OAuth provider.
+	SignInMethodOAuth = "oauth"
+	// SignInMethodSSO is a sign-in completed through an Organization SSO connection.
+	SignInMethodSSO = "sso"
+	// SignInMethodSAML is a sign-in completed through a SAML assertion.
+	SignInMethodSAML = "saml"
+)
+
 // BanUserInput describes an administrative ban.
 type BanUserInput struct {
 	ActorID      string
@@ -840,6 +905,10 @@ type ImpersonateUserInput struct {
 	ActorID      string
 	SessionToken string
 	UserID       string
+	// UserAgent is the raw User-Agent header of the admin request that
+	// started the Impersonation. It is derived by the HTTP handler and never
+	// decoded from a body.
+	UserAgent string `json:"-"`
 }
 
 // ImpersonationResult carries the temporary credentials.
@@ -1158,12 +1227,18 @@ type SignUpInput struct {
 	Name            string `json:"name"`
 	Username        string `json:"username"`
 	RateLimitKey    string `json:"-"`
+	// UserAgent is the raw User-Agent header of the sign-up request, derived
+	// by the HTTP handler for the Session automatic sign-in may create.
+	UserAgent string `json:"-"`
 }
 
 // SignUpResult is the outcome of a successful sign-up.
 type SignUpResult struct {
-	User         *User
+	User         *User  `json:"user"`
 	SessionToken string `json:"session_token,omitempty"`
+	// LastSignInMethod names the backing factor when automatic sign-in
+	// issued a Session; it is absent otherwise.
+	LastSignInMethod string `json:"last_sign_in_method,omitempty"`
 }
 
 // SignInInput is the input to a sign-in.
@@ -1174,6 +1249,9 @@ type SignInInput struct {
 	Username        string `json:"username"`
 	Password        string `json:"password"`
 	RateLimitKey    string `json:"-"`
+	// UserAgent is the raw User-Agent header of the sign-in request. It is
+	// derived by the HTTP handler and never decoded from the body.
+	UserAgent string `json:"-"`
 }
 
 // SignInResult is the outcome of a successful sign-in.
@@ -1232,6 +1310,9 @@ type VerifyTwoFactorInput struct {
 	Challenge    string `json:"challenge"`
 	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // DisableTwoFactorInput removes a User's Second factor enrollment.
@@ -1268,6 +1349,9 @@ type VerifyMagicLinkInput struct {
 	Token        string `json:"token"`
 	CallbackURL  string `json:"callback_url"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session it may create.
+	UserAgent string `json:"-"`
 }
 
 // SendEmailOTPInput requests a six-digit sign-in code by email.
@@ -1282,6 +1366,9 @@ type VerifyEmailOTPInput struct {
 	Email        string `json:"email"`
 	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // SignOutInput is the input to a sign-out.
@@ -1305,12 +1392,18 @@ type AutoSignInConfig struct {
 type VerifyEmailAndSignInResult struct {
 	User         *User  `json:"user"`
 	SessionToken string `json:"session_token"`
+	// LastSignInMethod names the backing factor when automatic sign-in
+	// issued a Session; it is absent otherwise.
+	LastSignInMethod string `json:"last_sign_in_method,omitempty"`
 }
 
 // VerifyEmailInput carries a verification Token.
 type VerifyEmailInput struct {
 	Token        string `json:"token"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session automatic sign-in may create.
+	UserAgent string `json:"-"`
 }
 
 // SendPasswordResetInput requests a password reset email.
@@ -1385,6 +1478,9 @@ type TokenInput struct {
 	Challenge    string `json:"challenge"`
 	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the exchange request,
+	// derived by the HTTP handler for the Session the grant may create.
+	UserAgent string `json:"-"`
 }
 
 // TokenPair is the result of a token exchange.
@@ -1413,6 +1509,9 @@ type OAuthCallbackInput struct {
 	Code         string `json:"code"`
 	State        string `json:"state"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the callback request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // OAuthCallbackResult carries a signed-in User or an explicit link token.
@@ -1580,4 +1679,5 @@ type SessionInfo struct {
 	IdleExpiresAt     time.Time  `json:"idle_expires_at"`
 	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at"`
 	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
+	UserAgent         string     `json:"user_agent"`
 }

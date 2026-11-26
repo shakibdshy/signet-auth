@@ -168,7 +168,7 @@ import { createSignetClient } from '@shakibdshy/signet-auth-client';
 
 const auth = createSignetClient({ baseURL: 'https://api.example.com/auth' });
 const { method } = await auth.lastSignInMethod();
-// "password" | "username" | "magic-link" | "email-otp" | a provider name | ""
+// "password" | "magic_link" | "otp" | "passkey" | "oauth" | "sso" | "saml" | ""
 ```
 
 <Callout title="Common mistake">

@@ -35,7 +35,7 @@ type VerificationDependencies struct {
 	Passwordless     *core.PasswordlessConfig
 	OAuthRedirects   []string
 	RedirectPatterns []string
-	CreateSession    func(context.Context, string) (string, error)
+	CreateSession    func(context.Context, string, string) (string, error)
 	RevokeSessions   func(context.Context, string) error
 	FlushSessions    func(context.Context)
 	BreachChecker    core.BreachChecker
@@ -152,17 +152,18 @@ func (s *VerificationService) verify(ctx context.Context, in core.VerifyEmailInp
 	audit.Emit(ctx, s.deps.AuditSink, s.deps.Logger, core.AuditEvent{Name: audit.EmailVerified, UserID: user.ID, Outcome: "success"})
 	result := &core.VerifyEmailAndSignInResult{User: user}
 	if allowAutomatic && s.deps.AutoSignIn {
-		token, err := s.issueAutomaticSession(ctx, user)
+		token, err := s.issueAutomaticSession(ctx, user, in.UserAgent)
 		if err != nil {
 			return nil, err
 		}
 		result.SessionToken = token
+		result.LastSignInMethod = core.SignInMethodMagicLink
 	}
 	return result, nil
 }
 
-func (s *VerificationService) issueAutomaticSession(ctx context.Context, user *core.User) (string, error) {
-	token, err := s.deps.CreateSession(ctx, user.ID)
+func (s *VerificationService) issueAutomaticSession(ctx context.Context, user *core.User, userAgent string) (string, error) {
+	token, err := s.deps.CreateSession(ctx, user.ID, userAgent)
 	if err != nil {
 		return "", err
 	}

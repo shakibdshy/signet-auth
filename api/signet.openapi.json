@@ -2116,7 +2116,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserInfo"
+                  "$ref": "#/components/schemas/SessionUser"
                 }
               }
             }
@@ -5812,6 +5812,9 @@
                     "error": {
                       "type": "string"
                     },
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7386,6 +7389,9 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7395,7 +7401,8 @@
                   },
                   "required": [
                     "user",
-                    "session_token"
+                    "session_token",
+                    "last_sign_in_method"
                   ],
                   "type": "object"
                 }
@@ -7506,6 +7513,9 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7515,7 +7525,8 @@
                   },
                   "required": [
                     "user",
-                    "session_token"
+                    "session_token",
+                    "last_sign_in_method"
                   ],
                   "type": "object"
                 }
@@ -7626,6 +7637,9 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7635,7 +7649,8 @@
                   },
                   "required": [
                     "user",
-                    "session_token"
+                    "session_token",
+                    "last_sign_in_method"
                   ],
                   "type": "object"
                 }
@@ -8637,6 +8652,9 @@
       },
       "SAMLACSResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "organization_id": {
             "type": "string"
           },
@@ -8646,7 +8664,8 @@
         },
         "required": [
           "session_token",
-          "organization_id"
+          "organization_id",
+          "last_sign_in_method"
         ],
         "type": "object"
       },
@@ -8682,6 +8701,9 @@
       },
       "SSOCallbackResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "organization_id": {
             "type": "string"
           },
@@ -8691,7 +8713,8 @@
         },
         "required": [
           "session_token",
-          "organization_id"
+          "organization_id",
+          "last_sign_in_method"
         ],
         "type": "object"
       },
@@ -8837,6 +8860,9 @@
             "format": "date-time",
             "nullable": true,
             "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
           }
         },
         "required": [
@@ -8844,7 +8870,49 @@
           "created_at",
           "last_seen_at",
           "idle_expires_at",
-          "absolute_expires_at"
+          "absolute_expires_at",
+          "user_agent"
+        ],
+        "type": "object"
+      },
+      "SessionUser": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "email": {
+            "type": "string"
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "email_verified",
+          "name",
+          "disabled",
+          "username",
+          "created_at",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -8872,7 +8940,6 @@
           }
         },
         "required": [
-          "email",
           "password"
         ],
         "type": "object"
@@ -8931,16 +8998,19 @@
       },
       "SignUpResult": {
         "properties": {
-          "User": {
-            "$ref": "#/components/schemas/User",
-            "nullable": true
+          "last_sign_in_method": {
+            "type": "string"
           },
           "session_token": {
             "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User",
+            "nullable": true
           }
         },
         "required": [
-          "User"
+          "user"
         ],
         "type": "object"
       },
@@ -9092,6 +9162,9 @@
       },
       "VerifyEmailAndSignInResult": {
         "properties": {
+          "last_sign_in_method": {
+            "type": "string"
+          },
           "session_token": {
             "type": "string"
           },

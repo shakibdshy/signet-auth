@@ -42,6 +42,11 @@ the bar for a supported adapter.
 
 ## Schema ownership
 
+Sessions carry the sign-in client: the `user_agent` column on `signet_sessions`
+(raw `User-Agent`, capped at 512 runes). Custom Stores should persist it; the
+conformance suite round-trips the field, so an implementation that drops it
+fails the suite.
+
 Signet never runs migrations against your database. Apply your own schema
 changes through your normal migration tooling. The bundled adapters expose
 their SQL as an embedded filesystem and an explicit `Migrate` method for

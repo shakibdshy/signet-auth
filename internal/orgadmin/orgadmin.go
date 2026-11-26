@@ -287,7 +287,7 @@ func (s *Service) ImpersonateUser(ctx context.Context, in core.ImpersonateUserIn
 		!s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersImpersonate) {
 		return nil, core.ErrForbidden
 	}
-	tempToken, err := s.deps.Sessions.Create(ctx, in.UserID)
+	tempToken, err := s.deps.Sessions.Create(ctx, in.UserID, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

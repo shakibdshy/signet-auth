@@ -81,7 +81,8 @@ await auth.signUp({
 // Sign in. The Go backend sets the Session cookie; you never handle it.
 await auth.signIn({ email: "user@example.com", password: "correct horse battery staple" });
 
-// Read the signed-in User.
+// Read the signed-in User. The profile carries the verification state,
+// the Username (empty when there is none) and the timestamps.
 const user = await auth.me();
 
 // Sign out.
@@ -132,7 +133,7 @@ The client has a typed method for most of Signet's HTTP API. The main methods by
 | --- | --- |
 | Sign-up, sign-in and sign-out | `signUp`, `signIn`, `signOut`, `me`, `lastSignInMethod` |
 | JWT Access and Refresh tokens, when the backend enables them | `exchangeToken` |
-| Sessions | `listSessions`, `revokeSession`, `revokeAllSessions` |
+| Sessions | `listSessions`, `revokeSession`, `revokeAllSessions` — each listed Session carries `user_agent`, the raw browser header it was started from |
 | Email verification and passwords | `sendVerification`, `verifyEmail`, `sendPasswordReset`, `resetPassword`, `changePassword`, `changeEmail`, `verifyChangeEmail` |
 | Linked provider accounts | `listAccounts`, `unlinkAccount` |
 | Second factor | `enableTwoFactor`, `verifyTwoFactor`, `disableTwoFactor`, `regenerateBackupCodes` |

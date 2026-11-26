@@ -170,7 +170,7 @@ the backend mounts Signet. It forwards the request's cookies and never creates a
 | Field | What it is |
 | --- | --- |
 | `status` | `"loading"`, `"authenticated"` or `"anonymous"`. It starts as `"loading"` and changes when the first `GET /me` finishes. |
-| `user` | The signed-in User returned by `GET /me`, or `null`. |
+| `user` | The signed-in User returned by `GET /me`, or `null` — with `email_verified`, `username` and the profile timestamps. |
 | `error` | The `SignetApiError` from the last failed `GET /me`, or `null`. |
 | `signIn(input)` | Calls the client's `signIn`, then reads the Session again. It throws the client's error if sign-in fails. |
 | `signOut()` | Calls the client's `signOut`, then sets `status` to `"anonymous"`. |

@@ -456,6 +456,7 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.SignUp(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -467,8 +468,8 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 			writeAuthError(w, err)
 			return
 		}
-		h.api.SetLastMethodCookie(w, "email")
 		body["session_token"] = result.SessionToken
+		h.writeSignInMethod(w, body, result.LastSignInMethod)
 	}
 	writeJSON(w, http.StatusCreated, body)
 }
@@ -482,13 +483,15 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.SignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
 	if result.TwoFactorChallenge != "" {
-		h.api.SetLastMethodCookie(w, result.LastSignInMethod)
+		// A challenge is not a sign-in: no Session exists yet, so no last
+		// sign-in method is recorded until the second factor completes.
 		writeJSON(w, http.StatusOK, map[string]any{
 			"user": result.User, "two_factor_challenge": result.TwoFactorChallenge,
 			"error": "two_factor_required",
@@ -500,12 +503,24 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"user":          result.User,
 		"session_token": result.SessionToken,
 		"csrf_token":    csrfToken,
-	})
+	}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
+}
+
+// writeSignInMethod records the Sign-in method of a response that established
+// a Session: it writes the signed cookie when the feature is enabled and adds
+// last_sign_in_method to the response body, so a flow cannot report one
+// without the other. body may be nil for responses without a JSON body.
+func (h *Handler) writeSignInMethod(w http.ResponseWriter, body map[string]any, method string) {
+	h.api.SetLastMethodCookie(w, method)
+	if body != nil {
+		body["last_sign_in_method"] = method
+	}
 }
 
 func (h *Handler) handleSendMagicLink(w http.ResponseWriter, r *http.Request) {
@@ -535,6 +550,7 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		Token:        r.URL.Query().Get("token"),
 		CallbackURL:  r.URL.Query().Get("callback_url"),
 		RateLimitKey: h.clientIP(r),
+		UserAgent:    clientUserAgent(r),
 	}
 	result, err := h.api.VerifyMagicLink(r.Context(), in)
 	if err != nil {
@@ -545,7 +561,6 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
 	callback := in.CallbackURL
 	if callback == "" {
 		// The emailed link carries the callback inside its proof; the query
@@ -553,12 +568,15 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		callback = result.CallbackURL
 	}
 	if callback != "" {
+		h.writeSignInMethod(w, nil, result.LastSignInMethod)
 		http.Redirect(w, r, callback, http.StatusFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"user": result.User, "session_token": result.SessionToken,
-	})
+	}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSendOTP(w http.ResponseWriter, r *http.Request) {
@@ -590,6 +608,7 @@ func (h *Handler) handleVerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.VerifyEmailOTP(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -599,10 +618,11 @@ func (h *Handler) handleVerifyOTP(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"user": result.User, "session_token": result.SessionToken,
-	})
+	}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSignOut(w http.ResponseWriter, r *http.Request) {
@@ -654,6 +674,7 @@ func (h *Handler) handleVerifyTwoFactor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.VerifyTwoFactor(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -663,8 +684,9 @@ func (h *Handler) handleVerifyTwoFactor(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
-	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "session_token": result.SessionToken})
+	body := map[string]any{"user": result.User, "session_token": result.SessionToken}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleDisableTwoFactor(w http.ResponseWriter, r *http.Request) {
@@ -974,6 +996,7 @@ func (h *Handler) handleImpersonate(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.api.ImpersonateUser(r.Context(), core.ImpersonateUserInput{
 		ActorID: actor, SessionToken: sessionToken, UserID: in.UserID,
+		UserAgent: clientUserAgent(r),
 	})
 	if err != nil {
 		writeAuthError(w, err)
@@ -1078,6 +1101,7 @@ func (h *Handler) handlePasskeySignInFinish(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "invalid_input", "invalid request")
 		return
 	}
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.FinishPasskeySignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1328,8 +1352,11 @@ func (h *Handler) handleSAMLACS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.api.SetActiveOrganizationCookie(w, result.OrganizationID)
-	h.api.SetLastMethodCookie(w, "saml")
-	writeJSON(w, http.StatusOK, result)
+	body := map[string]any{
+		"session_token": result.SessionToken, "organization_id": result.OrganizationID,
+	}
+	h.writeSignInMethod(w, body, core.SignInMethodSAML)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSSOStart(w http.ResponseWriter, r *http.Request) {
@@ -1357,6 +1384,7 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.api.CompleteSSOSignIn(r.Context(), core.SSOCallbackInput{
 		State: r.URL.Query().Get("state"), Code: r.URL.Query().Get("code"),
+		UserAgent: clientUserAgent(r),
 	})
 	if err != nil {
 		writeAuthError(w, err)
@@ -1367,8 +1395,11 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.api.SetActiveOrganizationCookie(w, result.OrganizationID)
-	h.api.SetLastMethodCookie(w, "sso")
-	writeJSON(w, http.StatusOK, result)
+	body := map[string]any{
+		"session_token": result.SessionToken, "organization_id": result.OrganizationID,
+	}
+	h.writeSignInMethod(w, body, core.SignInMethodSSO)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleSSOConnections(w http.ResponseWriter, r *http.Request) {
@@ -1468,8 +1499,21 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeJSON(w, http.StatusOK, &core.UserInfo{
-		ID: user.ID, Email: user.Email, Name: user.Name, Disabled: user.Disabled,
+	accounts, err := h.api.ListAccounts(r.Context(), core.ListAccountsInput{UserID: user.ID})
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	username := ""
+	for _, account := range accounts.Accounts {
+		if account.Provider == core.UsernameProvider {
+			username = account.ProviderUserID
+			break
+		}
+	}
+	writeJSON(w, http.StatusOK, &core.SessionUser{
+		ID: user.ID, Email: user.Email, EmailVerified: user.EmailVerified, Name: user.Name,
+		Disabled: user.Disabled, Username: username, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt,
 	})
 }
 
@@ -1571,6 +1615,7 @@ func (h *Handler) handleToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	pair, err := h.api.ExchangeToken(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1606,6 +1651,7 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.VerifyEmailAndSignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1617,8 +1663,8 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 			writeAuthError(w, err)
 			return
 		}
-		h.api.SetLastMethodCookie(w, "email")
 		body["session_token"] = result.SessionToken
+		h.writeSignInMethod(w, body, result.LastSignInMethod)
 	}
 	writeJSON(w, http.StatusOK, body)
 }
@@ -1772,6 +1818,7 @@ func (h *Handler) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		Code:         r.URL.Query().Get("code"),
 		State:        r.URL.Query().Get("state"),
 		RateLimitKey: h.clientIP(r),
+		UserAgent:    clientUserAgent(r),
 	}
 	result, err := h.api.OAuthCallback(r.Context(), in)
 	if err != nil {
@@ -1822,4 +1869,10 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 
 func (h *Handler) clientIP(r *http.Request) string {
 	return resolveClientIP(r.RemoteAddr, r.Header.Get("X-Forwarded-For"), h.trusted)
+}
+
+// clientUserAgent returns the raw User-Agent header of the request, empty when
+// the client sent none.
+func clientUserAgent(r *http.Request) string {
+	return r.Header.Get("User-Agent")
 }

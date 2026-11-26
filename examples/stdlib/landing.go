@@ -64,6 +64,7 @@ const landingHTML = `<!doctype html>
     <tr><td><code><span class="m">POST</span> /auth/signup</code></td><td>create an account</td></tr>
     <tr><td><code><span class="m">POST</span> /auth/signin</code></td><td>sign in (rotates the CSRF token)</td></tr>
     <tr><td><code><span class="m">POST</span> /auth/signout</code></td><td>revoke the session</td></tr>
+    <tr><td><code><span class="m">GET</span> /auth/last-sign-in-method</code></td><td>how this browser last signed in</td></tr>
     <tr><td><code><span class="m">GET</span> /private</code></td><td>protected route, requires a session cookie</td></tr>
   </table>
 

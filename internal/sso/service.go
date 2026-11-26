@@ -239,7 +239,7 @@ func (s *Service) CompleteSAML(ctx context.Context, state string, request *http.
 	if err != nil {
 		return nil, err
 	}
-	sessionToken, err := s.deps.Sessions.Create(ctx, user.ID)
+	sessionToken, err := s.deps.Sessions.Create(ctx, user.ID, request.UserAgent())
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (s *Service) Callback(ctx context.Context, in core.SSOCallbackInput) (*core
 	if err != nil {
 		return nil, err
 	}
-	sessionToken, err := s.deps.Sessions.Create(ctx, user.ID)
+	sessionToken, err := s.deps.Sessions.Create(ctx, user.ID, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

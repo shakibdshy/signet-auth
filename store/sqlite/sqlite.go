@@ -32,7 +32,9 @@ func New(db *sql.DB) *Store {
 }
 
 // Migrate applies the embedded default schema. It is not part of signet.Store.
-// Every statement is idempotent, so repeated calls are safe.
+// Every statement is idempotent, so repeated calls are safe. SQLite has no
+// ADD COLUMN IF NOT EXISTS, so column additions after 0001 are applied through
+// guarded helpers instead of replayed SQL.
 func (s *Store) Migrate(ctx context.Context) error {
 	if _, err := s.db.ExecContext(ctx, "PRAGMA foreign_keys = ON"); err != nil {
 		return err
@@ -46,7 +48,39 @@ func (s *Store) Migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if err := s.addColumnIfMissing(ctx, "signet_sessions", "user_agent",
+		"ALTER TABLE signet_sessions ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	return nil
+}
+
+// addColumnIfMissing runs ddl only when the table does not already have the
+// column, keeping repeated Migrate calls idempotent.
+func (s *Store) addColumnIfMissing(ctx context.Context, table, column, ddl string) error {
+	rows, err := s.db.QueryContext(ctx, "PRAGMA table_info("+table+")")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return rows.Err()
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, ddl)
+	return err
 }
 
 // CreateUser implements the corresponding signet.Store method.
@@ -136,16 +170,16 @@ func (s *Store) DeleteAccount(ctx context.Context, id string) error {
 // CreateSession implements the corresponding signet.Store method.
 func (s *Store) CreateSession(ctx context.Context, session *signet.Session) error {
 	_, err := s.db.ExecContext(ctx,
-		"INSERT INTO signet_sessions (id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		"INSERT INTO signet_sessions (id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		session.ID, session.UserID, session.TokenHash, formatTime(session.CreatedAt), formatTime(session.LastSeenAt),
-		formatTime(session.IdleExpiresAt), formatTime(session.AbsoluteExpiresAt), formatTimePtr(session.RevokedAt))
+		formatTime(session.IdleExpiresAt), formatTime(session.AbsoluteExpiresAt), formatTimePtr(session.RevokedAt), session.UserAgent)
 	return err
 }
 
 // SessionByHash implements the corresponding signet.Store method.
 func (s *Store) SessionByHash(ctx context.Context, hash string) (*signet.Session, error) {
 	return scanSession(s.db.QueryRowContext(ctx,
-		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at FROM signet_sessions WHERE token_hash = ?", hash))
+		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent FROM signet_sessions WHERE token_hash = ?", hash))
 }
 
 // TouchSession implements the corresponding signet.Store method.
@@ -172,7 +206,7 @@ func (s *Store) DeleteSessionsForUser(ctx context.Context, userID string) error 
 // ListSessionsForUser implements the corresponding signet.Store method.
 func (s *Store) ListSessionsForUser(ctx context.Context, userID string) ([]*signet.Session, error) {
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at FROM signet_sessions WHERE user_id = ?", userID)
+		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent FROM signet_sessions WHERE user_id = ?", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +295,7 @@ func scanSession(row scanner) (*signet.Session, error) {
 	var session signet.Session
 	var created, lastSeen, idle, absolute string
 	var revoked sql.NullString
-	err := row.Scan(&session.ID, &session.UserID, &session.TokenHash, &created, &lastSeen, &idle, &absolute, &revoked)
+	err := row.Scan(&session.ID, &session.UserID, &session.TokenHash, &created, &lastSeen, &idle, &absolute, &revoked, &session.UserAgent)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, signet.ErrNotFound
 	}

@@ -121,6 +121,8 @@ func TestLastMethodExpires(t *testing.T) {
 	}
 }
 
+// A Username credential is a password sign-in: the canonical method value is
+// "password", never the identifier kind.
 func TestLastMethodForUsername(t *testing.T) {
 	client := lastMethodClient(t, nil)
 	ctx := context.Background()
@@ -130,7 +132,7 @@ func TestLastMethodForUsername(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	result, err := client.SignIn(ctx, signet.SignInInput{Username: "ada", Password: "correct horse"})
-	if err != nil || result.LastSignInMethod != "username" {
+	if err != nil || result.LastSignInMethod != "password" {
 		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 }
@@ -154,7 +156,7 @@ func TestLastMethodForMagicLinkAndOTP(t *testing.T) {
 	linkResult, err := client.VerifyMagicLink(ctx, signet.VerifyMagicLinkInput{
 		Token: tokenFromMail(t, mailer),
 	})
-	if err != nil || linkResult.LastSignInMethod != "magic-link" {
+	if err != nil || linkResult.LastSignInMethod != "magic_link" {
 		t.Fatalf("magic link result = %+v, err = %v", linkResult, err)
 	}
 	if err := client.SendEmailOTP(ctx, signet.SendEmailOTPInput{Email: "user@example.com"}); err != nil {
@@ -163,7 +165,7 @@ func TestLastMethodForMagicLinkAndOTP(t *testing.T) {
 	otpResult, err := client.VerifyEmailOTP(ctx, signet.VerifyEmailOTPInput{
 		Email: "user@example.com", Code: otpCodeFromMail(t, mailer),
 	})
-	if err != nil || otpResult.LastSignInMethod != "email-otp" {
+	if err != nil || otpResult.LastSignInMethod != "otp" {
 		t.Fatalf("OTP result = %+v, err = %v", otpResult, err)
 	}
 }
@@ -237,7 +239,7 @@ func TestLastMethodForOAuthProvider(t *testing.T) {
 	result, err := client.OAuthCallback(ctx, signet.OAuthCallbackInput{
 		Code: "code", State: parsed.Query().Get("state"),
 	})
-	if err != nil || result.LastSignInMethod != "google" {
+	if err != nil || result.LastSignInMethod != "oauth" {
 		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 }

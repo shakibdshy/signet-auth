@@ -443,6 +443,10 @@ type UnlinkAccountInput = core.UnlinkAccountInput
 // SessionInfo is the safe representation of a Session.
 type SessionInfo = core.SessionInfo
 
+// SessionUser is the safe profile of the User behind the current Session, as
+// returned by GET /me.
+type SessionUser = core.SessionUser
+
 // ListSessionsInput selects the User whose Sessions should be listed.
 type ListSessionsInput = core.ListSessionsInput
 

@@ -148,7 +148,7 @@ func (s *JWTService) Exchange(ctx context.Context, in core.TokenInput) (*core.To
 			return nil, core.ErrTokenInvalid
 		}
 		result, err := s.deps.VerifyTwoFactor(ctx, core.VerifyTwoFactorInput{
-			Challenge: in.Challenge, Code: in.Code, RateLimitKey: in.RateLimitKey,
+			Challenge: in.Challenge, Code: in.Code, RateLimitKey: in.RateLimitKey, UserAgent: in.UserAgent,
 		})
 		if err != nil {
 			return nil, err
@@ -156,7 +156,7 @@ func (s *JWTService) Exchange(ctx context.Context, in core.TokenInput) (*core.To
 		return s.Issue(ctx, result.User.ID)
 	}
 	result, err := s.deps.SignIn(ctx, core.SignInInput{
-		Email: in.Email, Password: in.Password, RateLimitKey: in.RateLimitKey,
+		Email: in.Email, Password: in.Password, RateLimitKey: in.RateLimitKey, UserAgent: in.UserAgent,
 	})
 	if err != nil {
 		return nil, err

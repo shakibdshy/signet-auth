@@ -125,6 +125,7 @@ func testSessions(t *testing.T, store signet.Store) {
 		ID: "session-1", UserID: "user-1", TokenHash: "digest-1",
 		CreatedAt: now, LastSeenAt: now,
 		IdleExpiresAt: now.Add(time.Minute), AbsoluteExpiresAt: now.Add(time.Hour),
+		UserAgent: "Mozilla/5.0 (Macintosh) Conformance/1.0",
 	}
 	if err := store.CreateSession(ctx, session); err != nil {
 		t.Fatalf("CreateSession: %v", err)
@@ -133,6 +134,9 @@ func testSessions(t *testing.T, store signet.Store) {
 	if err != nil || found.UserID != "user-1" {
 		t.Fatalf("SessionByHash = (%v, %v)", found, err)
 	}
+	if found.UserAgent != session.UserAgent {
+		t.Fatalf("SessionByHash UserAgent = %#v, want %#v", found.UserAgent, session.UserAgent)
+	}
 	newIdle := now.Add(2 * time.Minute)
 	if err := store.TouchSession(ctx, session.ID, newIdle); err != nil {
 		t.Fatalf("TouchSession: %v", err)
@@ -140,6 +144,9 @@ func testSessions(t *testing.T, store signet.Store) {
 	touched, err := store.SessionByHash(ctx, "digest-1")
 	if err != nil || !touched.IdleExpiresAt.Equal(newIdle) {
 		t.Fatalf("after TouchSession = (%v, %v)", touched, err)
+	}
+	if touched.UserAgent != session.UserAgent {
+		t.Fatalf("TouchSession must not disturb UserAgent; got %#v", touched.UserAgent)
 	}
 	sessions, err := store.ListSessionsForUser(ctx, "user-1")
 	if err != nil || len(sessions) != 1 {
@@ -152,6 +159,10 @@ func testSessions(t *testing.T, store signet.Store) {
 	}
 	if err := store.CreateSession(ctx, second); err != nil {
 		t.Fatalf("CreateSession second: %v", err)
+	}
+	withoutAgent, err := store.SessionByHash(ctx, "digest-2")
+	if err != nil || withoutAgent.UserAgent != "" {
+		t.Fatalf("Session without a User-Agent should read back empty: (%v, %v)", withoutAgent, err)
 	}
 	if err := store.DeleteSession(ctx, second.ID); err != nil {
 		t.Fatalf("DeleteSession: %v", err)

@@ -118,6 +118,13 @@ jobs:
         run: npm run typecheck
         working-directory: client/ts
 
+      - name: Build the TypeScript client
+        # The React package resolves the client's types through dist/, which
+        # only exists after a build. Without this the typecheck fails on a
+        # fresh checkout even though it passes locally.
+        run: npm run build
+        working-directory: client/ts
+
       - name: Typecheck the React package
         run: npm run typecheck
         working-directory: client/react

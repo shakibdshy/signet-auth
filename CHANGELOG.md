@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Sessions record the sign-in client: the `User-Agent` header of the request
+  that created a Session is stored on the Session (truncated to 512
+  characters, empty when absent) and returned as `user_agent` by
+  `GET /sessions`. Bundled adapters gain a replay-safe `0002` migration; run
+  `Migrate` again on upgrade.
+- `GET /me` returns the full profile: `email_verified`, `username` (empty
+  when the User has none), `created_at` and `updated_at` alongside the
+  existing fields.
+- Every session-establishing response carries `last_sign_in_method`:
+  `POST /signin`, `POST /verify-two-factor`, `POST /verify-otp`,
+  `GET /verify-magic-link`, `POST /signup` and `POST /verify-email` (exactly
+  when `session_token` is present), `POST /passkeys/signin-finish`,
+  `GET /sso/callback`, `POST /saml/acs` and `POST /token`. The stdlib example
+  enables the Last sign-in method cookie.
+- Credential sign-in responses (`POST /signin`, `POST /verify-two-factor`,
+  `POST /token`) carry `last_sign_in_method` in the body, independent of the
+  optional Last sign-in method cookie.
+
+### Changed
+
+- Sign-in method values are canonical, defined once and documented as
+  exactly: `password`, `magic_link`, `otp`, `passkey`, `oauth`, `sso`,
+  `saml`. A Username credential now reports `password` (was `username`);
+  magic-link sign-in reports `magic_link` (was `magic-link`); Email OTP
+  reports `otp` (was `email-otp`); OAuth sign-in reports `oauth` (was the
+  provider name); automatic sign-in after sign-up reports `password` and
+  after email verification `magic_link` (was `email`).
+- The Two-factor challenge response no longer writes the Last sign-in method
+  cookie; it is written when the second factor completes and a Session is
+  created.
+
 ## [1.0.0-beta] - 2026-11-25
 
 The first public release of Signet: a secure-by-default, embeddable

@@ -220,13 +220,13 @@ func (s *Service) Callback(ctx context.Context, in core.OAuthCallbackInput) (*co
 	if err != nil {
 		return nil, err
 	}
-	sessionToken, err := s.sessions.Create(ctx, user.ID)
+	sessionToken, err := s.sessions.Create(ctx, user.ID, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}
 	s.logInfo("oauth_sign_in", "user_id", user.ID, "provider", identity.Provider)
 	audit.Emit(ctx, s.auditSink, s.logger, core.AuditEvent{Name: audit.OAuthSignIn, UserID: user.ID, Outcome: "success", Metadata: map[string]string{"provider": identity.Provider}})
-	return &core.OAuthCallbackResult{LastSignInMethod: identity.Provider, User: user, SessionToken: sessionToken, Redirect: state.Redirect}, nil
+	return &core.OAuthCallbackResult{LastSignInMethod: core.SignInMethodOAuth, User: user, SessionToken: sessionToken, Redirect: state.Redirect}, nil
 }
 
 func (s *Service) pendingLink(ctx context.Context, identity *core.OAuthIdentity, redirect string) (*core.OAuthCallbackResult, error) {
