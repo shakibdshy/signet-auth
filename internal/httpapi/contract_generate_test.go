@@ -134,3 +134,67 @@ func TestGenerateReturnsErrorForUnknownResponseRef(t *testing.T) {
 		t.Fatal("Generate returned nil error for unknown response ref")
 	}
 }
+
+func TestGenerateSignUpResponseUsesLowercaseUserKey(t *testing.T) {
+	data, err := Generate(ContractFor())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	var doc generatedDoc
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	schema, ok := doc.Components.Schemas["SignUpResult"]
+	if !ok {
+		t.Fatal("missing SignUpResult schema")
+	}
+	if _, ok := schema.Properties["user"]; !ok {
+		t.Fatalf("SignUpResult must declare the user key lowercase; properties: %v", keysOf(schema.Properties))
+	}
+	if _, ok := schema.Properties["User"]; ok {
+		t.Fatal("SignUpResult still declares the Go-cased User key")
+	}
+}
+
+func keysOf(properties map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(properties))
+	for key := range properties {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func TestGenerateSignInInputEmailOptional(t *testing.T) {
+	data, err := Generate(ContractFor())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	var doc generatedDoc
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	schema, ok := doc.Components.Schemas["SignInInput"]
+	if !ok {
+		t.Fatal("missing SignInInput schema")
+	}
+	if _, ok := schema.Properties["email"]; !ok {
+		t.Fatal("SignInInput missing email property")
+	}
+	for _, name := range schema.Required {
+		if name == "email" {
+			t.Fatal("SignInInput.email must be optional: username-only sign-in sends an empty email")
+		}
+	}
+	if !contains(schema.Required, "password") {
+		t.Fatalf("SignInInput.password must stay required, required = %v", schema.Required)
+	}
+}
+
+func contains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}

@@ -364,7 +364,7 @@ func ContractFor() Contract {
 		OptionalFields: map[string][]string{
 			"TokenInput":                 {"email", "password", "refresh_token", "challenge", "code"},
 			"SignUpInput":                {"username"},
-			"SignInInput":                {"username"},
+			"SignInInput":                {"email", "username"},
 			"SignUpResult":               {"session_token"},
 			"VerifyEmailAndSignInResult": {"session_token"},
 			"SignOutInput":               {"session_token"},

@@ -1219,7 +1219,7 @@ type SignUpInput struct {
 
 // SignUpResult is the outcome of a successful sign-up.
 type SignUpResult struct {
-	User         *User
+	User         *User  `json:"user"`
 	SessionToken string `json:"session_token,omitempty"`
 }
 

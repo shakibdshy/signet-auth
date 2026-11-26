@@ -1419,7 +1419,7 @@ export interface components {
             org_id: string;
         };
         SignInInput: {
-            email: string;
+            email?: string;
             password: string;
             username?: string;
         };
@@ -1439,8 +1439,8 @@ export interface components {
             username?: string;
         };
         SignUpResult: {
-            User: components["schemas"]["User"];
             session_token?: string;
+            user: components["schemas"]["User"];
         };
         StopImpersonatingInput: {
             token: string;

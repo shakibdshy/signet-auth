@@ -8924,7 +8924,6 @@
           }
         },
         "required": [
-          "email",
           "password"
         ],
         "type": "object"
@@ -8983,16 +8982,16 @@
       },
       "SignUpResult": {
         "properties": {
-          "User": {
-            "$ref": "#/components/schemas/User",
-            "nullable": true
-          },
           "session_token": {
             "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User",
+            "nullable": true
           }
         },
         "required": [
-          "User"
+          "user"
         ],
         "type": "object"
       },
