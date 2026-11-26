@@ -15,6 +15,9 @@ void client.revokeSession();
 void client.csrfToken();
 void client.lastSignInMethod();
 
+// Username-only sign-in is expressible: the contract makes email optional.
+void client.signIn({ username: "ada", password: "correct horse" });
+
 // @ts-expect-error password is required by the published contract
 void client.signUp({ email: "user@example.com", name: "Ada" });
 
@@ -56,3 +59,24 @@ void client.verifyTwoFactor({ challenge: "proof" });
 
 // @ts-expect-error current_password is required by the published contract
 void client.changeEmail({ new_email: "ada@example.com" });
+
+// Shape checks for the Phase 13 fields: the compile errors ARE the test.
+type Assert<T extends true> = T;
+type MeResult = Awaited<ReturnType<typeof client.me>>;
+type SessionsResult = Awaited<ReturnType<typeof client.listSessions>>;
+type SignInResult = Awaited<ReturnType<typeof client.signIn>>;
+type VerifyOtpResult = Awaited<ReturnType<typeof client.verifyOtp>>;
+type SessionRow = SessionsResult["sessions"][number];
+
+// GET /me returns the full profile.
+type _meVerification = Assert<MeResult extends { email_verified: boolean } ? true : false>;
+type _meUsername = Assert<MeResult extends { username: string } ? true : false>;
+type _meTimestamps = Assert<MeResult extends { created_at: string; updated_at: string } ? true : false>;
+
+// Each listed Session names the Sign-in client that started it.
+type _sessionUserAgent = Assert<SessionRow extends { user_agent: string } ? true : false>;
+
+// Sign-in responses report the canonical method; required where a Session
+// always results, optional where a challenge branch can omit it.
+type _otpMethodRequired = Assert<VerifyOtpResult extends { last_sign_in_method: string } ? true : false>;
+type _signInMethodOptional = Assert<SignInResult extends { last_sign_in_method?: string } ? true : false>;

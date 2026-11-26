@@ -10,3 +10,9 @@ type _signOut = Assert<SessionState extends { signOut: () => Promise<void> } ? t
 type _error = Assert<SessionState extends { error: unknown } ? true : false>;
 type _guard = Assert<typeof sessionGuard extends (url: string, cookies: string) => Promise<boolean> ? true : false>;
 type _user = Assert<SessionUser extends { id: string } ? true : false>;
+// The session User carries the full Phase 13 profile.
+type _userProfile = Assert<
+	SessionUser extends { email_verified: boolean; username: string; created_at: string; updated_at: string }
+		? true
+		: false
+>;
