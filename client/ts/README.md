@@ -14,8 +14,8 @@ It attaches cookies and the CSRF token, so your frontend never builds those requ
 | **Calls that backend from a frontend** | Browser, Node.js | TypeScript, JavaScript | **`@shakibdshy/signet-auth-client`** (this package) |
 | Shares the Session with React components and guards routes (optional) | Browser | TypeScript, React | `@shakibdshy/signet-auth-react` |
 
-Current version: **`1.0.0-beta`**, a pre-1.0 release, so the API may still change before
-`v1.0.0`. The Go module (`v1.0.0-beta`) and both npm packages (`1.0.0-beta`) are released
+Current version: **`1.0.0-beta.2`**, a pre-1.0 release, so the API may still change before
+`v1.0.0`. The Go module (`v1.0.0-beta.2`) and both npm packages (`1.0.0-beta.2`) are released
 together at the same version.
 
 > **This package does not implement authentication.** Every request goes to the Signet
@@ -46,7 +46,7 @@ no separate auth server to install.
 ## Install
 
 ```sh
-npm install @shakibdshy/signet-auth-client@1.0.0-beta
+npm install @shakibdshy/signet-auth-client@1.0.0-beta.2
 ```
 
 To use a change that is not published yet, install from a checkout of the repository:
