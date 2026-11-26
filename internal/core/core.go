@@ -1215,6 +1215,9 @@ type SignUpInput struct {
 	Name            string `json:"name"`
 	Username        string `json:"username"`
 	RateLimitKey    string `json:"-"`
+	// UserAgent is the raw User-Agent header of the sign-up request, derived
+	// by the HTTP handler for the Session automatic sign-in may create.
+	UserAgent string `json:"-"`
 }
 
 // SignUpResult is the outcome of a successful sign-up.
@@ -1328,6 +1331,9 @@ type VerifyMagicLinkInput struct {
 	Token        string `json:"token"`
 	CallbackURL  string `json:"callback_url"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session it may create.
+	UserAgent string `json:"-"`
 }
 
 // SendEmailOTPInput requests a six-digit sign-in code by email.
@@ -1342,6 +1348,9 @@ type VerifyEmailOTPInput struct {
 	Email        string `json:"email"`
 	Code         string `json:"code"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session it creates.
+	UserAgent string `json:"-"`
 }
 
 // SignOutInput is the input to a sign-out.
@@ -1371,6 +1380,9 @@ type VerifyEmailAndSignInResult struct {
 type VerifyEmailInput struct {
 	Token        string `json:"token"`
 	RateLimitKey string `json:"-"`
+	// UserAgent is the raw User-Agent header of the verification request,
+	// derived by the HTTP handler for the Session automatic sign-in may create.
+	UserAgent string `json:"-"`
 }
 
 // SendPasswordResetInput requests a password reset email.

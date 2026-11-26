@@ -456,6 +456,7 @@ func (h *Handler) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.SignUp(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -549,6 +550,7 @@ func (h *Handler) handleVerifyMagicLink(w http.ResponseWriter, r *http.Request) 
 		Token:        r.URL.Query().Get("token"),
 		CallbackURL:  r.URL.Query().Get("callback_url"),
 		RateLimitKey: h.clientIP(r),
+		UserAgent:    clientUserAgent(r),
 	}
 	result, err := h.api.VerifyMagicLink(r.Context(), in)
 	if err != nil {
@@ -604,6 +606,7 @@ func (h *Handler) handleVerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.VerifyEmailOTP(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1634,6 +1637,7 @@ func (h *Handler) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.VerifyEmailAndSignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)

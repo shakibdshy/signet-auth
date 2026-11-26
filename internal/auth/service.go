@@ -217,7 +217,7 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 	}
 	result := &core.SignUpResult{User: user}
 	if s.deps.AutoSignInAfterSignUp && (user.EmailVerified || !s.deps.RequireVerifiedEmail) {
-		token, err := s.deps.CreateSession(ctx, user.ID, "")
+		token, err := s.deps.CreateSession(ctx, user.ID, in.UserAgent)
 		if err != nil {
 			return nil, err
 		}
