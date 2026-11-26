@@ -7923,6 +7923,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        last_sign_in_method: string;
                         session_token: string;
                         user: components["schemas"]["User"];
                     };

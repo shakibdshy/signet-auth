@@ -46,8 +46,8 @@ func (s *Service) Flush(ctx context.Context) {
 }
 
 // Create issues a new opaque Session token and stores only its digest. The
-// user agent of the request that started the visit, when known, is recorded on
-// the Session for device display.
+// user agent of the request that started the visit, when known, identifies the
+// Sign-in client on the Session.
 func (s *Service) Create(ctx context.Context, userID, userAgent string) (string, error) {
 	token := secret.NewToken()
 	now := s.clock.Now()

@@ -290,7 +290,7 @@ func (s *Service) VerifyTwoFactor(ctx context.Context, in core.VerifyTwoFactorIn
 	if _, err := s.deps.Tokens.Consume(ctx, core.TokenTwoFactor, in.Challenge); err != nil {
 		return nil, err
 	}
-	method := "password"
+	method := core.SignInMethodPassword
 	if embedded, parseErr := token.ParseData(in.Challenge); parseErr == nil && embedded != "" {
 		method = embedded
 	}

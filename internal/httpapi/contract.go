@@ -267,7 +267,7 @@ func ContractFor() Contract {
 			}}},
 			{Name: "verify-magic-link", Anonymous: true, Methods: []Method{{
 				Verb: "GET", Response: ResponseSpec{Fields: []Field{
-					user, strField("session_token"),
+					user, strField("session_token"), strField("last_sign_in_method"),
 				}}, Status: http.StatusOK,
 				Parameters: []Parameter{
 					{Name: "token", In: "query", Required: true, Type: "string"},

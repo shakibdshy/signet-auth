@@ -841,7 +841,7 @@ type UserInfo struct {
 
 // SessionUser is the safe representation of the User behind the current
 // Session, as returned by GET /me. It adds the verification state, the
-// Username credential handle and the profile timestamps to UserInfo.
+// Username credential and the profile timestamps to UserInfo.
 type SessionUser struct {
 	ID            string    `json:"id"`
 	Email         string    `json:"email"`
