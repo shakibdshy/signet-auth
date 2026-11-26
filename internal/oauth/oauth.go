@@ -220,7 +220,7 @@ func (s *Service) Callback(ctx context.Context, in core.OAuthCallbackInput) (*co
 	if err != nil {
 		return nil, err
 	}
-	sessionToken, err := s.sessions.Create(ctx, user.ID)
+	sessionToken, err := s.sessions.Create(ctx, user.ID, "")
 	if err != nil {
 		return nil, err
 	}

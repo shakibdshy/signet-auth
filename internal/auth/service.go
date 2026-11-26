@@ -43,7 +43,7 @@ type Dependencies struct {
 	OnSignUp                 func(context.Context, *core.User)
 	OnSignIn                 func(context.Context, *core.User)
 	SendVerification         func(context.Context, *core.User) error
-	CreateSession            func(context.Context, string) (string, error)
+	CreateSession            func(context.Context, string, string) (string, error)
 	AutoSignInAfterSignUp    bool
 	RevokeSession            func(context.Context, string) error
 	FlushSessions            func(context.Context)
@@ -217,7 +217,7 @@ func (s *Service) SignUp(ctx context.Context, in core.SignUpInput) (*core.SignUp
 	}
 	result := &core.SignUpResult{User: user}
 	if s.deps.AutoSignInAfterSignUp && (user.EmailVerified || !s.deps.RequireVerifiedEmail) {
-		token, err := s.deps.CreateSession(ctx, user.ID)
+		token, err := s.deps.CreateSession(ctx, user.ID, "")
 		if err != nil {
 			return nil, err
 		}
@@ -304,7 +304,7 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 			return nil, stateErr
 		}
 	}
-	sessionToken, err := s.deps.CreateSession(ctx, user.ID)
+	sessionToken, err := s.deps.CreateSession(ctx, user.ID, in.UserAgent)
 	if err != nil {
 		return nil, err
 	}

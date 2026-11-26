@@ -132,16 +132,16 @@ func (s *Store) DeleteAccount(ctx context.Context, id string) error {
 // CreateSession implements the corresponding signet.Store method.
 func (s *Store) CreateSession(ctx context.Context, session *signet.Session) error {
 	_, err := s.pool.Exec(ctx,
-		"INSERT INTO signet_sessions (id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+		"INSERT INTO signet_sessions (id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 		session.ID, session.UserID, session.TokenHash, session.CreatedAt, session.LastSeenAt,
-		session.IdleExpiresAt, session.AbsoluteExpiresAt, session.RevokedAt)
+		session.IdleExpiresAt, session.AbsoluteExpiresAt, session.RevokedAt, session.UserAgent)
 	return err
 }
 
 // SessionByHash implements the corresponding signet.Store method.
 func (s *Store) SessionByHash(ctx context.Context, hash string) (*signet.Session, error) {
 	return scanSession(s.pool.QueryRow(ctx,
-		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at FROM signet_sessions WHERE token_hash = $1", hash))
+		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent FROM signet_sessions WHERE token_hash = $1", hash))
 }
 
 // TouchSession implements the corresponding signet.Store method.
@@ -165,7 +165,7 @@ func (s *Store) DeleteSessionsForUser(ctx context.Context, userID string) error 
 // ListSessionsForUser implements the corresponding signet.Store method.
 func (s *Store) ListSessionsForUser(ctx context.Context, userID string) ([]*signet.Session, error) {
 	rows, err := s.pool.Query(ctx,
-		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at FROM signet_sessions WHERE user_id = $1", userID)
+		"SELECT id, user_id, token_hash, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent FROM signet_sessions WHERE user_id = $1", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func scanAccount(row rowScanner) (*signet.Account, error) {
 func scanSession(row rowScanner) (*signet.Session, error) {
 	var session signet.Session
 	err := row.Scan(&session.ID, &session.UserID, &session.TokenHash, &session.CreatedAt,
-		&session.LastSeenAt, &session.IdleExpiresAt, &session.AbsoluteExpiresAt, &session.RevokedAt)
+		&session.LastSeenAt, &session.IdleExpiresAt, &session.AbsoluteExpiresAt, &session.RevokedAt, &session.UserAgent)
 	return &session, mapNoRows(err)
 }
 

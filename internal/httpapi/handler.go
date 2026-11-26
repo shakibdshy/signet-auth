@@ -482,6 +482,7 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.RateLimitKey = h.clientIP(r)
+	in.UserAgent = clientUserAgent(r)
 	result, err := h.api.SignIn(r.Context(), in)
 	if err != nil {
 		writeAuthError(w, err)
@@ -1822,4 +1823,10 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 
 func (h *Handler) clientIP(r *http.Request) string {
 	return resolveClientIP(r.RemoteAddr, r.Header.Get("X-Forwarded-For"), h.trusted)
+}
+
+// clientUserAgent returns the raw User-Agent header of the request, empty when
+// the client sent none.
+func clientUserAgent(r *http.Request) string {
+	return r.Header.Get("User-Agent")
 }

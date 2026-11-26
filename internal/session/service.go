@@ -45,8 +45,10 @@ func (s *Service) Flush(ctx context.Context) {
 	s.flush(ctx)
 }
 
-// Create issues a new opaque Session token and stores only its digest.
-func (s *Service) Create(ctx context.Context, userID string) (string, error) {
+// Create issues a new opaque Session token and stores only its digest. The
+// user agent of the request that started the visit, when known, is recorded on
+// the Session for device display.
+func (s *Service) Create(ctx context.Context, userID, userAgent string) (string, error) {
 	token := secret.NewToken()
 	now := s.clock.Now()
 	session := &core.Session{
@@ -57,6 +59,7 @@ func (s *Service) Create(ctx context.Context, userID string) (string, error) {
 		LastSeenAt:        now,
 		IdleExpiresAt:     now.Add(s.cfg.IdleTimeout),
 		AbsoluteExpiresAt: now.Add(s.cfg.AbsoluteTimeout),
+		UserAgent:         core.TruncateUserAgent(userAgent),
 	}
 	if err := s.store.CreateSession(ctx, session); err != nil {
 		return "", err
@@ -151,7 +154,7 @@ func (s *Service) List(ctx context.Context, userID string) ([]*core.SessionInfo,
 		info = append(info, &core.SessionInfo{
 			ID: session.ID, CreatedAt: session.CreatedAt, LastSeenAt: session.LastSeenAt,
 			IdleExpiresAt: session.IdleExpiresAt, AbsoluteExpiresAt: session.AbsoluteExpiresAt,
-			RevokedAt: session.RevokedAt,
+			RevokedAt: session.RevokedAt, UserAgent: session.UserAgent,
 		})
 	}
 	return info, nil

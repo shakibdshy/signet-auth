@@ -976,8 +976,8 @@ func (c *Client) RevokeAllSessions(ctx context.Context, in RevokeAllSessionsInpu
 	return c.sessions.RevokeAll(ctx, in.UserID)
 }
 
-func (c *Client) createSession(ctx context.Context, userID string) (string, error) {
-	return c.sessions.Create(ctx, userID)
+func (c *Client) createSession(ctx context.Context, userID, userAgent string) (string, error) {
+	return c.sessions.Create(ctx, userID, userAgent)
 }
 
 func digestSecret(token string) string { return secret.Digest(token) }

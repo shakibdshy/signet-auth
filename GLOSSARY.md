@@ -144,6 +144,10 @@ _Avoid_: identity token, id_token
 A signed value that proves a browser request is same-origin. It is not single-use and is distinct from a Token.
 _Avoid_: anti-CSRF value
 
+**Sign-in client**:
+The browser or application from which a User signed in to start a Session.
+_Avoid_: device
+
 **Fresh session**:
 A Session created within the configured freshness window, measured from the moment the User authenticated — not from their most recent request.
 _Avoid_: recent session, active session

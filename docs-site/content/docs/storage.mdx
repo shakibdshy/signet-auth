@@ -25,7 +25,9 @@ custom schema; see `docs/custom-schema.md` in the repository.
 
 Both adapters expose `Migrate(ctx)`, which applies embedded, idempotent SQL. Signet never runs
 migrations automatically — call `Migrate` from your own startup or migration job. The caller owns
-the database handle and its lifecycle.
+the database handle and its lifecycle. New statements are appended as new migration files, so
+after upgrading Signet, calling `Migrate` once brings an existing database up to date; replaying
+every statement stays safe.
 
 ## The bundled schema
 
@@ -35,7 +37,7 @@ Four tables are created:
 | --- | --- |
 | `signet_users` | User identity, verified flag, disabled flag, timestamps. |
 | `signet_accounts` | provider + provider user ID, password verifier, verified email; FK to Users with cascade. |
-| `signet_sessions` | token digest, idle/absolute deadlines, revoked timestamp; FK to Users with cascade. |
+| `signet_sessions` | token digest, idle/absolute deadlines, revoked timestamp, sign-in client user agent; FK to Users with cascade. |
 | `signet_tokens` | kind, digest, expiry, used timestamp. No FK to Users. |
 
 Indexes cover email lookup, Accounts by User, Sessions by User and Tokens by (User, kind).

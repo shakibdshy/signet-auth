@@ -64,6 +64,25 @@ type Session struct {
 	IdleExpiresAt     time.Time  `json:"idle_expires_at"`
 	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at"`
 	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
+	// UserAgent is the raw User-Agent header of the request that created the
+	// Session, truncated to MaxUserAgentRunes. It is frozen at creation and
+	// empty when the client sent no header.
+	UserAgent string `json:"user_agent,omitempty"`
+}
+
+// MaxUserAgentRunes caps the User-Agent stored on a Session.
+const MaxUserAgentRunes = 512
+
+// TruncateUserAgent limits a raw User-Agent header to MaxUserAgentRunes runes,
+// cutting on a rune boundary and replacing invalid UTF-8 so the stored value
+// stays valid text in every store backend.
+func TruncateUserAgent(value string) string {
+	value = strings.ToValidUTF8(value, "\uFFFD")
+	runes := []rune(value)
+	if len(runes) <= MaxUserAgentRunes {
+		return value
+	}
+	return string(runes[:MaxUserAgentRunes])
 }
 
 // AllTokenKinds is the canonical list of single-use proof kinds. Security
@@ -1174,6 +1193,9 @@ type SignInInput struct {
 	Username        string `json:"username"`
 	Password        string `json:"password"`
 	RateLimitKey    string `json:"-"`
+	// UserAgent is the raw User-Agent header of the sign-in request. It is
+	// derived by the HTTP handler and never decoded from the body.
+	UserAgent string `json:"-"`
 }
 
 // SignInResult is the outcome of a successful sign-in.
@@ -1580,4 +1602,5 @@ type SessionInfo struct {
 	IdleExpiresAt     time.Time  `json:"idle_expires_at"`
 	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at"`
 	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
+	UserAgent         string     `json:"user_agent"`
 }

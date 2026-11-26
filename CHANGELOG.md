@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Sessions record the sign-in client: the `User-Agent` header of the request
+  that created a Session is stored on the Session (truncated to 512
+  characters, empty when absent) and returned as `user_agent` by
+  `GET /sessions`. Bundled adapters gain a replay-safe `0002` migration; run
+  `Migrate` again on upgrade.
+
 ## [1.0.0-beta] - 2026-11-25
 
 The first public release of Signet: a secure-by-default, embeddable

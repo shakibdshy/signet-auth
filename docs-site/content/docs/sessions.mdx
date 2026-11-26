@@ -30,8 +30,12 @@ auth.RevokeSession(ctx, signet.RevokeSessionInput{SessionID: id})
 auth.RevokeAllSessions(ctx, signet.RevokeAllSessionsInput{UserID: user.ID})
 ```
 
-Listing returns only safe fields — never a token digest. Revoke calls are successful
-no-ops for unknown IDs, so repeated logouts need no special handling.
+Listing returns only safe fields — never a token digest. Each listed Session
+carries `user_agent`: the raw `User-Agent` header of the request that created it,
+truncated to 512 characters and empty when the client sent none. It is frozen at
+creation, so it always names the Sign-in client that started the visit. Revoke
+calls are successful no-ops for unknown IDs, so repeated logouts need no special
+handling.
 
 ## Cookies and CSRF
 

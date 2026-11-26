@@ -35,7 +35,7 @@ type VerificationDependencies struct {
 	Passwordless     *core.PasswordlessConfig
 	OAuthRedirects   []string
 	RedirectPatterns []string
-	CreateSession    func(context.Context, string) (string, error)
+	CreateSession    func(context.Context, string, string) (string, error)
 	RevokeSessions   func(context.Context, string) error
 	FlushSessions    func(context.Context)
 	BreachChecker    core.BreachChecker
@@ -162,7 +162,7 @@ func (s *VerificationService) verify(ctx context.Context, in core.VerifyEmailInp
 }
 
 func (s *VerificationService) issueAutomaticSession(ctx context.Context, user *core.User) (string, error) {
-	token, err := s.deps.CreateSession(ctx, user.ID)
+	token, err := s.deps.CreateSession(ctx, user.ID, "")
 	if err != nil {
 		return "", err
 	}

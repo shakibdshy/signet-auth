@@ -36,3 +36,19 @@ func Load(files embed.FS, dir string) ([]string, error) {
 	}
 	return statements, nil
 }
+
+// LoadFile reads a single SQL file and returns its individual statements, so a
+// caller can replay one migration in isolation.
+func LoadFile(files embed.FS, dir, name string) ([]string, error) {
+	content, err := files.ReadFile(dir + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	var statements []string
+	for _, statement := range strings.Split(string(content), ";") {
+		if trimmed := strings.TrimSpace(statement); trimmed != "" {
+			statements = append(statements, trimmed)
+		}
+	}
+	return statements, nil
+}

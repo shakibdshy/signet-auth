@@ -219,7 +219,7 @@ func (s *VerificationService) finishPasswordlessSignIn(ctx context.Context, emai
 			}
 		}
 	}
-	sessionToken, err := s.deps.CreateSession(ctx, user.ID)
+	sessionToken, err := s.deps.CreateSession(ctx, user.ID, "")
 	if err != nil {
 		return nil, err
 	}

@@ -1401,6 +1401,7 @@ export interface components {
             last_seen_at: string;
             /** Format: date-time */
             revoked_at?: string | null;
+            user_agent: string;
         };
         SetActiveOrganizationInput: {
             org_id: string;
