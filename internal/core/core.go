@@ -848,6 +848,27 @@ type SessionUser struct {
 // UsernameProvider is the Account provider name of a Username credential.
 const UsernameProvider = "username"
 
+// Canonical Sign-in method values. Sign-in responses carry the method of the
+// Session they establish in last_sign_in_method, and the optional Last
+// sign-in method cookie stores the same value; downstream UIs key off these
+// exact strings.
+const (
+	// SignInMethodPassword is an email or Username credential sign-in.
+	SignInMethodPassword = "password"
+	// SignInMethodMagicLink is a sign-in completed by opening a Magic link.
+	SignInMethodMagicLink = "magic_link"
+	// SignInMethodOTP is a sign-in completed with an Email OTP.
+	SignInMethodOTP = "otp"
+	// SignInMethodPasskey is a sign-in completed with a Passkey assertion.
+	SignInMethodPasskey = "passkey"
+	// SignInMethodOAuth is a sign-in completed through an OAuth provider.
+	SignInMethodOAuth = "oauth"
+	// SignInMethodSSO is a sign-in completed through an Organization SSO connection.
+	SignInMethodSSO = "sso"
+	// SignInMethodSAML is a sign-in completed through a SAML assertion.
+	SignInMethodSAML = "saml"
+)
+
 // BanUserInput describes an administrative ban.
 type BanUserInput struct {
 	ActorID      string

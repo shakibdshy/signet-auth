@@ -6572,6 +6572,7 @@ export interface operations {
                     "application/json": {
                         csrf_token?: string;
                         error?: string;
+                        last_sign_in_method?: string;
                         session_token?: string;
                         two_factor_challenge?: string;
                         user: components["schemas"]["User"];
@@ -8116,6 +8117,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        last_sign_in_method: string;
                         session_token: string;
                         user: components["schemas"]["User"];
                     };

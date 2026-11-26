@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   characters, empty when absent) and returned as `user_agent` by
   `GET /sessions`. Bundled adapters gain a replay-safe `0002` migration; run
   `Migrate` again on upgrade.
+- `GET /me` returns the full profile: `email_verified`, `username` (empty
+  when the User has none), `created_at` and `updated_at` alongside the
+  existing fields.
+- Credential sign-in responses (`POST /signin`, `POST /verify-two-factor`,
+  `POST /token`) carry `last_sign_in_method` in the body, independent of the
+  optional Last sign-in method cookie.
+
+### Changed
+
+- A Username credential now reports the sign-in method `password` (was
+  `username`). The canonical method values are defined once and documented
+  as exactly: `password`, `magic_link`, `otp`, `passkey`, `oauth`, `sso`,
+  `saml`.
+- The Two-factor challenge response no longer writes the Last sign-in method
+  cookie; it is written when the second factor completes and a Session is
+  created.
 
 ## [1.0.0-beta] - 2026-11-25
 

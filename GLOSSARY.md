@@ -117,7 +117,7 @@ A temporary Session created by an administrator acting as another User.
 _Avoid_: sudo, act-as
 
 **Last sign-in method**:
-The method used in a User's most recent successful sign-in.
+The Sign-in method of the most recent successful sign-in from the same browser. It is remembered per browser, not per User, so it is empty in a browser that has not signed in.
 _Avoid_: last login method
 
 **Access token**:
@@ -147,6 +147,10 @@ _Avoid_: anti-CSRF value
 **Sign-in client**:
 The browser or application from which a User signed in to start a Session.
 _Avoid_: device
+
+**Sign-in method**:
+The kind of first factor behind a Session: a password, a Magic link, an Email OTP, a Passkey, or a federated sign-in through an OAuth provider or SSO connection. A Second factor never replaces it.
+_Avoid_: login method, last factor
 
 **Fresh session**:
 A Session created within the configured freshness window, measured from the moment the User authenticated — not from their most recent request.

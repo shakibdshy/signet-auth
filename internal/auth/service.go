@@ -253,10 +253,7 @@ func (s *Service) SignIn(ctx context.Context, in core.SignInInput) (*core.SignIn
 	}
 	var user *core.User
 	var err error
-	method := "password"
-	if in.Username != "" {
-		method = "username"
-	}
+	method := core.SignInMethodPassword
 	if email != "" {
 		user, err = s.deps.Store.UserByEmail(ctx, email)
 	} else {

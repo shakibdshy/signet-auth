@@ -121,6 +121,8 @@ func TestLastMethodExpires(t *testing.T) {
 	}
 }
 
+// A Username credential is a password sign-in: the canonical method value is
+// "password", never the identifier kind.
 func TestLastMethodForUsername(t *testing.T) {
 	client := lastMethodClient(t, nil)
 	ctx := context.Background()
@@ -130,7 +132,7 @@ func TestLastMethodForUsername(t *testing.T) {
 		t.Fatalf("SignUp: %v", err)
 	}
 	result, err := client.SignIn(ctx, signet.SignInInput{Username: "ada", Password: "correct horse"})
-	if err != nil || result.LastSignInMethod != "username" {
+	if err != nil || result.LastSignInMethod != "password" {
 		t.Fatalf("result = %+v, err = %v", result, err)
 	}
 }

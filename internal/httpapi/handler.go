@@ -489,7 +489,8 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if result.TwoFactorChallenge != "" {
-		h.api.SetLastMethodCookie(w, result.LastSignInMethod)
+		// A challenge is not a sign-in: no Session exists yet, so no last
+		// sign-in method is recorded until the second factor completes.
 		writeJSON(w, http.StatusOK, map[string]any{
 			"user": result.User, "two_factor_challenge": result.TwoFactorChallenge,
 			"error": "two_factor_required",
@@ -501,12 +502,24 @@ func (h *Handler) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"user":          result.User,
 		"session_token": result.SessionToken,
 		"csrf_token":    csrfToken,
-	})
+	}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
+}
+
+// writeSignInMethod records the Sign-in method of a response that established
+// a Session: it writes the signed cookie when the feature is enabled and adds
+// last_sign_in_method to the response body, so a flow cannot report one
+// without the other. body may be nil for responses without a JSON body.
+func (h *Handler) writeSignInMethod(w http.ResponseWriter, body map[string]any, method string) {
+	h.api.SetLastMethodCookie(w, method)
+	if body != nil {
+		body["last_sign_in_method"] = method
+	}
 }
 
 func (h *Handler) handleSendMagicLink(w http.ResponseWriter, r *http.Request) {
@@ -664,8 +677,9 @@ func (h *Handler) handleVerifyTwoFactor(w http.ResponseWriter, r *http.Request) 
 		writeAuthError(w, err)
 		return
 	}
-	h.api.SetLastMethodCookie(w, result.LastSignInMethod)
-	writeJSON(w, http.StatusOK, map[string]any{"user": result.User, "session_token": result.SessionToken})
+	body := map[string]any{"user": result.User, "session_token": result.SessionToken}
+	h.writeSignInMethod(w, body, result.LastSignInMethod)
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *Handler) handleDisableTwoFactor(w http.ResponseWriter, r *http.Request) {

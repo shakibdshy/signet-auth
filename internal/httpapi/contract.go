@@ -97,8 +97,9 @@ func ContractFor() Contract {
 					Fields: []Field{
 						user, strField("session_token"), strField("csrf_token"),
 						strField("two_factor_challenge"), strField("error"),
+						strField("last_sign_in_method"),
 					},
-					Optional: []string{"session_token", "csrf_token", "two_factor_challenge", "error"},
+					Optional: []string{"session_token", "csrf_token", "two_factor_challenge", "error", "last_sign_in_method"},
 				}, Status: http.StatusOK,
 			}}},
 			{Name: "last-sign-in-method", Anonymous: true, Methods: []Method{{
@@ -249,7 +250,7 @@ func ContractFor() Contract {
 			{Name: "verify-two-factor", Anonymous: true, Methods: []Method{{
 				Verb: "POST", Request: reflect.TypeOf(core.VerifyTwoFactorInput{}),
 				Response: ResponseSpec{Fields: []Field{
-					user, strField("session_token"),
+					user, strField("session_token"), strField("last_sign_in_method"),
 				}}, Status: http.StatusOK,
 			}}},
 			{Name: "disable-two-factor", Methods: []Method{{

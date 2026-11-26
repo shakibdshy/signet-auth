@@ -5812,6 +5812,9 @@
                     "error": {
                       "type": "string"
                     },
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7626,6 +7629,9 @@
               "application/json": {
                 "schema": {
                   "properties": {
+                    "last_sign_in_method": {
+                      "type": "string"
+                    },
                     "session_token": {
                       "type": "string"
                     },
@@ -7635,7 +7641,8 @@
                   },
                   "required": [
                     "user",
-                    "session_token"
+                    "session_token",
+                    "last_sign_in_method"
                   ],
                   "type": "object"
                 }
