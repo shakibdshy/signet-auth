@@ -344,7 +344,7 @@ await auth.adminSetUserRole({ user_id: userId, roles: ['admin'] });
 await auth.adminBanUser({ user_id: userId, reason: 'abuse' });
 await auth.adminUnbanUser({ user_id: userId });
 
-const { Sessions: sessions } = await auth.adminListUserSessions(userId);
+const { sessions } = await auth.adminListUserSessions(userId);
 await auth.adminRevokeUserSession({ session_id: sessions[0].id });
 ```
 

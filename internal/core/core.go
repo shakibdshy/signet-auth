@@ -1256,8 +1256,8 @@ type SignInInput struct {
 
 // SignInResult is the outcome of a successful sign-in.
 type SignInResult struct {
-	User         *User
-	SessionToken string
+	User         *User  `json:"user"`
+	SessionToken string `json:"session_token"`
 	// TwoFactorChallenge is returned instead of a Session when a Second factor is required.
 	TwoFactorChallenge string `json:"two_factor_challenge,omitempty"`
 	LastSignInMethod   string `json:"last_sign_in_method,omitempty"`
@@ -1663,7 +1663,9 @@ var (
 type ListSessionsInput struct{ UserID string }
 
 // ListSessionsResult contains safe Session fields.
-type ListSessionsResult struct{ Sessions []*SessionInfo }
+type ListSessionsResult struct {
+	Sessions []*SessionInfo `json:"sessions"`
+}
 
 // RevokeSessionInput identifies one Session.
 type RevokeSessionInput struct{ SessionID string }
