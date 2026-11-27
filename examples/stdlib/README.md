@@ -21,7 +21,8 @@ Then:
 go run .
 ```
 
-Migrations are applied at startup with `store.Migrate(ctx)`.
+Migrations are applied at startup with `store.Migrate(ctx)` and `orgStore.Migrate(ctx)`;
+the latter creates the example's organization and membership tables.
 
 ### Environment
 
@@ -74,6 +75,41 @@ curl -s -o /dev/null -w '%{http_code}\n' -b jar.txt http://localhost:8080/privat
 ```
 
 Sign-up again after step 2 with the same email? Use a new address, or expect `email_exists`.
+
+## Self-serve organizations
+
+Any authenticated user can create an organization and manage its members:
+
+```sh
+# Create an organization — the creator is stored as its owner.
+ORG=$(curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"name":"Acme"}' \
+  http://localhost:8080/auth/organizations)
+ORG_ID=$(echo "$ORG" | jq -r .Organization.id)
+curl -s -b jar.txt http://localhost:8080/auth/organizations
+
+# Add, promote and remove a member (owner/admin only).
+curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"organization_id\":\"$ORG_ID\",\"user_id\":\"member-1\",\"role\":\"member\"}" \
+  http://localhost:8080/auth/organization-members/add
+curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"organization_id\":\"$ORG_ID\",\"user_id\":\"member-1\",\"role\":\"admin\"}" \
+  http://localhost:8080/auth/organization-members/role
+curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"organization_id\":\"$ORG_ID\",\"user_id\":\"member-1\"}" \
+  http://localhost:8080/auth/organization-members/remove
+```
+
+This is example configuration, not a Signet default. The authorizer grants only
+`organizations:create` (`signet.PermissionOrgsCreate`) to the ordinary `user` role, so
+the admin/system routes stay disabled. The `AuthorizeIn` callback re-reads membership on
+every org-scoped check and allows `organizations:member-add`, `member-remove` and
+`member-role` only for members whose organization role is `owner` or `admin`; plain
+members and non-members get `403`. Every mutation still needs a fresh session and a
+valid CSRF token.
 
 ## How Signet is wired in
 

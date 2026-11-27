@@ -65,6 +65,12 @@ const landingHTML = `<!doctype html>
     <tr><td><code><span class="m">POST</span> /auth/signin</code></td><td>sign in (rotates the CSRF token)</td></tr>
     <tr><td><code><span class="m">POST</span> /auth/signout</code></td><td>revoke the session</td></tr>
     <tr><td><code><span class="m">GET</span> /auth/last-sign-in-method</code></td><td>how this browser last signed in</td></tr>
+    <tr><td><code><span class="m">GET</span> /auth/organizations</code></td><td>list the caller's organizations</td></tr>
+    <tr><td><code><span class="m">POST</span> /auth/organizations</code></td><td>create an organization (creator becomes owner)</td></tr>
+    <tr><td><code><span class="m">GET</span> /auth/organization-members</code></td><td>list members (owner/admin)</td></tr>
+    <tr><td><code><span class="m">POST</span> /auth/organization-members/add</code></td><td>add a member (owner/admin)</td></tr>
+    <tr><td><code><span class="m">POST</span> /auth/organization-members/role</code></td><td>change a member's role (owner/admin)</td></tr>
+    <tr><td><code><span class="m">POST</span> /auth/organization-members/remove</code></td><td>remove a member (owner/admin)</td></tr>
     <tr><td><code><span class="m">GET</span> /private</code></td><td>protected route, requires a session cookie</td></tr>
   </table>
 
