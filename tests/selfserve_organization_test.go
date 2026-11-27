@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shakibdshy/signet-auth"
 	"github.com/shakibdshy/signet-auth/internal/testutil"
@@ -41,9 +42,14 @@ func (a *selfServeAuthorizeIn) AuthorizeIn(ctx context.Context, userID, orgID, r
 // token paired with the owner's session.
 func selfServeClient(t *testing.T, store *fakeOrganizationStore) (*signet.Client, *fakeOrganizationStore, string, []*http.Cookie, string) {
 	t.Helper()
+	return selfServeClientWithStore(t, store, testutil.NewStore())
+}
+
+func selfServeClientWithStore(t *testing.T, store *fakeOrganizationStore, authStore *testutil.Store) (*signet.Client, *fakeOrganizationStore, string, []*http.Cookie, string) {
+	t.Helper()
 	cfg := testutil.NewConfig()
 	cfg.PathPrefix = "/auth"
-	cfg.Store = testutil.NewStore()
+	cfg.Store = authStore
 	cfg.Mailer = testutil.NewMailer()
 	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OrganizationStore = store
@@ -123,6 +129,23 @@ func TestSelfServeOrganizationHTTPFlow(t *testing.T) {
 	}
 	if err := json.Unmarshal(created.Body.Bytes(), &result); err != nil || result.Organization.ID == "" {
 		t.Fatalf("decode create = %v, body = %s", err, created.Body.String())
+	}
+	// Pin the exact wire key the README's jq expression uses. Go's decoder
+	// accepts "id" case-insensitively, so a struct-only assertion would miss
+	// a casing change that breaks the documented curl flow.
+	var wire map[string]json.RawMessage
+	if err := json.Unmarshal(created.Body.Bytes(), &wire); err != nil {
+		t.Fatalf("decode wire = %v", err)
+	}
+	var orgWire map[string]json.RawMessage
+	if err := json.Unmarshal(wire["Organization"], &orgWire); err != nil {
+		t.Fatalf("decode wire Organization = %v", err)
+	}
+	if _, ok := orgWire["ID"]; !ok {
+		t.Fatalf("create response has no Organization.ID key: %s", created.Body.String())
+	}
+	if _, ok := orgWire["id"]; ok {
+		t.Fatalf("create response has lowercase Organization.id key: %s", created.Body.String())
 	}
 	orgID := result.Organization.ID
 	role, err := store.MemberRole(ctx, orgID, ownerID)
@@ -259,5 +282,40 @@ func TestSelfServeOrganizationRequiresFreshSession(t *testing.T) {
 	rec := postSelfServe(t, client, "/organizations", `{"name":"Acme"}`, stale, csrfBody.Token)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("stale create status = %d, want 401; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+// A session can still authenticate while being outside Accounts.FreshWindow.
+// Guarded organization mutations must reject it with 403, not serve the call.
+func TestSelfServeOrganizationRequiresFreshSessionWindow(t *testing.T) {
+	authStore := testutil.NewStore()
+	client, _, _, cookies, csrf := selfServeClientWithStore(t, newFakeOrganizationStore(), authStore)
+
+	created := postSelfServe(t, client, "/organizations", `{"name":"Acme"}`, cookies, csrf)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, body = %s", created.Code, created.Body.String())
+	}
+	var result struct {
+		Organization struct {
+			ID string
+		} `json:"Organization"`
+	}
+	if err := json.Unmarshal(created.Body.Bytes(), &result); err != nil || result.Organization.ID == "" {
+		t.Fatalf("decode create = %v, body = %s", err, created.Body.String())
+	}
+	orgID := result.Organization.ID
+
+	// Keep the session resolvable but older than the 5-minute freshness window.
+	for _, session := range authStore.Sessions {
+		session.CreatedAt = time.Now().Add(-time.Hour)
+	}
+	staleCreate := postSelfServe(t, client, "/organizations", `{"name":"Stale"}`, cookies, csrf)
+	if staleCreate.Code != http.StatusForbidden {
+		t.Fatalf("stale-window create status = %d, want 403; body = %s", staleCreate.Code, staleCreate.Body.String())
+	}
+	staleAdd := postSelfServe(t, client, "/organization-members/add",
+		fmt.Sprintf(`{"organization_id":%q,"user_id":"member-1","role":"member"}`, orgID), cookies, csrf)
+	if staleAdd.Code != http.StatusForbidden {
+		t.Fatalf("stale-window add status = %d, want 403; body = %s", staleAdd.Code, staleAdd.Body.String())
 	}
 }

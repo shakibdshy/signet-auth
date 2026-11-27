@@ -85,7 +85,7 @@ Any authenticated user can create an organization and manage its members:
 ORG=$(curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
   -H 'Content-Type: application/json' -d '{"name":"Acme"}' \
   http://localhost:8080/auth/organizations)
-ORG_ID=$(echo "$ORG" | jq -r .Organization.id)
+ORG_ID=$(echo "$ORG" | jq -r .Organization.ID)
 curl -s -b jar.txt http://localhost:8080/auth/organizations
 
 # Add, promote and remove a member (owner/admin only).
