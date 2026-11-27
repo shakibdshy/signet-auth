@@ -43,3 +43,9 @@ Thumbs.db
 docs/superpowers/
 docs/agents/local/
 *.local.md
+
+# Internal design/process records — facts ship, deliberation stays local
+docs/adr/
+docs/agents/
+docs/checklists/
+docs/research/

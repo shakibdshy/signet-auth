@@ -42,9 +42,15 @@ Signet is imported into your application — it is not a separate auth server. I
 | License | Proprietary, priced per monthly active user | Apache-2.0 | Apache-2.0 (self-hosted core) | MIT | **MIT** |
 
 Positions reflect each project's own documentation as of November 2026. Everything claimed for
+<<<<<<< HEAD
 Signet above is a shipped feature — the design records in `docs/adr/` and the test suite in
 `tests/` are the evidence, and the [typed client](https://www.npmjs.com/package/@shakibdshy/signet-auth-client)
 is published.
+=======
+Signet above is a shipped feature, covered by the test suite and exercised by the
+[typed client](https://www.npmjs.com/package/@shakibdshy/signet-auth-client) and the
+[React hooks](https://www.npmjs.com/package/@shakibdshy/signet-auth-react).
+>>>>>>> docs/private-internal-docs
 
 ## Five-minute quickstart
 
