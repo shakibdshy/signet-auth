@@ -78,9 +78,17 @@ Sign-up again after step 2 with the same email? Use a new address, or expect `em
 
 ## Self-serve organizations
 
-Any authenticated user can create an organization and manage its members:
+Any authenticated user can create an organization and manage its members. The
+walkthrough above ends with a sign-out, so start a fresh session first:
 
 ```sh
+TOKEN=$(curl -s -c jar.txt http://localhost:8080/auth/csrf-token | jq -r .token)
+RESP=$(curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ada@example.com","password":"correct horse battery staple"}' \
+  http://localhost:8080/auth/signin)
+TOKEN=$(echo "$RESP" | jq -r .csrf_token)
+
 # Create an organization — the creator is stored as its owner.
 ORG=$(curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
   -H 'Content-Type: application/json' -d '{"name":"Acme"}' \
