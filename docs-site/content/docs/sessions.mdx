@@ -81,6 +81,7 @@ Leave both unset when exact, immediate revocation is required.
 
 Set `Session.FreshAge` to require recent authentication for sensitive operations. A zero
 window (the default) disables the check. Freshness is measured from `CreatedAt` — the moment
-of authentication — never from `LastSeenAt`, which is extended by ordinary requests.
+the User authenticated. `LastSeenAt` is set when the Session is created and does not move
+afterwards, so it always records when the sign-in happened rather than the latest activity.
 `Client.VerifyFreshSession` returns `ErrSessionNotFresh` for a stale Session, and
 `Client.RequireFreshSession` is middleware that rejects stale requests with 401.

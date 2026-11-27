@@ -8282,7 +8282,7 @@
       },
       "ListSessionsResult": {
         "properties": {
-          "Sessions": {
+          "sessions": {
             "items": {
               "$ref": "#/components/schemas/SessionInfo",
               "nullable": true
@@ -8291,7 +8291,7 @@
           }
         },
         "required": [
-          "Sessions"
+          "sessions"
         ],
         "type": "object"
       },
@@ -8946,23 +8946,23 @@
       },
       "SignInResult": {
         "properties": {
-          "SessionToken": {
+          "last_sign_in_method": {
             "type": "string"
           },
-          "User": {
-            "$ref": "#/components/schemas/User",
-            "nullable": true
-          },
-          "last_sign_in_method": {
+          "session_token": {
             "type": "string"
           },
           "two_factor_challenge": {
             "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User",
+            "nullable": true
           }
         },
         "required": [
-          "User",
-          "SessionToken"
+          "user",
+          "session_token"
         ],
         "type": "object"
       },

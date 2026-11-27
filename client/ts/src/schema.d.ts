@@ -1249,7 +1249,7 @@ export interface components {
             Organizations: components["schemas"]["Organization"][];
         };
         ListSessionsResult: {
-            Sessions: components["schemas"]["SessionInfo"][];
+            sessions: components["schemas"]["SessionInfo"][];
         };
         MemberInfo: {
             Role: string;
@@ -1426,10 +1426,10 @@ export interface components {
             username?: string;
         };
         SignInResult: {
-            SessionToken: string;
-            User: components["schemas"]["User"];
             last_sign_in_method?: string;
+            session_token: string;
             two_factor_challenge?: string;
+            user: components["schemas"]["User"];
         };
         SignOutInput: {
             session_token?: string;
