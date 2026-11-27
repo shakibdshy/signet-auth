@@ -105,7 +105,16 @@ func main() {
 	cfg.RequireVerifiedEmail = &no
 	cfg.SendVerificationOnSignUp = &no
 	cfg.Store = store
-	cfg.Mailer = console.New(os.Stdout) // development only: prints links
+	// DEMO_MODE=true swaps the console mailer for an in-memory demo inbox and
+	// exposes GET /auth/demo/inbox so visitors can complete email-driven
+	// flows without a mail provider. Never set DEMO_MODE in production.
+	var inbox *DemoMemoryMailer
+	if demoMode() {
+		inbox = NewDemoMemoryMailer()
+		cfg.Mailer = inbox
+	} else {
+		cfg.Mailer = console.New(os.Stdout) // development only: prints links
+	}
 	cfg.RateLimiter = &memoryLimiter{hits: make(map[string]int)}
 	cfg.CSRFKey = csrfKey()
 	cfg.AppURL = appURL(port)
@@ -130,6 +139,11 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.Handle("/auth/", auth.Handler())
+	if inbox != nil {
+		// More specific than "/auth/", so this route wins regardless of
+		// registration order. Registered only in demo mode.
+		mux.Handle("GET /auth/demo/inbox", inbox.Handler())
+	}
 	mux.Handle("/private", auth.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := signet.UserFromContext(r.Context())
 		if !ok {
