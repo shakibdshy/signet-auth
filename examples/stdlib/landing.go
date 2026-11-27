@@ -72,7 +72,7 @@ const landingHTML = `<!doctype html>
   <ul class="links">
     <li><a href="https://github.com/shakibdshy/signet-auth">GitHub repository</a></li>
     <li><a href="https://github.com/shakibdshy/signet-auth#five-minute-quickstart">Five-minute quickstart</a></li>
-    <li><a href="https://shakibdshy.github.io/signet-auth/">Documentation</a></li>
+    <li><a href="https://go-signet-auth.vercel.app/">Documentation</a></li>
     <li><a href="https://www.npmjs.com/package/@shakibdshy/signet-auth-client">npm: @shakibdshy/signet-auth-client</a></li>
     <li><a href="https://www.npmjs.com/package/@shakibdshy/signet-auth-react">npm: @shakibdshy/signet-auth-react</a></li>
   </ul>
