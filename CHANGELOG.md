@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   neither return `400 invalid_input`, and an unknown email returns `404
   user_not_found`. No invitation email is sent — someone without an account
   must sign up first.
+- Guarded organization endpoints now answer a resolvable but stale Session
+  (older than `Accounts.FreshWindow`) with `403 session_not_fresh` instead of
+  the generic `403 forbidden`, so clients can re-authenticate and retry rather
+  than mistaking the freshness window for a role denial. A missing
+  `organization_id` returns `400 invalid_input` (sentinel
+  `signet.ErrMissingOrgID`) instead of the generic `403 forbidden` a wrong id
+  used to produce.
+- A built-in organization policy is installed when `OrganizationStore` is set
+  and `AuthorizeIn` is not: `organizations:member-add`, `member-remove` and
+  `member-role` go to the organization's `owner` and `admin` members, with
+  membership re-read on every check (`signet.NewOrgAuthorizeIn` returns the
+  same policy for explicit wiring). Previously the fallback was the global
+  `Authorizer`, whose seam has no organization context and could never see
+  org roles.
 
 ### Changed
 

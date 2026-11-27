@@ -52,26 +52,34 @@ func (s *Service) fresh(ctx context.Context, raw string) bool {
 	return err == nil && fresh
 }
 
-// guard checks a permission and a fresh Session, auditing the denial.
-func (s *Service) guard(ctx context.Context, actorID, sessionToken string, permission core.Permission) bool {
-	if !s.deps.Authz.AuthorizePermission(ctx, actorID, permission) || !s.fresh(ctx, sessionToken) {
-		audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
-			Name: audit.AuthorizationDenied, UserID: actorID, Outcome: "denied",
-			Metadata: map[string]string{"permission": string(permission)},
-		})
-		return false
+// guard checks a permission and a fresh Session, auditing the denial. A
+// permission that would grant but a Session outside the freshness window is
+// reported as ErrSessionNotFresh so callers can re-authenticate, instead of
+// the generic ErrForbidden a real permission denial produces. A Session that
+// cannot be resolved at all stays ErrForbidden.
+func (s *Service) guard(ctx context.Context, actorID, sessionToken string, permission core.Permission) error {
+	if !s.deps.Authz.AuthorizePermission(ctx, actorID, permission) {
+		s.auditDeny(ctx, actorID, permission, "")
+		return core.ErrForbidden
 	}
-	return true
+	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, sessionToken, s.deps.Config.Accounts.FreshWindow)
+	if err != nil {
+		s.auditDeny(ctx, actorID, permission, "")
+		return core.ErrForbidden
+	}
+	if !fresh {
+		s.auditDeny(ctx, actorID, permission, "")
+		return core.ErrSessionNotFresh
+	}
+	return nil
 }
 
-// orgGuard checks membership, then the organization-aware permission seam.
-func (s *Service) orgGuard(ctx context.Context, actorID, orgID, sessionToken string, permission core.Permission) bool {
+// orgGuard checks membership, then the organization-aware permission seam,
+// then the fresh Session. Staleness after a grant is ErrSessionNotFresh.
+func (s *Service) orgGuard(ctx context.Context, actorID, orgID, sessionToken string, permission core.Permission) error {
 	if _, err := s.deps.Config.OrganizationStore.MemberRole(ctx, orgID, actorID); err != nil {
-		audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
-			Name: audit.AuthorizationDenied, UserID: actorID, Outcome: "denied",
-			Metadata: map[string]string{"permission": string(permission), "organization_id": orgID},
-		})
-		return false
+		s.auditDeny(ctx, actorID, permission, orgID)
+		return core.ErrForbidden
 	}
 	resource, action, _ := strings.Cut(string(permission), ":")
 	var granted bool
@@ -80,14 +88,30 @@ func (s *Service) orgGuard(ctx context.Context, actorID, orgID, sessionToken str
 	} else {
 		granted = s.deps.Authz.Authorize(ctx, actorID, resource, action)
 	}
-	if !granted || !s.fresh(ctx, sessionToken) {
-		audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
-			Name: audit.AuthorizationDenied, UserID: actorID, Outcome: "denied",
-			Metadata: map[string]string{"permission": string(permission), "organization_id": orgID},
-		})
-		return false
+	if !granted {
+		s.auditDeny(ctx, actorID, permission, orgID)
+		return core.ErrForbidden
 	}
-	return true
+	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, sessionToken, s.deps.Config.Accounts.FreshWindow)
+	if err != nil || !fresh {
+		s.auditDeny(ctx, actorID, permission, orgID)
+		if err != nil {
+			return core.ErrForbidden
+		}
+		return core.ErrSessionNotFresh
+	}
+	return nil
+}
+
+func (s *Service) auditDeny(ctx context.Context, actorID string, permission core.Permission, orgID string) {
+	metadata := map[string]string{"permission": string(permission)}
+	if orgID != "" {
+		metadata["organization_id"] = orgID
+	}
+	audit.Emit(ctx, s.deps.Config.AuditSink, s.deps.Logger, core.AuditEvent{
+		Name: audit.AuthorizationDenied, UserID: actorID, Outcome: "denied",
+		Metadata: metadata,
+	})
 }
 
 func (s *Service) emit(ctx context.Context, name, actorID, targetID string) {
@@ -101,8 +125,11 @@ func (s *Service) emit(ctx context.Context, name, actorID, targetID string) {
 
 // CreateOrganization creates an Organization owned by a User.
 func (s *Service) CreateOrganization(ctx context.Context, in core.CreateOrganizationInput, sessionToken string) (*core.CreateOrganizationResult, error) {
-	if s.deps.Config.OrganizationStore == nil || !s.guard(ctx, in.OwnerID, sessionToken, core.PermissionOrgsCreate) {
+	if s.deps.Config.OrganizationStore == nil {
 		return nil, core.ErrForbidden
+	}
+	if err := s.guard(ctx, in.OwnerID, sessionToken, core.PermissionOrgsCreate); err != nil {
+		return nil, err
 	}
 	org := &core.Organization{ID: secret.NewID(), OwnerID: in.OwnerID, Name: in.Name, CreatedAt: s.deps.Clock.Now()}
 	if err := s.deps.Config.OrganizationStore.Create(ctx, org); err != nil {
@@ -114,9 +141,16 @@ func (s *Service) CreateOrganization(ctx context.Context, in core.CreateOrganiza
 
 // ListOrganizations returns a User's Organizations after checking the Session and grant.
 func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizationsInput, sessionToken string) (*core.ListOrganizationsResult, error) {
-	if s.deps.Config.OrganizationStore == nil || !s.fresh(ctx, sessionToken) ||
+	if s.deps.Config.OrganizationStore == nil ||
 		!s.deps.Authz.AuthorizePermission(ctx, in.UserID, core.PermissionOrgsCreate) {
 		return nil, core.ErrForbidden
+	}
+	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, sessionToken, s.deps.Config.Accounts.FreshWindow)
+	if err != nil {
+		return nil, core.ErrForbidden
+	}
+	if !fresh {
+		return nil, core.ErrSessionNotFresh
 	}
 	orgs, err := s.deps.Config.OrganizationStore.List(ctx, in.UserID)
 	if err != nil {
@@ -127,6 +161,9 @@ func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizatio
 
 // AddOrganizationMember adds a Member after an org-scoped check.
 func (s *Service) AddOrganizationMember(ctx context.Context, in core.AddOrganizationMemberInput, sessionToken string) error {
+	if in.OrgID == "" {
+		return core.ErrMissingOrgID
+	}
 	email := core.NormalizeEmail(in.Email)
 	hasID, hasEmail := in.UserID != "", email != ""
 	if hasID == hasEmail {
@@ -142,9 +179,11 @@ func (s *Service) AddOrganizationMember(ctx context.Context, in core.AddOrganiza
 		}
 		in.UserID = user.ID
 	}
-	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, in.ActorID, in.OrgID, sessionToken, core.PermissionOrgsMemberAdd) {
+	if s.deps.Config.OrganizationStore == nil {
 		return core.ErrForbidden
+	}
+	if err := s.orgGuard(ctx, in.ActorID, in.OrgID, sessionToken, core.PermissionOrgsMemberAdd); err != nil {
+		return err
 	}
 	if err := s.deps.Config.OrganizationStore.AddMember(ctx, in.OrgID, in.UserID, in.Role); err != nil {
 		return err
@@ -155,9 +194,14 @@ func (s *Service) AddOrganizationMember(ctx context.Context, in core.AddOrganiza
 
 // RemoveOrganizationMember removes a Member after an org-scoped check.
 func (s *Service) RemoveOrganizationMember(ctx context.Context, orgID, userID, actorID, sessionToken string) error {
-	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, actorID, orgID, sessionToken, core.PermissionOrgsMemberRemove) {
+	if orgID == "" {
+		return core.ErrMissingOrgID
+	}
+	if s.deps.Config.OrganizationStore == nil {
 		return core.ErrForbidden
+	}
+	if err := s.orgGuard(ctx, actorID, orgID, sessionToken, core.PermissionOrgsMemberRemove); err != nil {
+		return err
 	}
 	if err := s.deps.Config.OrganizationStore.RemoveMember(ctx, orgID, userID); err != nil {
 		return err
@@ -168,9 +212,14 @@ func (s *Service) RemoveOrganizationMember(ctx context.Context, orgID, userID, a
 
 // SetOrganizationMemberRole changes a Member's role after an org-scoped check.
 func (s *Service) SetOrganizationMemberRole(ctx context.Context, orgID, userID, role, actorID, sessionToken string) error {
-	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, actorID, orgID, sessionToken, core.PermissionOrgsMemberRole) {
+	if orgID == "" {
+		return core.ErrMissingOrgID
+	}
+	if s.deps.Config.OrganizationStore == nil {
 		return core.ErrForbidden
+	}
+	if err := s.orgGuard(ctx, actorID, orgID, sessionToken, core.PermissionOrgsMemberRole); err != nil {
+		return err
 	}
 	if err := s.deps.Config.OrganizationStore.SetMemberRole(ctx, orgID, userID, role); err != nil {
 		return err
@@ -181,9 +230,14 @@ func (s *Service) SetOrganizationMemberRole(ctx context.Context, orgID, userID, 
 
 // ListOrganizationMembers returns an Organization's Members after an org-scoped check.
 func (s *Service) ListOrganizationMembers(ctx context.Context, orgID, userID, sessionToken string) (*core.ListOrganizationMembersResult, error) {
-	if s.deps.Config.OrganizationStore == nil ||
-		!s.orgGuard(ctx, userID, orgID, sessionToken, core.PermissionOrgsMemberAdd) {
+	if orgID == "" {
+		return nil, core.ErrMissingOrgID
+	}
+	if s.deps.Config.OrganizationStore == nil {
 		return nil, core.ErrForbidden
+	}
+	if err := s.orgGuard(ctx, userID, orgID, sessionToken, core.PermissionOrgsMemberAdd); err != nil {
+		return nil, err
 	}
 	members, err := s.deps.Config.OrganizationStore.Members(ctx, orgID)
 	if err != nil {
@@ -224,8 +278,11 @@ func (s *Service) ListUsers(ctx context.Context, actorID, sessionToken string) (
 
 // BanUser disables a User account.
 func (s *Service) BanUser(ctx context.Context, in core.BanUserInput) error {
-	if in.ActorID == in.UserID || !s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersBan) {
+	if in.ActorID == in.UserID {
 		return core.ErrForbidden
+	}
+	if err := s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersBan); err != nil {
+		return err
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
 	if err != nil {
@@ -241,8 +298,8 @@ func (s *Service) BanUser(ctx context.Context, in core.BanUserInput) error {
 
 // UnbanUser re-enables a User account.
 func (s *Service) UnbanUser(ctx context.Context, in core.UnbanUserInput) error {
-	if !s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersBan) {
-		return core.ErrForbidden
+	if err := s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersBan); err != nil {
+		return err
 	}
 	user, err := s.deps.Store.UserByID(ctx, in.UserID)
 	if err != nil {
@@ -258,8 +315,11 @@ func (s *Service) UnbanUser(ctx context.Context, in core.UnbanUserInput) error {
 
 // SetUserRole writes global roles for a User.
 func (s *Service) SetUserRole(ctx context.Context, in core.AdminSetUserRoleInput) error {
-	if !s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersSetRole) || s.deps.Config.RoleWriter == nil {
+	if s.deps.Config.RoleWriter == nil {
 		return core.ErrForbidden
+	}
+	if err := s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersSetRole); err != nil {
+		return err
 	}
 	if err := s.deps.Config.RoleWriter.SetRoles(ctx, in.UserID, in.Roles); err != nil {
 		return err
@@ -282,8 +342,8 @@ func (s *Service) ListUserSessions(ctx context.Context, actorID, userID, session
 
 // RevokeUserSession revokes one Session after a freshness and grant check.
 func (s *Service) RevokeUserSession(ctx context.Context, actorID, sessionID, sessionToken string) error {
-	if !s.guard(ctx, actorID, sessionToken, core.PermissionSessionsRevoke) {
-		return core.ErrForbidden
+	if err := s.guard(ctx, actorID, sessionToken, core.PermissionSessionsRevoke); err != nil {
+		return err
 	}
 	if err := s.deps.Sessions.Revoke(ctx, sessionID); err != nil {
 		return err
@@ -299,9 +359,11 @@ type impersonationPayload struct {
 
 // ImpersonateUser creates a fresh Store-backed Session for the target.
 func (s *Service) ImpersonateUser(ctx context.Context, in core.ImpersonateUserInput) (*core.ImpersonationResult, error) {
-	if in.ActorID == in.UserID || s.imp == nil ||
-		!s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersImpersonate) {
+	if in.ActorID == in.UserID || s.imp == nil {
 		return nil, core.ErrForbidden
+	}
+	if err := s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersImpersonate); err != nil {
+		return nil, err
 	}
 	tempToken, err := s.deps.Sessions.Create(ctx, in.UserID, in.UserAgent)
 	if err != nil {

@@ -84,6 +84,12 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	cfg = withDefaults(cfg)
+	// Built-in org policy: without it the AuthorizeIn fallback is the global
+	// Authorizer, whose seam has no organization context and could never see
+	// org roles — owners would be unable to manage members out of the box.
+	if cfg.OrganizationStore != nil && cfg.AuthorizeIn == nil {
+		cfg.AuthorizeIn = authorization.NewOrgAuthorizeIn(cfg.OrganizationStore)
+	}
 	if err := core.ValidateRedirectPatterns(cfg.AllowedRedirectPatterns); err != nil {
 		return nil, err
 	}

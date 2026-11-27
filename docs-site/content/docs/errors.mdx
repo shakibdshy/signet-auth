@@ -77,7 +77,7 @@ sign in first and send the session cookie and CSRF token.
 | --- | --- | --- |
 | ErrNotFound | no dedicated mapping — surfaces as 500 internal_error | Entity or Session not found. `404 not_found` comes from JWT/OAuth-disabled sentinels and unknown routes. |
 | ErrInvalidRateLimitRule | 500 internal_error | A rule names an endpoint that is not published. |
-| ErrSessionNotFresh | 401 unauthorized | Session is older than the configured FreshAge; re-authenticate. |
+| ErrSessionNotFresh | 403 session_not_fresh | Session resolved but older than the configured freshness window (`Accounts.FreshWindow`, 5 minutes by default). The permission would have been granted; sign in again and retry. |
 | ErrTokenInvalid | 401 invalid_token | Malformed, unknown or replayed Token, including a magic link. |
 | ErrTokenConsumed | 401 invalid_token | A Token was already used. Wraps `ErrTokenInvalid`, so existing `errors.Is` checks keep working. |
 | ErrInvalidOTP | 401 invalid_code | Missing, malformed, unknown, wrong-email or expired email OTP. |
@@ -105,7 +105,8 @@ sign in first and send the session cookie and CSRF token.
 | --- | --- | --- |
 | ErrRateLimited | 429 rate_limited | Too many attempts, including failed OTP guesses; retry later. |
 | ErrInvalidCSRFConfig | 500 internal_error | See configuration errors above. |
-| ErrForbidden | 403 forbidden | The actor lacks the required permission, has a stale Session, is acting on another owner's keys, or attempted a self-action ban/impersonation. Guarded denials emit an Audit event. |
+| ErrForbidden | 403 forbidden | The actor lacks the required permission, is acting on another owner's keys, or attempted a self-action ban/impersonation. Guarded denials emit an Audit event. A stale but otherwise sufficient Session returns `403 session_not_fresh` instead. |
+| ErrMissingOrgID | 400 invalid_input | An organization endpoint was called without `organization_id`. |
 
 ## CSRF wire errors
 
