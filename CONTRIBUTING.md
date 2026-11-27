@@ -71,10 +71,8 @@ Common types are `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, and
 
 - **Every PR must include tests.** New behaviour needs new test coverage; bug
   fixes need a regression test that fails before the fix.
-- Complete the requirements coverage checklist for the phase before review.
-  Every Testing Decisions line and security requirement must name a test or an
-  explained limitation; see `docs/checklists/requirements-coverage.md` and the
-  phase files it indexes (`phase5-authorization.md`, `phase-7.md` … `phase-12.md`).
 - Keep changes focused and explain the motivation in the description.
+  Behaviour changes need end-to-end coverage in `tests/`; security mechanisms
+  need a test that asserts the observable effect, not the mechanism's presence.
 - Update documentation when behaviour or the public API changes.
 - Make sure CI is green and `make check` passes locally.

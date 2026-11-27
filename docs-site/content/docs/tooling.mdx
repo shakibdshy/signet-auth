@@ -69,9 +69,9 @@ The repository includes a project-local OpenCodeReview plugin. After installing 
 CLI and restarting OpenCode, `/ocr-review` reviews changes and `/ocr-health` checks the
 configured model. Credentials stay in the OCR CLI configuration, not in git.
 
-## CI and design records
+## CI
 
 `.github/workflows/ci.yml` runs tidy/format checks, vet, lint, race tests, examples, bounded
-fuzzing and govulncheck across Go 1.26/1.27 on Linux and macOS. `docs-site.yml` checks docs
-coverage and builds the site. `signet-auth-client.yml` checks drift and publishes the npm client
-on `client-v*` tags. Requirements coverage checklists live in `docs/checklists/`.
+fuzzing and govulncheck across Go 1.26/1.27 on Linux and macOS, verifies the generated OpenAPI
+and TypeScript artifacts are current, checks docs coverage and builds the site, and publishes
+the npm packages when a `client-v*` tag is pushed.
