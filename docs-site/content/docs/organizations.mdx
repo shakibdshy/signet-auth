@@ -48,12 +48,22 @@ err = auth.AddOrganizationMember(ctx, signet.AddOrganizationMemberInput{
     OrgID: created.Organization.ID, UserID: memberID, Role: "member",
     ActorID: userID, SessionToken: sessionToken,
 })
+// Or resolve an existing User by email instead of User ID.
+err = auth.AddOrganizationMember(ctx, signet.AddOrganizationMemberInput{
+    OrgID: created.Organization.ID, Email: "member@example.com", Role: "member",
+    ActorID: userID, SessionToken: sessionToken,
+})
 members, _ := auth.ListOrganizationMembers(ctx, created.Organization.ID, userID, sessionToken)
 // ListOrganizationMembersResult carries []*MemberInfo (User ID + role).
 
 err = auth.SetOrganizationMemberRole(ctx, created.Organization.ID, memberID, "admin", userID, sessionToken)
 err = auth.RemoveOrganizationMember(ctx, created.Organization.ID, memberID, userID, sessionToken)
 ```
+
+Exactly one of `UserID` and `Email` is required: sending both or neither returns `400
+invalid_input`, and an email with no matching User returns `404 user_not_found`. Email
+lookup uses the same normalized form as sign-up. This resolves an existing User — no
+invitation email is sent, and someone without an account must sign up first.
 
 Creation requires `PermissionOrgsCreate`; member changes require `PermissionOrgsMemberAdd`,
 `PermissionOrgsMemberRole` and `PermissionOrgsMemberRemove`. Organization-scoped checks re-read

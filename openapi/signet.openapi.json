@@ -7830,6 +7830,9 @@
       },
       "AddOrganizationMemberInput": {
         "properties": {
+          "email": {
+            "type": "string"
+          },
           "org_id": {
             "type": "string"
           },
@@ -7842,7 +7845,6 @@
         },
         "required": [
           "org_id",
-          "user_id",
           "role"
         ],
         "type": "object"
@@ -7921,6 +7923,7 @@
               "two_factor_not_enabled",
               "two_factor_required",
               "unauthorized",
+              "user_not_found",
               "username_taken"
             ],
             "type": "string"

@@ -2,6 +2,12 @@ package core
 
 import "testing"
 
+func TestNormalizeEmailTrimsAndLowercases(t *testing.T) {
+	if got := NormalizeEmail("  New@Example.COM "); got != "new@example.com" {
+		t.Fatalf("NormalizeEmail = %q, want %q", got, "new@example.com")
+	}
+}
+
 func TestAllTokenKindsCoversEveryDeclaredKind(t *testing.T) {
 	declared := map[TokenKind]bool{
 		TokenVerifyEmail: true, TokenChangeEmail: true, TokenDeleteUser: true, TokenResetPassword: true, TokenOAuthLink: true,

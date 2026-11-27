@@ -5,6 +5,10 @@ import "github.com/shakibdshy/signet-auth/internal/core"
 var (
 	// ErrNotFound reports that a User, Account, Session or Token does not exist.
 	ErrNotFound = core.ErrNotFound
+	// ErrUserNotFound reports that no User exists for a supplied email.
+	ErrUserNotFound = core.ErrUserNotFound
+	// ErrInvalidMemberInput reports an ambiguous or missing Membership identifier.
+	ErrInvalidMemberInput = core.ErrInvalidMemberInput
 	// ErrInvalidCredentials reports a failed sign-in attempt.
 	ErrInvalidCredentials = core.ErrInvalidCredentials
 	// ErrEmailNotVerified reports a sign-in blocked by an unverified email.

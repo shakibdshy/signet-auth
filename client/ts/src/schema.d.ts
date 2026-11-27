@@ -1143,9 +1143,10 @@ export interface components {
             provider_user_id: string;
         };
         AddOrganizationMemberInput: {
+            email?: string;
             org_id: string;
             role: string;
-            user_id: string;
+            user_id?: string;
         };
         AdminListUsersResult: {
             Users: components["schemas"]["UserInfo"][];
@@ -1158,7 +1159,7 @@ export interface components {
         };
         ApiError: {
             /** @enum {string} */
-            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "saml_connection_not_found" | "saml_invalid_assertion" | "saml_replay" | "sso_connection_not_found" | "sso_domain_not_verified" | "sso_invalid_assertion" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "username_taken";
+            error: "captcha_unavailable" | "code_already_used" | "csrf" | "email_exists" | "email_not_verified" | "forbidden" | "internal_error" | "invalid_code" | "invalid_credentials" | "invalid_input" | "invalid_link" | "invalid_request" | "invalid_token" | "last_account" | "link_already_used" | "not_found" | "oauth_account_conflict" | "oauth_email_not_verified" | "password_compromised" | "rate_limited" | "saml_connection_not_found" | "saml_invalid_assertion" | "saml_replay" | "sso_connection_not_found" | "sso_domain_not_verified" | "sso_invalid_assertion" | "two_factor_not_enabled" | "two_factor_required" | "unauthorized" | "user_not_found" | "username_taken";
             message: string;
         };
         BanUserInput: {

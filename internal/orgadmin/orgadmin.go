@@ -4,6 +4,7 @@ package orgadmin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -126,6 +127,21 @@ func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizatio
 
 // AddOrganizationMember adds a Member after an org-scoped check.
 func (s *Service) AddOrganizationMember(ctx context.Context, in core.AddOrganizationMemberInput, sessionToken string) error {
+	email := core.NormalizeEmail(in.Email)
+	hasID, hasEmail := in.UserID != "", email != ""
+	if hasID == hasEmail {
+		return core.ErrInvalidMemberInput
+	}
+	if hasEmail {
+		user, err := s.deps.Store.UserByEmail(ctx, email)
+		if errors.Is(err, core.ErrNotFound) {
+			return core.ErrUserNotFound
+		}
+		if err != nil {
+			return err
+		}
+		in.UserID = user.ID
+	}
 	if s.deps.Config.OrganizationStore == nil ||
 		!s.orgGuard(ctx, in.ActorID, in.OrgID, sessionToken, core.PermissionOrgsMemberAdd) {
 		return core.ErrForbidden

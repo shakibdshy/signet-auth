@@ -805,6 +805,7 @@ func (h *Handler) handleOrganizationMembers(w http.ResponseWriter, r *http.Reque
 type organizationMemberInput struct {
 	OrgID  string `json:"organization_id"`
 	UserID string `json:"user_id"`
+	Email  string `json:"email"`
 	Role   string `json:"role"`
 }
 
@@ -826,7 +827,7 @@ func (h *Handler) handleOrganizationMemberMutation(w http.ResponseWriter, r *htt
 	switch action {
 	case "add":
 		err = h.api.AddOrganizationMember(r.Context(), core.AddOrganizationMemberInput{
-			OrgID: in.OrgID, UserID: in.UserID, Role: in.Role, ActorID: actor, SessionToken: sessionToken,
+			OrgID: in.OrgID, UserID: in.UserID, Email: in.Email, Role: in.Role, ActorID: actor, SessionToken: sessionToken,
 		})
 	case "remove":
 		err = h.api.RemoveOrganizationMember(r.Context(), in.OrgID, in.UserID, actor, sessionToken)

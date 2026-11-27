@@ -364,6 +364,7 @@ func ContractFor() Contract {
 		OptionalFields: map[string][]string{
 			"TokenInput":                 {"email", "password", "refresh_token", "challenge", "code"},
 			"SignUpInput":                {"username"},
+			"AddOrganizationMemberInput": {"user_id"},
 			"SignInInput":                {"email", "username"},
 			"SignUpResult":               {"session_token"},
 			"VerifyEmailAndSignInResult": {"session_token"},
@@ -378,6 +379,8 @@ func ContractFor() Contract {
 			{core.ErrMagicLinkAlreadyUsed, http.StatusUnauthorized, "link_already_used", "this magic link has already been used; request a new one"},
 			{core.ErrInvalidMagicLink, http.StatusUnauthorized, "invalid_link", "invalid or expired magic link"},
 			{core.ErrForbidden, http.StatusForbidden, "forbidden", "permission denied"},
+			{core.ErrInvalidMemberInput, http.StatusBadRequest, "invalid_input", "provide exactly one of user_id or email"},
+			{core.ErrUserNotFound, http.StatusNotFound, "user_not_found", "no user with that email"},
 			{core.ErrSSOConnectionNotFound, http.StatusNotFound, "sso_connection_not_found", "sso connection not found"},
 			{core.ErrSSODomainNotVerified, http.StatusForbidden, "sso_domain_not_verified", "sso domain not verified"},
 			{core.ErrSSOInvalidAssertion, http.StatusUnauthorized, "sso_invalid_assertion", "sso assertion rejected"},

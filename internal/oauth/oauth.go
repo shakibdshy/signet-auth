@@ -245,7 +245,7 @@ func (s *Service) pendingLink(ctx context.Context, identity *core.OAuthIdentity,
 }
 
 func (s *Service) linkOrCreateUser(ctx context.Context, identity *core.OAuthIdentity) (*core.User, error) {
-	email := strings.ToLower(strings.TrimSpace(identity.Email))
+	email := core.NormalizeEmail(identity.Email)
 	if email == "" {
 		return nil, core.ErrOAuthEmailNotVerified
 	}
@@ -285,7 +285,7 @@ func (s *Service) linkAccount(ctx context.Context, user *core.User, identity *co
 	}
 	return s.store.CreateAccount(ctx, &core.Account{
 		ID: secret.NewID(), UserID: user.ID, Provider: identity.Provider,
-		ProviderUserID: identity.ProviderUserID, Email: strings.ToLower(strings.TrimSpace(identity.Email)),
+		ProviderUserID: identity.ProviderUserID, Email: core.NormalizeEmail(identity.Email),
 		EmailVerified: identity.EmailVerified, CreatedAt: s.clock.Now(),
 	})
 }

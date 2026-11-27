@@ -68,7 +68,7 @@ func selfServeClientWithStore(t *testing.T, store *fakeOrganizationStore, authSt
 	if err != nil {
 		t.Fatalf("SignUp owner: %v", err)
 	}
-	cookies, csrf := signInSelfServe(t, client, "owner@example.com", "correct horse")
+	cookies, csrf := signInSelfServe(t, client, "owner@example.com")
 	return client, store, signUp.User.ID, cookies, csrf
 }
 
@@ -95,11 +95,11 @@ func getSelfServe(t *testing.T, client *signet.Client, path string, cookies []*h
 	return rec
 }
 
-func signInSelfServe(t *testing.T, client *signet.Client, email, password string) ([]*http.Cookie, string) {
+func signInSelfServe(t *testing.T, client *signet.Client, email string) ([]*http.Cookie, string) {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/auth/signin",
-		strings.NewReader(fmt.Sprintf(`{"email":%q,"password":%q}`, email, password)))
+		strings.NewReader(fmt.Sprintf(`{"email":%q,"password":"correct horse"}`, email)))
 	client.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("sign-in %s = %d, body %s", email, rec.Code, rec.Body.String())
@@ -113,11 +113,8 @@ func signInSelfServe(t *testing.T, client *signet.Client, email, password string
 	return rec.Result().Cookies(), body.CSRFToken
 }
 
-func TestSelfServeOrganizationHTTPFlow(t *testing.T) {
-	store := newFakeOrganizationStore()
-	client, _, ownerID, cookies, csrf := selfServeClient(t, store)
-	ctx := context.Background()
-
+func createSelfServeOrganization(t *testing.T, client *signet.Client, cookies []*http.Cookie, csrf string) (string, []byte) {
+	t.Helper()
 	created := postSelfServe(t, client, "/organizations", `{"name":"Acme"}`, cookies, csrf)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("create status = %d, body = %s", created.Code, created.Body.String())
@@ -130,11 +127,20 @@ func TestSelfServeOrganizationHTTPFlow(t *testing.T) {
 	if err := json.Unmarshal(created.Body.Bytes(), &result); err != nil || result.Organization.ID == "" {
 		t.Fatalf("decode create = %v, body = %s", err, created.Body.String())
 	}
+	return result.Organization.ID, created.Body.Bytes()
+}
+
+func TestSelfServeOrganizationHTTPFlow(t *testing.T) {
+	store := newFakeOrganizationStore()
+	client, _, ownerID, cookies, csrf := selfServeClient(t, store)
+	ctx := context.Background()
+
+	orgID, createdBody := createSelfServeOrganization(t, client, cookies, csrf)
 	// Pin the exact wire key the README's jq expression uses. Go's decoder
 	// accepts "id" case-insensitively, so a struct-only assertion would miss
 	// a casing change that breaks the documented curl flow.
 	var wire map[string]json.RawMessage
-	if err := json.Unmarshal(created.Body.Bytes(), &wire); err != nil {
+	if err := json.Unmarshal(createdBody, &wire); err != nil {
 		t.Fatalf("decode wire = %v", err)
 	}
 	var orgWire map[string]json.RawMessage
@@ -142,12 +148,11 @@ func TestSelfServeOrganizationHTTPFlow(t *testing.T) {
 		t.Fatalf("decode wire Organization = %v", err)
 	}
 	if _, ok := orgWire["ID"]; !ok {
-		t.Fatalf("create response has no Organization.ID key: %s", created.Body.String())
+		t.Fatalf("create response has no Organization.ID key: %s", createdBody)
 	}
 	if _, ok := orgWire["id"]; ok {
-		t.Fatalf("create response has lowercase Organization.id key: %s", created.Body.String())
+		t.Fatalf("create response has lowercase Organization.id key: %s", createdBody)
 	}
-	orgID := result.Organization.ID
 	role, err := store.MemberRole(ctx, orgID, ownerID)
 	if err != nil || role != "owner" {
 		t.Fatalf("creator role = %q, %v; want owner, nil", role, err)
@@ -202,7 +207,7 @@ func TestSelfServeOrganizationDeniesMemberMutations(t *testing.T) {
 		t.Fatalf("owner add status = %d, body = %s", add.Code, add.Body.String())
 	}
 
-	memberCookies, memberCSRF := signInSelfServe(t, client, "member@example.com", "correct horse")
+	memberCookies, memberCSRF := signInSelfServe(t, client, "member@example.com")
 	denied := postSelfServe(t, client, "/organization-members/add",
 		fmt.Sprintf(`{"organization_id":%q,"user_id":"outsider","role":"member"}`, orgID), memberCookies, memberCSRF)
 	if denied.Code != http.StatusForbidden {
@@ -237,7 +242,7 @@ func TestSelfServeOrganizationDeniesNonMembers(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("SignUp outsider: %v", err)
 	}
-	outsiderCookies, outsiderCSRF := signInSelfServe(t, client, "outsider@example.com", "correct horse")
+	outsiderCookies, outsiderCSRF := signInSelfServe(t, client, "outsider@example.com")
 
 	listed := getSelfServe(t, client, "/organization-members?organization_id="+orgID, outsiderCookies)
 	if listed.Code != http.StatusForbidden {

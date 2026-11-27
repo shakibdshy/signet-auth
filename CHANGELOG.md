@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `POST /auth/organization-members/add` accepts `email` as an alternative to
+  `user_id`, resolving an existing User through the application Store with the
+  same normalization as sign-up. Exactly one identifier is required; both or
+  neither return `400 invalid_input`, and an unknown email returns `404
+  user_not_found`. No invitation email is sent — someone without an account
+  must sign up first.
+
 ### Changed
 
 - **Breaking (wire key casing):** `POST /passkeys/signin-finish` now returns

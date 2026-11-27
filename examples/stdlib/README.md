@@ -111,6 +111,10 @@ curl -s -b jar.txt -c jar.txt -H "X-CSRF-Token: $TOKEN" \
   http://localhost:8080/auth/organization-members/remove
 ```
 
+`add` also accepts `"email"` instead of `"user_id"` for an account that already
+exists, for example `-d "{\"organization_id\":\"$ORG_ID\",\"email\":\"member@example.com\",\"role\":\"member\"}"`.
+No invitation email is sent; the User must already have signed up.
+
 This is example configuration, not a Signet default. The authorizer grants only
 `organizations:create` (`signet.PermissionOrgsCreate`) to the ordinary `user` role, so
 the admin/system routes stay disabled. The `AuthorizeIn` callback re-reads membership on

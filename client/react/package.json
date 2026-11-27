@@ -1,6 +1,6 @@
 {
   "name": "@shakibdshy/signet-auth-react",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "React session hooks (SignetProvider, useSession, sessionGuard) for Signet, an embeddable authentication library for Go",
   "keywords": [
     "react",
@@ -35,7 +35,7 @@
     "react": ">=18"
   },
   "dependencies": {
-    "@shakibdshy/signet-auth-client": "1.0.0-beta.2"
+    "@shakibdshy/signet-auth-client": "1.0.0-beta.3"
   },
   "devDependencies": {
     "typescript": "5.9.3",

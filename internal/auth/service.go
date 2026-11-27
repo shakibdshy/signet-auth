@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/shakibdshy/signet-auth/internal/audit"
@@ -110,7 +109,7 @@ func (s *Service) allow(ctx context.Context, endpoint, key string) error {
 	return allow(ctx, s.deps.Limiter, endpoint, key)
 }
 
-func normalizeEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
+func normalizeEmail(email string) string { return core.NormalizeEmail(email) }
 
 func redacted(user *core.User) *core.User {
 	redactedCopy := *user

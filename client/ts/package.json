@@ -1,6 +1,6 @@
 {
   "name": "@shakibdshy/signet-auth-client",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "Typed TypeScript client for Signet's HTTP API — the frontend half of Signet, an embeddable authentication library for Go",
   "keywords": [
     "auth",

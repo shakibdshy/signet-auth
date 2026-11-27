@@ -62,6 +62,8 @@ if errors.Is(err, signet.ErrInvalidCredentials) {
 | ErrInvalidCredentials | 401 invalid_credentials | Wrong password, disabled User or missing credential Account. Fail generically. |
 | ErrEmailNotVerified | 403 email_not_verified | Sign-in blocked. Verify the email or disable verification. |
 | ErrInvalidEmail | 400 invalid_input | Empty or malformed email. |
+| ErrUserNotFound | 404 user_not_found | No User exists for the email supplied to add an Organization Membership. |
+| ErrInvalidMemberInput | 400 invalid_input | A Membership add sent both `user_id` and `email`, or neither. |
 | ErrEmailAlreadyExists | 400 email_exists | Sign-up with a registered email. |
 | ErrPasswordTooShort | 400 invalid_input | Below `Password.MinLength`. |
 | ErrPasswordTooLong | 400 invalid_input | Above `Password.MaxLength`. |

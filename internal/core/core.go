@@ -792,6 +792,7 @@ type ListOrganizationsResult struct{ Organizations []*Organization }
 type AddOrganizationMemberInput struct {
 	OrgID        string `json:"org_id"`
 	UserID       string `json:"user_id"`
+	Email        string `json:"email,omitempty"`
 	Role         string `json:"role"`
 	ActorID      string `json:"-"`
 	SessionToken string `json:"-"`
@@ -984,6 +985,10 @@ type PasswordlessConfig struct {
 	AllowSignUp      *bool
 	AllowedRedirects []string
 }
+
+// NormalizeEmail returns the canonical form used for email/password and OAuth
+// User emails: trimmed and lower-cased.
+func NormalizeEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
 
 // RedirectAllowed reports whether redirect is in the allowlist. An empty
 // allowlist rejects every redirect; callers supply their own fallback.
@@ -1532,6 +1537,10 @@ type LinkOAuthAccountInput struct {
 var (
 	// ErrNotFound reports a missing entity.
 	ErrNotFound = errors.New("signet: not found")
+	// ErrUserNotFound reports that no User exists for a supplied email.
+	ErrUserNotFound = errors.New("signet: user not found")
+	// ErrInvalidMemberInput reports an ambiguous or missing Membership identifier.
+	ErrInvalidMemberInput = errors.New("signet: invalid membership input")
 	// ErrInvalidCredentials reports a failed sign-in.
 	ErrInvalidCredentials = errors.New("signet: invalid credentials")
 	// ErrEmailNotVerified reports an unverified email.

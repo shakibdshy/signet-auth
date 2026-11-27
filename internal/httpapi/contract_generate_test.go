@@ -190,6 +190,32 @@ func TestGenerateSignInInputEmailOptional(t *testing.T) {
 	}
 }
 
+func TestGenerateAddOrganizationMemberInputIdentifiersOptional(t *testing.T) {
+	data, err := Generate(ContractFor())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	var doc generatedDoc
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	schema, ok := doc.Components.Schemas["AddOrganizationMemberInput"]
+	if !ok {
+		t.Fatal("missing AddOrganizationMemberInput schema")
+	}
+	if _, ok := schema.Properties["email"]; !ok {
+		t.Fatal("AddOrganizationMemberInput missing email property")
+	}
+	for _, name := range schema.Required {
+		if name == "email" || name == "user_id" {
+			t.Fatalf("Membership identifiers must be optional so callers can send either one, required = %v", schema.Required)
+		}
+	}
+	if !contains(schema.Required, "org_id") || !contains(schema.Required, "role") {
+		t.Fatalf("org_id and role must stay required, required = %v", schema.Required)
+	}
+}
+
 func contains(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {
