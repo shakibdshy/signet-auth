@@ -274,6 +274,72 @@ func TestChangePasswordOAuthOnlyUserReturnsGenericCredentialError(t *testing.T) 
 	}
 }
 
+func TestChangePasswordThenSignInWithNewPasswordHTTP(t *testing.T) {
+	client, store, _ := changePasswordClient(t)
+	ctx := context.Background()
+	if _, err := client.SignUp(ctx, signet.SignUpInput{
+		Email: "user@example.com", Password: "correct horse", Name: "Ada",
+	}); err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+	signIn := changePasswordSignIn(t, client)
+	var first struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := json.Unmarshal(signIn.Body.Bytes(), &first); err != nil || first.CSRFToken == "" {
+		t.Fatalf("decode first sign-in: %v, body = %s", err, signIn.Body.String())
+	}
+	req := httptest.NewRequest(http.MethodPost, "/change-password",
+		strings.NewReader(`{"current_password":"correct horse","new_password":"a much better password"}`))
+	for _, c := range signIn.Result().Cookies() {
+		req.AddCookie(c)
+	}
+	req.Header.Set("X-CSRF-Token", first.CSRFToken)
+	rec := httptest.NewRecorder()
+	client.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("change-password status = %d body = %s", rec.Code, rec.Body.String())
+	}
+
+	again := httptest.NewRecorder()
+	client.Handler().ServeHTTP(again, httptest.NewRequest(http.MethodPost, "/signin",
+		strings.NewReader(`{"email":"user@example.com","password":"a much better password"}`)))
+	if again.Code != http.StatusOK {
+		t.Fatalf("sign-in with new password status = %d body = %s", again.Code, again.Body.String())
+	}
+	var second struct {
+		SessionToken string `json:"session_token"`
+		CSRFToken    string `json:"csrf_token"`
+	}
+	if err := json.Unmarshal(again.Body.Bytes(), &second); err != nil || second.SessionToken == "" || second.CSRFToken == "" {
+		t.Fatalf("new sign-in body = %s, err = %v", again.Body.String(), err)
+	}
+	ok, err := (signet.Argon2idHasher{}).Verify(ctx, store.Accounts[0].PasswordHash, "a much better password")
+	if err != nil || !ok {
+		t.Fatalf("new verifier = %v, %v", ok, err)
+	}
+
+	// The new session and its rotated CSRF token must work together on a
+	// protected state-changing route.
+	signout := httptest.NewRequest(http.MethodPost, "/signout", strings.NewReader(`{}`))
+	for _, c := range again.Result().Cookies() {
+		signout.AddCookie(c)
+	}
+	signout.Header.Set("X-CSRF-Token", second.CSRFToken)
+	signedOut := httptest.NewRecorder()
+	client.Handler().ServeHTTP(signedOut, signout)
+	if signedOut.Code != http.StatusNoContent {
+		t.Fatalf("signout with new session status = %d, want 204; body = %s", signedOut.Code, signedOut.Body.String())
+	}
+
+	stale := httptest.NewRecorder()
+	client.Handler().ServeHTTP(stale, httptest.NewRequest(http.MethodPost, "/signin",
+		strings.NewReader(`{"email":"user@example.com","password":"correct horse"}`)))
+	if stale.Code != http.StatusUnauthorized {
+		t.Fatalf("old password status = %d, want 401", stale.Code)
+	}
+}
+
 func TestChangePasswordHTTPRejectsNonPost(t *testing.T) {
 	client, store := changePasswordHTTPClient(t)
 	signInRec := changePasswordSignIn(t, client)

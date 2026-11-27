@@ -92,6 +92,10 @@ func main() {
 	if err := store.Migrate(ctx); err != nil {
 		log.Fatal(err)
 	}
+	orgStore := newOrgStore(pool)
+	if err := orgStore.Migrate(ctx); err != nil {
+		log.Fatal(err)
+	}
 
 	port := listenPort()
 	cfg := signet.DefaultConfig()
@@ -109,6 +113,12 @@ func main() {
 	// Expose GET /auth/last-sign-in-method so frontends can show how the
 	// current browser last signed in. Consent-gated via BeforeStore if needed.
 	cfg.LastSignInMethod = &signet.LastSignInMethodConfig{}
+	// Self-serve organizations: ordinary users may create an organization and
+	// become its owner; owners/admins manage membership. All other permissions
+	// stay ungranted, so admin/system routes remain deny-by-default.
+	cfg.OrganizationStore = orgStore
+	cfg.Authorizer = newAuthorizer()
+	cfg.AuthorizeIn = newAuthorizeIn(orgStore)
 	auth, err := signet.New(cfg)
 	if err != nil {
 		log.Fatal(err)
