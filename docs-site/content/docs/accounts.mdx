@@ -57,8 +57,13 @@ err := auth.UnlinkAccount(ctx, signet.UnlinkAccountInput{
 ```
 
 Programmatic callers supply the raw Session token; the HTTP adapter derives it from the session
-cookie. A successful unlink flushes any configured Session cache. Changing a Username is
-unlink-plus-add guarded by the same freshness window.
+cookie. A successful unlink flushes any configured Session cache.
+
+A Username cannot currently be changed or added after sign-up: unlinking the Username Account
+leaves the User signing in by email only, and no bundled method creates a Username Account for
+an existing User. Applications that need renames own that flow — it means writing the
+replacement `provider: "username"` Account (normalised and globally unique) through the Store
+and removing the old one under one freshness guard.
 
 ## HTTP endpoints
 
