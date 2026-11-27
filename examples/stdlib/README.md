@@ -32,6 +32,40 @@ the latter creates the example's organization and membership tables.
 | `PORT` | listen port (hosts like Render inject it) | `8080` |
 | `APP_URL` | public origin used in verification and reset links | `http://localhost:PORT` |
 | `CSRF_KEY` | persistent base64 CSRF key, `openssl rand -base64 32` | random per boot (development only) |
+| `DEMO_MODE` | `true` captures email in a demo inbox instead of a mail provider | off (console mailer) |
+
+### Demo inbox
+
+With `DEMO_MODE=true` the server wires an in-memory ring buffer as the active
+mailer (the last 50 emails, never delivered) and exposes
+
+```sh
+curl 'http://localhost:8080/auth/demo/inbox?email=ada@example.com'
+```
+
+```json
+{
+  "messages": [
+    {
+      "id": "9f2c…",
+      "to": "ada@example.com",
+      "subject": "Verify your email",
+      "body": "Hello Ada, …",
+      "url": "http://localhost:8080/auth/verify?token=…",
+      "token": "…",
+      "code": "123456",
+      "created_at": "2026-11-28T01:45:00Z"
+    }
+  ]
+}
+```
+
+`?email=` is required and matched case-insensitively, so a visitor only ever
+sees their own messages. `url`/`token` are parsed out of link emails and
+`code` out of the six-digit OTP mail, so verification, magic-link, OTP and
+password-reset flows can be completed entirely in a browser or with curl.
+This is demo-only plumbing in this example binary — it does not exist in the
+library and must never be enabled in production.
 
 ## Walk the full flow
 

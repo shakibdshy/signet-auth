@@ -71,6 +71,7 @@ const landingHTML = `<!doctype html>
     <tr><td><code><span class="m">POST</span> /auth/organization-members/add</code></td><td>add a member (owner/admin)</td></tr>
     <tr><td><code><span class="m">POST</span> /auth/organization-members/role</code></td><td>change a member's role (owner/admin)</td></tr>
     <tr><td><code><span class="m">POST</span> /auth/organization-members/remove</code></td><td>remove a member (owner/admin)</td></tr>
+    <tr><td><code><span class="m">GET</span> /auth/demo/inbox?email=</code></td><td>demo inbox: recent emails for that address (DEMO_MODE)</td></tr>
     <tr><td><code><span class="m">GET</span> /private</code></td><td>protected route, requires a session cookie</td></tr>
   </table>
 
