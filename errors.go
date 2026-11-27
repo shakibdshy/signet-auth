@@ -9,6 +9,8 @@ var (
 	ErrUserNotFound = core.ErrUserNotFound
 	// ErrInvalidMemberInput reports an ambiguous or missing Membership identifier.
 	ErrInvalidMemberInput = core.ErrInvalidMemberInput
+	// ErrMissingOrgID reports an organization endpoint called without organization_id.
+	ErrMissingOrgID = core.ErrMissingOrgID
 	// ErrInvalidCredentials reports a failed sign-in attempt.
 	ErrInvalidCredentials = core.ErrInvalidCredentials
 	// ErrEmailNotVerified reports a sign-in blocked by an unverified email.

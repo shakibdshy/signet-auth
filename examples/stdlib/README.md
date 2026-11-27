@@ -151,11 +151,16 @@ No invitation email is sent; the User must already have signed up.
 
 This is example configuration, not a Signet default. The authorizer grants only
 `organizations:create` (`signet.PermissionOrgsCreate`) to the ordinary `user` role, so
-the admin/system routes stay disabled. The `AuthorizeIn` callback re-reads membership on
-every org-scoped check and allows `organizations:member-add`, `member-remove` and
-`member-role` only for members whose organization role is `owner` or `admin`; plain
-members and non-members get `403`. Every mutation still needs a fresh session and a
-valid CSRF token.
+the admin/system routes stay disabled. Organization member management is governed by
+`AuthorizeIn` — here Signet's built-in policy (`signet.NewOrgAuthorizeIn`), which
+re-reads membership on every org-scoped check and allows `organizations:member-add`,
+`member-remove` and `member-role` only for members whose organization role is `owner`
+or `admin`; plain members and non-members get `403 forbidden`. Signet installs this
+same policy automatically when you set `OrganizationStore` and leave `AuthorizeIn`
+unset. Every mutation still needs a valid CSRF token and a session started within the
+last five minutes (`Accounts.FreshWindow`): a stale session answers
+`403 session_not_fresh` — sign in again and retry — and a missing `organization_id`
+answers `400 invalid_input`.
 
 ## How Signet is wired in
 

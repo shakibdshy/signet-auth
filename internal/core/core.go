@@ -1541,6 +1541,9 @@ var (
 	ErrUserNotFound = errors.New("signet: user not found")
 	// ErrInvalidMemberInput reports an ambiguous or missing Membership identifier.
 	ErrInvalidMemberInput = errors.New("signet: invalid membership input")
+	// ErrMissingOrgID reports an organization endpoint called without an
+	// organization ID.
+	ErrMissingOrgID = errors.New("signet: organization_id is required")
 	// ErrInvalidCredentials reports a failed sign-in.
 	ErrInvalidCredentials = errors.New("signet: invalid credentials")
 	// ErrEmailNotVerified reports an unverified email.

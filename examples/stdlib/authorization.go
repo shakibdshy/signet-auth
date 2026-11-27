@@ -16,31 +16,11 @@ func newAuthorizer() signet.Authorizer {
 	)
 }
 
-type orgAuthorizeIn struct {
-	store signet.OrganizationStore
-}
-
-var _ signet.AuthorizeIn = (*orgAuthorizeIn)(nil)
-
-// newAuthorizeIn builds an organization-scoped policy that reads membership
-// from the store on every check. It grants member mutations to owners and
-// admins only, and never falls back to the global authorizer.
+// newAuthorizeIn returns Signet's built-in organization policy: member-add,
+// member-remove and member-role go to the organization's owners and admins,
+// re-reading membership on every check. Signet also installs this policy
+// automatically when AuthorizeIn is unset; the example wires it explicitly so
+// the seam stays visible.
 func newAuthorizeIn(store signet.OrganizationStore) signet.AuthorizeIn {
-	return &orgAuthorizeIn{store: store}
-}
-
-func (a *orgAuthorizeIn) AuthorizeIn(ctx context.Context, userID, orgID, resource, action string) bool {
-	if resource != "organizations" {
-		return false
-	}
-	switch action {
-	case "member-add", "member-remove", "member-role":
-	default:
-		return false
-	}
-	role, err := a.store.MemberRole(ctx, orgID, userID)
-	if err != nil {
-		return false
-	}
-	return role == "owner" || role == "admin"
+	return signet.NewOrgAuthorizeIn(store)
 }

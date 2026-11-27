@@ -315,12 +315,19 @@ func TestSelfServeOrganizationRequiresFreshSessionWindow(t *testing.T) {
 		session.CreatedAt = time.Now().Add(-time.Hour)
 	}
 	staleCreate := postSelfServe(t, client, "/organizations", `{"name":"Stale"}`, cookies, csrf)
-	if staleCreate.Code != http.StatusForbidden {
-		t.Fatalf("stale-window create status = %d, want 403; body = %s", staleCreate.Code, staleCreate.Body.String())
+	if staleCreate.Code != http.StatusForbidden || !strings.Contains(staleCreate.Body.String(), "session_not_fresh") {
+		t.Fatalf("stale-window create status = %d, body = %s; want 403 session_not_fresh",
+			staleCreate.Code, staleCreate.Body.String())
 	}
 	staleAdd := postSelfServe(t, client, "/organization-members/add",
 		fmt.Sprintf(`{"organization_id":%q,"user_id":"member-1","role":"member"}`, orgID), cookies, csrf)
-	if staleAdd.Code != http.StatusForbidden {
-		t.Fatalf("stale-window add status = %d, want 403; body = %s", staleAdd.Code, staleAdd.Body.String())
+	if staleAdd.Code != http.StatusForbidden || !strings.Contains(staleAdd.Body.String(), "session_not_fresh") {
+		t.Fatalf("stale-window add status = %d, body = %s; want 403 session_not_fresh",
+			staleAdd.Code, staleAdd.Body.String())
+	}
+	staleList := getSelfServe(t, client, "/organization-members?organization_id="+orgID, cookies)
+	if staleList.Code != http.StatusForbidden || !strings.Contains(staleList.Body.String(), "session_not_fresh") {
+		t.Fatalf("stale-window list status = %d, body = %s; want 403 session_not_fresh",
+			staleList.Code, staleList.Body.String())
 	}
 }

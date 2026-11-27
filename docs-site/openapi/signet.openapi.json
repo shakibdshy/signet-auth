@@ -7917,6 +7917,7 @@
               "saml_connection_not_found",
               "saml_invalid_assertion",
               "saml_replay",
+              "session_not_fresh",
               "sso_connection_not_found",
               "sso_domain_not_verified",
               "sso_invalid_assertion",
