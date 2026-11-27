@@ -27,6 +27,25 @@ Signet is imported into your application — it is not a separate auth server. I
   breach checks and captcha checks
 - Bring-your-own-schema storage with PostgreSQL and SQLite adapters and explicit migrations
 
+## How Signet compares
+
+| | Auth0 | Keycloak | Ory | better-auth | **Signet** |
+| --- | --- | --- | --- | --- | --- |
+| What you deploy | Nothing — it is a managed cloud | A Java server (plus its database) | Several services: Kratos, Hydra and friends | A TypeScript library in your app | **Nothing — a library in your Go binary** |
+| Runs inside your process | — | — | — (separate services) | ✓ (Node/TS) | **✓ (Go)** |
+| You keep your own database schema | — | — (Keycloak owns its schema) | — (each service owns a schema and its migrations) | ~ (your database, its tables) | **✓ (implement one small `Store` interface; bundled adapters optional)** |
+| Language | Proprietary cloud | Java | Go | TypeScript | **Go** |
+| SAML and per-org SSO | ✓ (paid tiers) | ✓ | ✓ (paid tiers / Ory Network) | ✓ (SSO plugin) | **✓ in the core library** |
+| SCIM 2.0 provisioning | ✓ (paid tiers) | via extension | ✓ (paid tiers / Ory Network) | — | **✓ in the core library** |
+| Passkeys (WebAuthn) | ✓ | ✓ | ✓ | ✓ (plugin) | **✓** |
+| Typed frontend clients | ✓ SDKs | ✓ adapters | ✓ SDKs | ✓ (it is TypeScript) | **✓ generated from the OpenAPI contract: a typed TS client plus React session hooks** |
+| License | Proprietary, priced per monthly active user | Apache-2.0 | Apache-2.0 (self-hosted core) | MIT | **MIT** |
+
+Positions reflect each project's own documentation as of November 2026. Everything claimed for
+Signet above is a shipped feature — the design records in `docs/adr/` and the test suite in
+`tests/` are the evidence, and the [typed client](https://www.npmjs.com/package/@shakibdshy/signet-auth-client)
+is published.
+
 ## Five-minute quickstart
 
 This is a complete, runnable program using SQLite and a development-only limiter and mailer.
