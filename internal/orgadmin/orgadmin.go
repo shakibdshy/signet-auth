@@ -43,13 +43,21 @@ func New(deps Deps, impKey []byte) *Service {
 	return &Service{deps: deps, imp: imp}
 }
 
-// fresh reports whether a raw Session token is within the freshness window.
-func (s *Service) fresh(ctx context.Context, raw string) bool {
+// freshErr reports a resolvable Session outside the freshness window as
+// ErrSessionNotFresh; a Session that cannot be resolved at all is
+// ErrForbidden. A nil return means the Session is fresh.
+func (s *Service) freshErr(ctx context.Context, raw string) error {
 	if raw == "" {
-		return false
+		return core.ErrForbidden
 	}
 	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, raw, s.deps.Config.Accounts.FreshWindow)
-	return err == nil && fresh
+	if err != nil {
+		return core.ErrForbidden
+	}
+	if !fresh {
+		return core.ErrSessionNotFresh
+	}
+	return nil
 }
 
 // guard checks a permission and a fresh Session, auditing the denial. A
@@ -62,14 +70,9 @@ func (s *Service) guard(ctx context.Context, actorID, sessionToken string, permi
 		s.auditDeny(ctx, actorID, permission, "")
 		return core.ErrForbidden
 	}
-	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, sessionToken, s.deps.Config.Accounts.FreshWindow)
-	if err != nil {
+	if err := s.freshErr(ctx, sessionToken); err != nil {
 		s.auditDeny(ctx, actorID, permission, "")
-		return core.ErrForbidden
-	}
-	if !fresh {
-		s.auditDeny(ctx, actorID, permission, "")
-		return core.ErrSessionNotFresh
+		return err
 	}
 	return nil
 }
@@ -92,13 +95,9 @@ func (s *Service) orgGuard(ctx context.Context, actorID, orgID, sessionToken str
 		s.auditDeny(ctx, actorID, permission, orgID)
 		return core.ErrForbidden
 	}
-	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, sessionToken, s.deps.Config.Accounts.FreshWindow)
-	if err != nil || !fresh {
+	if err := s.freshErr(ctx, sessionToken); err != nil {
 		s.auditDeny(ctx, actorID, permission, orgID)
-		if err != nil {
-			return core.ErrForbidden
-		}
-		return core.ErrSessionNotFresh
+		return err
 	}
 	return nil
 }
@@ -145,12 +144,8 @@ func (s *Service) ListOrganizations(ctx context.Context, in core.ListOrganizatio
 		!s.deps.Authz.AuthorizePermission(ctx, in.UserID, core.PermissionOrgsCreate) {
 		return nil, core.ErrForbidden
 	}
-	fresh, err := s.deps.Sessions.IsFreshWithin(ctx, sessionToken, s.deps.Config.Accounts.FreshWindow)
-	if err != nil {
-		return nil, core.ErrForbidden
-	}
-	if !fresh {
-		return nil, core.ErrSessionNotFresh
+	if err := s.freshErr(ctx, sessionToken); err != nil {
+		return nil, err
 	}
 	orgs, err := s.deps.Config.OrganizationStore.List(ctx, in.UserID)
 	if err != nil {
@@ -248,8 +243,11 @@ func (s *Service) ListOrganizationMembers(ctx context.Context, orgID, userID, se
 
 // SetActiveOrganization verifies membership before the caller writes the cookie.
 func (s *Service) SetActiveOrganization(ctx context.Context, orgID, userID, sessionToken string) error {
-	if s.deps.Config.OrganizationStore == nil || !s.fresh(ctx, sessionToken) {
+	if s.deps.Config.OrganizationStore == nil {
 		return core.ErrForbidden
+	}
+	if err := s.freshErr(ctx, sessionToken); err != nil {
+		return err
 	}
 	if _, err := s.deps.Config.OrganizationStore.MemberRole(ctx, orgID, userID); err != nil {
 		return core.ErrForbidden
@@ -261,9 +259,12 @@ func (s *Service) SetActiveOrganization(ctx context.Context, orgID, userID, sess
 
 // ListUsers returns safe User fields after a Session and grant check.
 func (s *Service) ListUsers(ctx context.Context, actorID, sessionToken string) (*core.AdminListUsersResult, error) {
-	if s.deps.Config.AdminUserStore == nil || !s.fresh(ctx, sessionToken) ||
+	if s.deps.Config.AdminUserStore == nil ||
 		!s.deps.Authz.AuthorizePermission(ctx, actorID, core.PermissionUsersBan) {
 		return nil, core.ErrForbidden
+	}
+	if err := s.freshErr(ctx, sessionToken); err != nil {
+		return nil, err
 	}
 	all, err := s.deps.Config.AdminUserStore.ListUsersForAdmin(ctx)
 	if err != nil {
@@ -315,11 +316,11 @@ func (s *Service) UnbanUser(ctx context.Context, in core.UnbanUserInput) error {
 
 // SetUserRole writes global roles for a User.
 func (s *Service) SetUserRole(ctx context.Context, in core.AdminSetUserRoleInput) error {
-	if s.deps.Config.RoleWriter == nil {
-		return core.ErrForbidden
-	}
 	if err := s.guard(ctx, in.ActorID, in.SessionToken, core.PermissionUsersSetRole); err != nil {
 		return err
+	}
+	if s.deps.Config.RoleWriter == nil {
+		return core.ErrForbidden
 	}
 	if err := s.deps.Config.RoleWriter.SetRoles(ctx, in.UserID, in.Roles); err != nil {
 		return err
@@ -330,7 +331,10 @@ func (s *Service) SetUserRole(ctx context.Context, in core.AdminSetUserRoleInput
 
 // ListUserSessions returns a User's Sessions after a Session and grant check.
 func (s *Service) ListUserSessions(ctx context.Context, actorID, userID, sessionToken string) (*core.ListSessionsResult, error) {
-	if !s.fresh(ctx, sessionToken) || !s.deps.Authz.AuthorizePermission(ctx, actorID, core.PermissionSessionsRevoke) {
+	if err := s.freshErr(ctx, sessionToken); err != nil {
+		return nil, err
+	}
+	if !s.deps.Authz.AuthorizePermission(ctx, actorID, core.PermissionSessionsRevoke) {
 		return nil, core.ErrForbidden
 	}
 	sessions, err := s.deps.Sessions.List(ctx, userID)
