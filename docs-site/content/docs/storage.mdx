@@ -53,5 +53,9 @@ makes verification, reset, OAuth state and refresh Tokens single-use under concu
 ## Conformance suite
 
 `store/conformance.Run(t, factory)` tests any Store implementation: Users, Accounts,
-Sessions, Tokens and token concurrency (16 racers, exactly one winner). Run it against your
-adapter before relying on it. See [Tooling](/docs/tooling) for the shared checks.
+Sessions, Tokens and token concurrency (16 racers, exactly one winner). The optional
+contracts have their own suites: `store/conformance.RunOrganizations(t, factory)` for
+`OrganizationStore` implementations (membership-scoped `List`, `ErrNotFound` on role
+misses, idempotent removal) and `store/conformance.RunAdminUsers(t, factory)` for
+`AdminUserStore`. Run them against your own store before relying on it. See
+[Tooling](/docs/tooling) for the shared checks.

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `store/conformance` gains `RunOrganizations` and `RunAdminUsers`: the same
+  shared-suite pattern as `Run`, applied to the optional `OrganizationStore`
+  and `AdminUserStore` contracts. They pin the semantics the organization and
+  admin features depend on — `List` is scoped to the User's Memberships,
+  `MemberRole` misses answer `ErrNotFound`, removing a missing Membership is
+  idempotent — so an application-owned store can verify itself the way a
+  bundled `Store` adapter can.
 - The built-in organization policy no longer hard-codes the `owner` and `admin`
   role names. `Config.OrganizationRoles` (and the variadic
   `signet.NewOrgAuthorizeIn(store, roles...)`) name the membership roles that
