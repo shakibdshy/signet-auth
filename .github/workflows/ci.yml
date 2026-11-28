@@ -1,28 +1,43 @@
 name: CI
 
+# Two Ubuntu Go legs (a full-check primary and a slim go 1.26 floor leg) gate
+# every push and pull request. macOS is a platform sweep, not a gate: it runs
+# weekly and on v* release tags. The publish jobs stay tag-only and unchanged.
+
 on:
   push:
     branches: [main]
-    tags: ["client-v*"]
+    tags: ["client-v*", "v*"]
+    paths-ignore:
+      - "**.md"
   pull_request:
+    paths-ignore:
+      - "**.md"
+  schedule:
+    # Weekly full sweep on main: every leg including macOS.
+    - cron: "0 6 * * 1"
 
 permissions:
   contents: read
 
 jobs:
   go:
-    name: Go ${{ matrix.go }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Go ${{ matrix.go }} ${{ matrix.primary && '· full checks' || '· floor build and test' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      # Matrix legs share job-level groups: without the matrix value in the
+      # name the two legs would cancel each other.
+      group: go-${{ matrix.go }}-${{ github.ref }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            go: "1.26"
-          - os: ubuntu-latest
-            go: "1.27"
-          - os: macos-latest
-            go: "1.27"
+          - go: "1.26"
+            primary: false
+          - go: "1.27"
+            primary: true
     steps:
       - uses: actions/checkout@v7
 
@@ -32,38 +47,82 @@ jobs:
           go-version: ${{ matrix.go }}
           cache: true
 
+      # Floor leg: prove the go 1.26 directive holds. Everything that does not
+      # depend on the Go version runs once, on the primary leg.
+      - name: Build
+        if: ${{ !matrix.primary }}
+        run: go build ./...
+
+      - name: Test
+        if: ${{ !matrix.primary }}
+        run: go test ./...
+
+      # --- primary leg only from here on ---
+
       - name: Check go.mod and go.sum are tidy
+        if: matrix.primary
         run: |
           go mod tidy
           git diff --exit-code -- go.mod go.sum
 
       - name: Check formatting
+        if: matrix.primary
         run: |
           test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
       - name: Vet
+        if: matrix.primary
         run: go vet ./...
 
       - name: Lint
+        if: matrix.primary
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.15
           args: --timeout=5m
 
-      - name: Test
+      - name: Test with the race detector and coverage
+        if: matrix.primary
         run: go test -race -coverprofile=coverage.out ./...
 
       - name: Build examples
+        if: matrix.primary
         run: make examples
 
       - name: Fuzz
-        if: matrix.go == '1.27' && matrix.os == 'ubuntu-latest'
+        if: matrix.primary
         run: make fuzz
 
       - name: Vulnerability scan
+        if: matrix.primary
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
+
+  darwin:
+    # macOS is free on this public repo but slow: sweep it weekly and when a
+    # release tag is cut instead of on every push.
+    name: Go 1.27 on macos-latest · platform sweep
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    timeout-minutes: 15
+    concurrency:
+      group: darwin-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race ./...
 
   js:
     name: Generated artifacts, TypeScript and docs
@@ -73,9 +132,9 @@ jobs:
       group: js-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.27"
           cache: true
@@ -150,7 +209,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -192,7 +251,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
