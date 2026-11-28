@@ -30,8 +30,10 @@ cfg.AuthorizeIn = myOrgAwareAuthorizer // optional; re-reads membership per chec
 With no `OrganizationStore` the feature is disabled and every operation denies. When
 `OrganizationStore` is set but `AuthorizeIn` is not, Signet installs a built-in policy
 (`signet.NewOrgAuthorizeIn`): `organizations:member-add`, `member-remove` and
-`member-role` go to the organization's `owner` and `admin` members, with membership
-re-read on every check. Wire `AuthorizeIn` explicitly to override it. All mutations
+`member-role` go to members holding one of the configured membership roles — the
+organization's `owner` and `admin` roles by default, or the roles named in
+`Config.OrganizationRoles` if your vocabulary differs — with membership re-read on
+every check. Wire `AuthorizeIn` explicitly to override it. All mutations
 require a Session within `Accounts.FreshWindow` (passed as `SessionToken`) plus the
 published permission; each emits an Audit event on success and on denial. A stale
 Session that would otherwise be granted returns `403 session_not_fresh` — sign in
@@ -76,7 +78,7 @@ member endpoint without `organization_id` returns `400 invalid_input`.
 Creation requires `PermissionOrgsCreate`; member changes require `PermissionOrgsMemberAdd`,
 `PermissionOrgsMemberRole` and `PermissionOrgsMemberRemove`. Organization-scoped checks re-read
 membership from `OrganizationStore` and consult `AuthorizeIn.AuthorizeIn` with the
-organization ID — the wired policy, or the built-in owner/admin policy when none was
+organization ID — the wired policy, or the built-in policy when none was
 configured. The plain global `Authorize` is consulted only by that fallback path.
 
 ## Active organization

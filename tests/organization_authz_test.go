@@ -17,6 +17,12 @@ import (
 // organization creation, mirroring the stdlib example minus its explicit
 // AuthorizeIn.
 func defaultOrgClient(t *testing.T) (*signet.Client, *fakeOrganizationStore, *testutil.Store) {
+	return defaultOrgClientWithRoles(t, nil)
+}
+
+// defaultOrgClientWithRoles is defaultOrgClient with the built-in policy's
+// membership roles configured; nil selects the default owner/admin vocabulary.
+func defaultOrgClientWithRoles(t *testing.T, roles []string) (*signet.Client, *fakeOrganizationStore, *testutil.Store) {
 	t.Helper()
 	orgStore := newFakeOrganizationStore()
 	authStore := testutil.NewStore()
@@ -26,6 +32,7 @@ func defaultOrgClient(t *testing.T) (*signet.Client, *fakeOrganizationStore, *te
 	cfg.Mailer = testutil.NewMailer()
 	cfg.RateLimiter = &testutil.Limiter{Allowed: true}
 	cfg.OrganizationStore = orgStore
+	cfg.OrganizationRoles = roles
 	cfg.Authorizer = signet.NewMemoryAuthorizer(
 		signet.RoleStatements{"user": {signet.PermissionOrgsCreate}},
 		func(context.Context, string) []string { return []string{"user"} },
@@ -85,6 +92,52 @@ func TestBuiltInOrgPolicyGrantsOwnerAndAdmin(t *testing.T) {
 		`{"organization_id":"`+orgID+`","email":"admin@example.com","role":"member"}`, memberCookies, memberCSRF)
 	if memberAdd.Code != http.StatusForbidden || !strings.Contains(memberAdd.Body.String(), "forbidden") {
 		t.Fatalf("member add status = %d, body = %s; want 403 forbidden", memberAdd.Code, memberAdd.Body.String())
+	}
+}
+
+// The built-in policy must not silently assume the owner/admin vocabulary:
+// applications with different membership role names name them in
+// Config.OrganizationRoles, and the policy grants exactly those roles —
+// the defaults stop granting.
+func TestBuiltInOrgPolicyHonorsConfiguredRoles(t *testing.T) {
+	client, _, _ := defaultOrgClientWithRoles(t, []string{"owner", "manager"})
+	ctx := context.Background()
+
+	if _, err := client.SignUp(ctx, signet.SignUpInput{Email: "boss@example.com", Password: "correct horse", Name: "Boss"}); err != nil {
+		t.Fatalf("SignUp boss: %v", err)
+	}
+	bossCookies, bossCSRF := signInSelfServe(t, client, "boss@example.com")
+	orgID, _ := createSelfServeOrganization(t, client, bossCookies, bossCSRF)
+
+	for _, email := range []string{"manager@example.com", "admin@example.com", "outsider@example.com"} {
+		if _, err := client.SignUp(ctx, signet.SignUpInput{Email: email, Password: "correct horse", Name: email}); err != nil {
+			t.Fatalf("SignUp %s: %v", email, err)
+		}
+	}
+	added := postSelfServe(t, client, "/organization-members/add",
+		`{"organization_id":"`+orgID+`","email":"manager@example.com","role":"manager"}`, bossCookies, bossCSRF)
+	if added.Code != http.StatusOK {
+		t.Fatalf("boss add manager status = %d, body = %s", added.Code, added.Body.String())
+	}
+	addedAdmin := postSelfServe(t, client, "/organization-members/add",
+		`{"organization_id":"`+orgID+`","email":"admin@example.com","role":"admin"}`, bossCookies, bossCSRF)
+	if addedAdmin.Code != http.StatusOK {
+		t.Fatalf("boss add admin status = %d, body = %s", addedAdmin.Code, addedAdmin.Body.String())
+	}
+
+	managerCookies, managerCSRF := signInSelfServe(t, client, "manager@example.com")
+	managerAdd := postSelfServe(t, client, "/organization-members/add",
+		`{"organization_id":"`+orgID+`","email":"outsider@example.com","role":"member"}`, managerCookies, managerCSRF)
+	if managerAdd.Code != http.StatusOK {
+		t.Fatalf("configured manager role add status = %d, body = %s", managerAdd.Code, managerAdd.Body.String())
+	}
+
+	adminCookies, adminCSRF := signInSelfServe(t, client, "admin@example.com")
+	adminAdd := postSelfServe(t, client, "/organization-members/add",
+		`{"organization_id":"`+orgID+`","email":"outsider@example.com","role":"member"}`, adminCookies, adminCSRF)
+	if adminAdd.Code != http.StatusForbidden || !strings.Contains(adminAdd.Body.String(), "forbidden") {
+		t.Fatalf("default admin role add status = %d, body = %s; want 403 forbidden once roles are configured",
+			adminAdd.Code, adminAdd.Body.String())
 	}
 }
 

@@ -2,23 +2,37 @@ package authorization
 
 import (
 	"context"
+	"slices"
 
 	"github.com/shakibdshy/signet-auth/internal/core"
 )
 
+// defaultOrgManagerRoles are the membership roles the built-in organization
+// policy grants member management to when the application does not name its
+// own.
+var defaultOrgManagerRoles = []string{"owner", "admin"}
+
 // orgRolePolicy is the built-in AuthorizeIn: it grants organization member
-// management to the organization's owners and admins by re-reading membership
-// from the OrganizationStore on every check. It exists because the global
-// Authorizer seam has no organization context and could never see org roles.
+// management to members holding one of the configured membership roles by
+// re-reading membership from the OrganizationStore on every check. It exists
+// because the global Authorizer seam has no organization context and could
+// never see org roles.
 type orgRolePolicy struct {
 	store core.OrganizationStore
+	roles []string
 }
 
 // NewOrgAuthorizeIn returns the built-in organization policy. Signet installs
 // it automatically when Config.OrganizationStore is set and Config.AuthorizeIn
-// is not; applications may also wire it explicitly.
-func NewOrgAuthorizeIn(store core.OrganizationStore) core.AuthorizeIn {
-	return &orgRolePolicy{store: store}
+// is not; applications may also wire it explicitly. The optional managerRoles
+// name the membership roles that manage members; empty selects the default,
+// the organization's owner and admin roles.
+func NewOrgAuthorizeIn(store core.OrganizationStore, managerRoles ...string) core.AuthorizeIn {
+	roles := managerRoles
+	if len(roles) == 0 {
+		roles = defaultOrgManagerRoles
+	}
+	return &orgRolePolicy{store: store, roles: roles}
 }
 
 func (p *orgRolePolicy) AuthorizeIn(ctx context.Context, userID, orgID, resource, action string) bool {
@@ -34,5 +48,5 @@ func (p *orgRolePolicy) AuthorizeIn(ctx context.Context, userID, orgID, resource
 	if err != nil {
 		return false
 	}
-	return role == "owner" || role == "admin"
+	return slices.Contains(p.roles, role)
 }
