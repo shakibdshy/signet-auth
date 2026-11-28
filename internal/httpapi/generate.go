@@ -233,7 +233,7 @@ func Generate(contract Contract) ([]byte, error) {
 
 	doc := oasDocument{
 		OpenAPI: "3.1.0",
-		Info:    oasInfo{Title: "Signet HTTP API", Version: "1.0.0-beta.2"},
+		Info:    oasInfo{Title: "Signet HTTP API", Version: "1.0.0-beta.3"},
 		Paths:   make(map[string]map[string]oasOp),
 	}
 

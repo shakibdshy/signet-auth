@@ -37,7 +37,7 @@ func NewOrgAuthorizeIn(store OrganizationStore) AuthorizeIn {
 }
 
 // Version is the current Signet version. It changes with every release tag.
-const Version = "1.0.0-beta.2"
+const Version = "1.0.0-beta.3"
 
 // Clock supplies the current time so time-dependent behaviour can be tested
 // without waiting.

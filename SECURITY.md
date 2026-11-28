@@ -2,17 +2,17 @@
 
 ## Supported versions
 
-Signet is pre-1.0. Security fixes target the `v1.0.0-beta.2` release line, which tracks the latest
+Signet is pre-1.0. Security fixes target the `v1.0.0-beta.3` release line, which tracks the latest
 commit on `main`.
 
 | Version | Supported |
 | --- | --- |
-| `v1.0.0-beta.2` | Yes |
+| `v1.0.0-beta.3` | Yes |
 | `main` | Yes |
-| `v0.1.0` | Critical fixes only |
+| `v1.0.0-beta.2` | Critical fixes only |
 | older tags | No |
 
-There is no patched 0.1.x series; upgrade to `v1.0.0-beta.2` or `main` to receive fixes.
+There is no patched 0.1.x series; upgrade to `v1.0.0-beta.3` or `main` to receive fixes.
 
 ## Reporting a vulnerability
 

@@ -13,8 +13,8 @@ state instead of each one calling the Go API on its own.
 | Calls that backend from a frontend | Browser, Node.js | TypeScript, JavaScript | `@shakibdshy/signet-auth-client` |
 | **Shares that Session with React components and guards routes** | Browser | TypeScript, React | **`@shakibdshy/signet-auth-react`** (this package) |
 
-Current version: **`1.0.0-beta.2`**, a pre-1.0 release, so the API may still change before
-`v1.0.0`. The Go module (`v1.0.0-beta.2`) and both npm packages (`1.0.0-beta.2`) are released
+Current version: **`1.0.0-beta.3`**, a pre-1.0 release, so the API may still change before
+`v1.0.0`. The Go module (`v1.0.0-beta.3`) and both npm packages (`1.0.0-beta.3`) are released
 together at the same version.
 
 > **This package does not implement authentication.** It is a thin layer over the typed
@@ -40,7 +40,7 @@ together at the same version.
 ## Install
 
 ```sh
-npm install @shakibdshy/signet-auth-react@1.0.0-beta.2
+npm install @shakibdshy/signet-auth-react@1.0.0-beta.3
 ```
 
 This also installs `@shakibdshy/signet-auth-client`. Do not install the client separately.

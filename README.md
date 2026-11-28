@@ -5,7 +5,7 @@
 [![Go 1.26+](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status:** `v1.0.0-beta.2` (pre-1.0). The planned feature set is implemented; the API-stability
+> **Status:** `v1.0.0-beta.3` (pre-1.0). The planned feature set is implemented; the API-stability
 > commitment arrives with `v1.0.0`. See [status](https://go-signet-auth.vercel.app/docs/status).
 
 Signet is imported into your application — it is not a separate auth server. It is built on
@@ -21,7 +21,8 @@ Signet is imported into your application — it is not a separate auth server. I
 - **Passkeys** (WebAuthn) and per-organization **OIDC / SAML SSO**
 - **SCIM 2.0** User and Group provisioning with group-to-role projection
 - Opt-in **Authorization server** with PKCE, rotating tokens and device authorization
-- Application-managed authorization: roles, permissions, API keys, organizations and admin management
+- Application-managed authorization: roles, permissions, API keys, self-serve
+  Organizations with member invites by email, and admin management
 - Automatic sign-in, account controls, queryable Audit events and optional React session hooks
 - Security controls: signed double-submit CSRF, trusted proxies, rate limits, key rings, JWKS,
   breach checks and captcha checks
