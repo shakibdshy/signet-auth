@@ -14,13 +14,13 @@ import (
 // organization and admin features depend on. The fakes below are themselves
 // checked against them.
 func TestOrganizationStoreConformance(t *testing.T) {
-	conformance.RunOrganizations(t, func(t *testing.T) signet.OrganizationStore {
+	conformance.RunOrganizations(t, func(_ *testing.T) signet.OrganizationStore {
 		return newFakeOrganizationStore()
 	})
 }
 
 func TestAdminUserStoreConformance(t *testing.T) {
-	conformance.RunAdminUsers(t, func(t *testing.T) (signet.AdminUserStore, func(context.Context, *signet.User) error) {
+	conformance.RunAdminUsers(t, func(_ *testing.T) (signet.AdminUserStore, func(context.Context, *signet.User) error) {
 		store := testutil.NewStore()
 		return store, store.CreateUser
 	})
