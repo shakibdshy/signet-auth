@@ -318,11 +318,11 @@ const { Organizations: orgs } = await auth.listOrganizations();
 
 // Manage Memberships. Role changes are guarded by the backend Authorizer.
 // Add by User ID, or by email when the User already has an account.
-await auth.addOrganizationMember({ org_id: orgId, user_id: userId, role: 'member' });
-await auth.addOrganizationMember({ org_id: orgId, email: 'member@example.com', role: 'member' });
+await auth.addOrganizationMember({ organization_id: orgId, user_id: userId, role: 'member' });
+await auth.addOrganizationMember({ organization_id: orgId, email: 'member@example.com', role: 'member' });
 const { Members: members } = await auth.listOrganizationMembers(orgId);
-await auth.setOrganizationMemberRole({ org_id: orgId, user_id: userId, role: 'admin' });
-await auth.removeOrganizationMember({ org_id: orgId, user_id: userId });
+await auth.setOrganizationMemberRole({ organization_id: orgId, user_id: userId, role: 'admin' });
+await auth.removeOrganizationMember({ organization_id: orgId, user_id: userId });
 
 // Select, read and clear the active Organization.
 await auth.setActiveOrganization({ org_id: orgId });

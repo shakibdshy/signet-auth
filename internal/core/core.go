@@ -790,7 +790,7 @@ type ListOrganizationsResult struct{ Organizations []*Organization }
 
 // AddOrganizationMemberInput adds a Member to an Organization.
 type AddOrganizationMemberInput struct {
-	OrgID        string `json:"org_id"`
+	OrgID        string `json:"organization_id"`
 	UserID       string `json:"user_id"`
 	Email        string `json:"email,omitempty"`
 	Role         string `json:"role"`
@@ -880,32 +880,32 @@ const (
 
 // BanUserInput describes an administrative ban.
 type BanUserInput struct {
-	ActorID      string
-	SessionToken string
-	UserID       string
-	Reason       string
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
+	UserID       string `json:"user_id"`
+	Reason       string `json:"reason"`
 }
 
 // UnbanUserInput identifies a User to unban.
 type UnbanUserInput struct {
-	ActorID      string
-	SessionToken string
-	UserID       string
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
+	UserID       string `json:"user_id"`
 }
 
 // AdminSetUserRoleInput assigns global roles to a User.
 type AdminSetUserRoleInput struct {
-	ActorID      string
-	SessionToken string
-	UserID       string
-	Roles        []string
+	ActorID      string   `json:"-"`
+	SessionToken string   `json:"-"`
+	UserID       string   `json:"user_id"`
+	Roles        []string `json:"roles"`
 }
 
 // ImpersonateUserInput starts an impersonation Session.
 type ImpersonateUserInput struct {
-	ActorID      string
-	SessionToken string
-	UserID       string
+	ActorID      string `json:"-"`
+	SessionToken string `json:"-"`
+	UserID       string `json:"user_id"`
 	// UserAgent is the raw User-Agent header of the admin request that
 	// started the Impersonation. It is derived by the HTTP handler and never
 	// decoded from a body.
@@ -1680,7 +1680,7 @@ type ListSessionsResult struct {
 }
 
 // RevokeSessionInput identifies one Session.
-type RevokeSessionInput struct{ SessionID string }
+type RevokeSessionInput struct{ SessionID string `json:"session_id"` }
 
 // RevokeAllSessionsInput identifies the User whose Sessions to revoke.
 type RevokeAllSessionsInput struct{ UserID string }

@@ -211,8 +211,8 @@ func TestGenerateAddOrganizationMemberInputIdentifiersOptional(t *testing.T) {
 			t.Fatalf("Membership identifiers must be optional so callers can send either one, required = %v", schema.Required)
 		}
 	}
-	if !contains(schema.Required, "org_id") || !contains(schema.Required, "role") {
-		t.Fatalf("org_id and role must stay required, required = %v", schema.Required)
+	if !contains(schema.Required, "organization_id") || !contains(schema.Required, "role") {
+		t.Fatalf("organization_id and role must stay required, required = %v", schema.Required)
 	}
 }
 

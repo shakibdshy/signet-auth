@@ -7833,7 +7833,7 @@
           "email": {
             "type": "string"
           },
-          "org_id": {
+          "organization_id": {
             "type": "string"
           },
           "role": {
@@ -7844,7 +7844,7 @@
           }
         },
         "required": [
-          "org_id",
+          "organization_id",
           "role"
         ],
         "type": "object"
@@ -7866,27 +7866,19 @@
       },
       "AdminSetUserRoleInput": {
         "properties": {
-          "ActorID": {
-            "type": "string"
-          },
-          "Roles": {
+          "roles": {
             "items": {
               "type": "string"
             },
             "type": "array"
           },
-          "SessionToken": {
-            "type": "string"
-          },
-          "UserID": {
+          "user_id": {
             "type": "string"
           }
         },
         "required": [
-          "ActorID",
-          "SessionToken",
-          "UserID",
-          "Roles"
+          "user_id",
+          "roles"
         ],
         "type": "object"
       },
@@ -7941,24 +7933,16 @@
       },
       "BanUserInput": {
         "properties": {
-          "ActorID": {
+          "reason": {
             "type": "string"
           },
-          "Reason": {
-            "type": "string"
-          },
-          "SessionToken": {
-            "type": "string"
-          },
-          "UserID": {
+          "user_id": {
             "type": "string"
           }
         },
         "required": [
-          "ActorID",
-          "SessionToken",
-          "UserID",
-          "Reason"
+          "user_id",
+          "reason"
         ],
         "type": "object"
       },
@@ -8207,20 +8191,12 @@
       },
       "ImpersonateUserInput": {
         "properties": {
-          "ActorID": {
-            "type": "string"
-          },
-          "SessionToken": {
-            "type": "string"
-          },
-          "UserID": {
+          "user_id": {
             "type": "string"
           }
         },
         "required": [
-          "ActorID",
-          "SessionToken",
-          "UserID"
+          "user_id"
         ],
         "type": "object"
       },
@@ -8645,12 +8621,12 @@
       },
       "RevokeSessionInput": {
         "properties": {
-          "SessionID": {
+          "session_id": {
             "type": "string"
           }
         },
         "required": [
-          "SessionID"
+          "session_id"
         ],
         "type": "object"
       },
@@ -9076,20 +9052,12 @@
       },
       "UnbanUserInput": {
         "properties": {
-          "ActorID": {
-            "type": "string"
-          },
-          "SessionToken": {
-            "type": "string"
-          },
-          "UserID": {
+          "user_id": {
             "type": "string"
           }
         },
         "required": [
-          "ActorID",
-          "SessionToken",
-          "UserID"
+          "user_id"
         ],
         "type": "object"
       },

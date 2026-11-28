@@ -1144,7 +1144,7 @@ export interface components {
         };
         AddOrganizationMemberInput: {
             email?: string;
-            org_id: string;
+            organization_id: string;
             role: string;
             user_id?: string;
         };
@@ -1152,10 +1152,8 @@ export interface components {
             Users: components["schemas"]["UserInfo"][];
         };
         AdminSetUserRoleInput: {
-            ActorID: string;
-            Roles: string[];
-            SessionToken: string;
-            UserID: string;
+            roles: string[];
+            user_id: string;
         };
         ApiError: {
             /** @enum {string} */
@@ -1163,10 +1161,8 @@ export interface components {
             message: string;
         };
         BanUserInput: {
-            ActorID: string;
-            Reason: string;
-            SessionToken: string;
-            UserID: string;
+            reason: string;
+            user_id: string;
         };
         ChangeEmailInput: {
             current_password: string;
@@ -1232,9 +1228,7 @@ export interface components {
             password: string;
         };
         ImpersonateUserInput: {
-            ActorID: string;
-            SessionToken: string;
-            UserID: string;
+            user_id: string;
         };
         ImpersonationResult: {
             AdminID: string;
@@ -1341,7 +1335,7 @@ export interface components {
             owner_user_id: string;
         };
         RevokeSessionInput: {
-            SessionID: string;
+            session_id: string;
         };
         SAMLACSResult: {
             last_sign_in_method: string;
@@ -1464,9 +1458,7 @@ export interface components {
             two_factor_challenge?: string;
         };
         UnbanUserInput: {
-            ActorID: string;
-            SessionToken: string;
-            UserID: string;
+            user_id: string;
         };
         UnlinkAccountInput: {
             account_id: string;
