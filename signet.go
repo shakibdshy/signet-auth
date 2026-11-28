@@ -225,6 +225,9 @@ type Organization = core.Organization
 // OrganizationStore persists Organizations and Memberships.
 type OrganizationStore = core.OrganizationStore
 
+// AdminUserStore lists Users for administrative management.
+type AdminUserStore = core.AdminUserStore
+
 // CreateOrganizationInput describes a new Organization.
 type CreateOrganizationInput = core.CreateOrganizationInput
 

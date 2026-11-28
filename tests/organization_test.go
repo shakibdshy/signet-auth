@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -31,10 +32,21 @@ func (s *fakeOrganizationStore) Create(_ context.Context, org *signet.Organizati
 	return nil
 }
 
-func (s *fakeOrganizationStore) List(context.Context, string) ([]*signet.Organization, error) {
-	out := make([]*signet.Organization, 0, len(s.orgs))
-	for _, org := range s.orgs {
-		out = append(out, org)
+// List is membership-scoped, matching the OrganizationStore contract the
+// conformance suite pins: a User's Organizations are the ones they belong to.
+func (s *fakeOrganizationStore) List(_ context.Context, userID string) ([]*signet.Organization, error) {
+	out := make([]*signet.Organization, 0)
+	ids := make([]string, 0, len(s.members))
+	for orgID, roles := range s.members {
+		if _, ok := roles[userID]; ok {
+			ids = append(ids, orgID)
+		}
+	}
+	slices.Sort(ids)
+	for _, orgID := range ids {
+		if org, ok := s.orgs[orgID]; ok {
+			out = append(out, org)
+		}
 	}
 	return out, nil
 }
