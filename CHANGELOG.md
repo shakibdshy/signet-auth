@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The generated OpenAPI and TypeScript schema for the organization-member and
+  admin request bodies now match what the handlers actually decode. The
+  member endpoints advertise `organization_id` (the handler never accepted the
+  documented `org_id`), and `admin-users/role`, `admin-users/ban`,
+  `admin-users/unban`, `admin-user-sessions/revoke` and `impersonate` advertise
+  the snake_case `user_id`, `roles`, `reason` and `session_id` keys the handlers
+  decode, instead of the Go-cased keys a schema without tags produced.
+  Handlers and the wire are unchanged — only the generated contract and the
+  typed client schema moved to describe it truthfully.
+
 ## [1.0.0-beta.3] - 2026-11-28
 
 ### Added
