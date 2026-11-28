@@ -1152,11 +1152,15 @@ type Config struct {
 	APIKeyStore              APIKeyStore
 	APIKeyProtectedEndpoints []string
 	OrganizationStore        OrganizationStore
-	AdminUserStore           AdminUserStore
-	LastSignInMethod         *LastSignInMethodConfig
-	CSRFKey                  []byte
-	CSRFKeys                 [][]byte
-	JWTOnly                  bool
+	// OrganizationRoles names the Membership roles the built-in organization
+	// policy grants member management to. Empty selects the default: the
+	// organization's owner and admin members.
+	OrganizationRoles []string
+	AdminUserStore    AdminUserStore
+	LastSignInMethod  *LastSignInMethodConfig
+	CSRFKey           []byte
+	CSRFKeys          [][]byte
+	JWTOnly           bool
 }
 
 // CookieConfig controls the session cookie.

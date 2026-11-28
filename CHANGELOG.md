@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The built-in organization policy no longer hard-codes the `owner` and `admin`
+  role names. `Config.OrganizationRoles` (and the variadic
+  `signet.NewOrgAuthorizeIn(store, roles...)`) name the membership roles that
+  manage members; empty keeps the default owner/admin vocabulary. An
+  application whose Store assigns different membership roles can now use the
+  zero-config policy without silent denials or a full `AuthorizeIn` override.
+
 ### Fixed
 
 - The generated OpenAPI and TypeScript schema for the organization-member and

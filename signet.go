@@ -29,11 +29,12 @@ func NewMemoryAuthorizer(statements RoleStatements, roles func(context.Context, 
 
 // NewOrgAuthorizeIn returns the built-in organization policy: it grants
 // member-add, member-remove and member-role to members whose organization
-// role is owner or admin, re-reading membership on every check. Signet
+// role is one of the named managerRoles — the organization's owner and admin
+// roles when none are named — re-reading membership on every check. Signet
 // installs it automatically when OrganizationStore is set and AuthorizeIn is
 // not; wire it explicitly to override or restrict that policy.
-func NewOrgAuthorizeIn(store OrganizationStore) AuthorizeIn {
-	return authorization.NewOrgAuthorizeIn(store)
+func NewOrgAuthorizeIn(store OrganizationStore, managerRoles ...string) AuthorizeIn {
+	return authorization.NewOrgAuthorizeIn(store, managerRoles...)
 }
 
 // Version is the current Signet version. It changes with every release tag.
