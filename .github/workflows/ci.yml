@@ -26,7 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
-      group: go-${{ github.ref }}
+      # Matrix legs share job-level groups: without the matrix value in the
+      # name the two legs would cancel each other.
+      group: go-${{ matrix.go }}-${{ github.ref }}
       cancel-in-progress: true
     strategy:
       fail-fast: false
