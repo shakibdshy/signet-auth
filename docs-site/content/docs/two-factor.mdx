@@ -16,6 +16,28 @@ cfg.TOTP = &signet.TOTPConfig{Digits: 6, Period: 30, Window: 1}
 The secret is encrypted at rest with the dedicated key. Backup codes are stored only as digests.
 `TokenTwoFactor` is the single-use Token kind used for challenges.
 
+## Reference schema
+
+`TOTPStore` is keyed by User ID — one enrollment per User, `Put` upserts. Your store persists
+what it is given: the secret arrives already encrypted with `TOTPKey`, and the backup codes
+arrive as digests.
+
+```sql
+-- PostgreSQL
+CREATE TABLE IF NOT EXISTS signet_totp_states (
+    user_id TEXT PRIMARY KEY,       -- one enrollment per User
+    secret TEXT NOT NULL,           -- encrypted with TOTPKey before it reaches you
+    backup_codes TEXT NOT NULL,     -- the ten digests, serialized however you choose
+    verified BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES signet_users(id) ON DELETE CASCADE
+);
+```
+
+For SQLite: `BOOLEAN` → `INTEGER` and `TEXT` timestamps stay `TEXT`, as in the bundled adapters.
+A missing row means "not enrolled"; delete it when the User disables Second factor.
+
+## Enrollment
+
 ## Enrollment
 
 `EnableTwoFactor(ctx, EnableTwoFactorInput) (*EnableTwoFactorResult, error)` requires the current

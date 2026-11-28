@@ -22,6 +22,30 @@ cfg.Passkeys = &signet.PasskeysConfig{
 
 Your `PasskeyStore` implements five methods: `CreateCredential`, `CredentialsByUser`, `CredentialByID`, `UpdateCredential` and `DeleteCredential`. Store the public key as opaque bytes; Signet never asks you to store a private key. Deleting a User removes their credentials explicitly.
 
+## Reference schema
+
+The credential row is keyed by the WebAuthn credential ID — `CredentialByID` looks it up without a User ID during sign-in — and `UpdateCredential` rewrites `sign_count` and the backup flags on every successful ceremony. One table is all the contract needs:
+
+```sql
+-- PostgreSQL
+CREATE TABLE IF NOT EXISTS signet_passkey_credentials (
+    id TEXT PRIMARY KEY,            -- WebAuthn credential ID, unique per Relying party
+    user_id TEXT NOT NULL,
+    public_key BYTEA NOT NULL,      -- COSE key, opaque to Signet
+    aaguid TEXT NOT NULL DEFAULT '',
+    sign_count BIGINT NOT NULL DEFAULT 0,
+    transports TEXT NOT NULL DEFAULT '',     -- comma-separated, "" when unknown
+    backup_eligible BOOLEAN NOT NULL DEFAULT 0,
+    backup_state BOOLEAN NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES signet_users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_signet_passkeys_user ON signet_passkey_credentials(user_id);
+```
+
+For SQLite: `BYTEA` → `BLOB`, `TIMESTAMPTZ` → `TEXT`, `BOOLEAN` → `INTEGER` — the same mapping the bundled adapters use. The `ON DELETE CASCADE` is what makes "deleting a User removes their credentials" true; the library never deletes rows behind your back.
+
 ## Enroll a passkey
 
 Enrollment requires an authenticated Session within `Accounts.FreshWindow` and a verified email when `RequireVerifiedEmail` is enabled.
