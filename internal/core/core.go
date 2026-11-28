@@ -1680,7 +1680,9 @@ type ListSessionsResult struct {
 }
 
 // RevokeSessionInput identifies one Session.
-type RevokeSessionInput struct{ SessionID string `json:"session_id"` }
+type RevokeSessionInput struct {
+	SessionID string `json:"session_id"`
+}
 
 // RevokeAllSessionsInput identifies the User whose Sessions to revoke.
 type RevokeAllSessionsInput struct{ UserID string }
